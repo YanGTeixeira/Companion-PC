@@ -1,0 +1,14 @@
+[Unit]
+Description=R36S PC Companion - rede USB (RNDIS, 10.55.0.2)
+After=local-fs.target sys-kernel-config.mount
+Before=ssh.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=FUNC=rndis
+ExecStart=/opt/r36s-companion/companion-usbnet.sh up
+ExecStop=/opt/r36s-companion/companion-usbnet.sh down
+
+[Install]
+WantedBy=multi-user.target
