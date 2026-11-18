@@ -406,6 +406,22 @@ input[type=range]:disabled { opacity: .35; }
     #t-sys .cols { columns: 3; }
   }
 }
+/* celular deitado e baixo (Chrome com barra de endereço, ~340px): Tocando, teclas e Arquivos compactos */
+@media (orientation: landscape) and (max-height: 560px) {
+  .media { row-gap: 8px; }
+  .media .art { width: min(28cqw, calc(100cqh - 16px), 240px); }
+  .mtitle { font-size: 28px; }
+  .prog { height: 22px; }
+  .times { font-size: 17px; }
+  .cbtn { width: 54px; height: 44px; } .cbtn.main { width: 74px; height: 48px; }
+  .vol button { height: 32px; }
+  .outchip { padding: 5px 10px; }
+  .mright { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .mright .key { height: 36px; }
+  .mbtns { height: 46px; }
+  .ta { min-height: 60px; }
+  #t-send h2 { margin: 6px 0 6px; }
+}
 /* Energia: botões à esquerda, timer à direita (a aba é o próprio container, então vai por media query) */
 @media (orientation: landscape) and (max-height: 560px) and (min-width: 700px) {
   #t-power.on { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 14px; align-content: start; }
