@@ -763,6 +763,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <div class="card">
             <div class="set"><label>Comandos de voz<small id="voz-st">Diga "PC" e o comando</small></label><button class="switch" id="sw-voz" aria-label="Comandos de voz"></button></div>
             <div class="set"><label>Microfone<small>Automático usa o microfone padrão do Windows</small></label><select id="voz-dev" class="sel" aria-label="Microfone dos comandos de voz"><option value="">Automático (padrão do Windows)</option></select></div>
+            <div class="set"><label>Aviso na tela do PC<small>Caixinha no canto: "Ouvindo..." e o resultado</small></label><button class="switch" id="sw-voz-ov" aria-label="Aviso na tela do PC"></button></div>
             <div class="set"><label>Responder falando<small>Voz do Windows; sem isso, só bipes</small></label><button class="switch" id="sw-voz-fala" aria-label="Responder falando"></button></div>
             <div class="set"><label>Último comando<small id="voz-last">Nenhum ainda</small></label></div>
             <div class="sub voz-help">PC, próxima música · pausa · toca · volume 30 · aumenta o volume · muta o som · que música é essa · abre o Spotify · joga (jogo) · muta o microfone · muta o Discord · troca a saída de som · tira um print · bloqueia · desliga em 1 hora · cancela o timer · ou o nome de um botão: PC, ausente. Dizer só "PC" e parar também funciona: ele bipa e espera o comando.</div>
@@ -1640,6 +1641,7 @@ function renderVoice(v) {
   if (!v || !v.available) return;
   $("sw-voz").classList.toggle("on", v.on);
   $("sw-voz-fala").classList.toggle("on", v.speak);
+  $("sw-voz-ov").classList.toggle("on", v.overlay);
   let st = v.on ? VOZ_ST[v.status] || v.status : "Desligado";
   if (v.on && v.status === "listening") st = `Ouvindo: ${v.device}` + (v.fallback ? " (o microfone principal está no mudo)" : "") + ` · diga "PC" e o comando`;
   if (v.on && v.status === "error") st = "Erro: " + v.error;
@@ -1669,6 +1671,7 @@ async function voiceSet(p) {
 }
 $("sw-voz").onclick = () => voiceSet({ on: !$("sw-voz").classList.contains("on") });
 $("sw-voz-fala").onclick = () => voiceSet({ speak: !$("sw-voz-fala").classList.contains("on") });
+$("sw-voz-ov").onclick = () => voiceSet({ overlay: !$("sw-voz-ov").classList.contains("on") });
 $("voz-dev").onchange = () => voiceSet({ device: $("voz-dev").value });
 
 // ---------------------------------------------------------------- celular parado: passa as telas / relógio

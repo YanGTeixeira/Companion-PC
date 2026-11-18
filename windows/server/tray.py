@@ -84,10 +84,12 @@ def make_icon(color):
 # App da bandeja
 # --------------------------------------------------------------------------
 class TrayApp:
-    def __init__(self, status_fn, log_path: Path, base: Path, version: str, stop_server, open_on_phone=None):
+    def __init__(self, status_fn, log_path: Path, base: Path, version: str, stop_server, open_on_phone=None,
+                 voice_set=None):
         """status_fn() -> dict(state='ok'|'wait'|'off', text=str, game=str|None, phone=dict)."""
         self.status_fn = status_fn
         self.open_on_phone_fn = open_on_phone
+        self.voice_set = voice_set
         self.log_path = log_path
         self.base = base
         self.version = version
@@ -210,7 +212,7 @@ class Panel:
         root = self.root = tk.Tk()
         root.title("Companion PC")
         root.configure(bg=self.BG)
-        root.geometry("600x620")
+        root.geometry("600x720")
         root.minsize(460, 340)
         try:
             from PIL import ImageTk
@@ -240,6 +242,30 @@ class Panel:
         self.status.pack(side="left", padx=8)
         self.game = tk.Label(card, font=f, fg=self.DIM, bg=self.CARD, anchor="w")
         self.game.pack(fill="x", padx=32, pady=(0, 10))
+
+        # Comandos de voz ("PC, próxima música")
+        self.voice_title = tk.Label(root, text="Comandos de voz", font=f_b, fg=self.DIM, bg=self.BG, anchor="w")
+        self.voice_card = vc = tk.Frame(root, bg=self.CARD)
+        vrow = tk.Frame(vc, bg=self.CARD)
+        vrow.pack(fill="x", padx=12, pady=(10, 2))
+        self.vdot = tk.Canvas(vrow, width=12, height=12, bg=self.CARD, highlightthickness=0)
+        self.vdot.pack(side="left", pady=2)
+        self.vdot_id = self.vdot.create_oval(1, 1, 11, 11, fill=self.STATE_HEX["off"], outline="")
+        self.voice_status = tk.Label(vrow, font=f_b, fg=self.TEXT, bg=self.CARD, anchor="w")
+        self.voice_status.pack(side="left", padx=8)
+        self.voice_last = tk.Label(vc, font=f, fg=self.DIM, bg=self.CARD, anchor="w", justify="left", wraplength=520)
+        self.voice_last.pack(fill="x", padx=32)
+        vb = tk.Frame(vc, bg=self.CARD)
+        vb.pack(fill="x", padx=32, pady=(6, 10))
+
+        def vbutton(cmd):
+            b = tk.Button(vb, font=f, fg=self.TEXT, bg="#2b323c", activebackground="#36404c", activeforeground=self.TEXT,
+                          relief="flat", borderwidth=0, padx=12, pady=4, cursor="hand2", command=cmd)
+            b.pack(side="left", padx=(0, 8))
+            return b
+        self.voice_on_btn = vbutton(lambda: self._voice({"on": "toggle"}))
+        self.voice_ov_btn = vbutton(lambda: self._voice({"overlay": not self._vstate.get("overlay")}))
+        self._vstate = {}
 
         # Celular: QR com o link (Wi-Fi) + estado do cabo
         tk.Label(root, text="Celular (Android)", font=f_b, fg=self.DIM, bg=self.BG, anchor="w").pack(fill="x", padx=16, pady=(12, 4))
@@ -285,6 +311,43 @@ class Panel:
         self.refresh()
         self.bring_to_front()
         root.mainloop()
+
+    def _voice(self, p):
+        if self.app.voice_set:
+            threading.Thread(target=self.app.voice_set, args=(p,), daemon=True).start()
+            self.root.after(300, self.refresh_voice_soon)
+
+    def refresh_voice_soon(self):
+        self._refresh_voice(self.app.status_fn().get("voice"))
+
+    def _refresh_voice(self, v):
+        if not v or not v.get("available"):
+            if self.voice_card.winfo_ismapped():
+                self.voice_title.pack_forget()
+                self.voice_card.pack_forget()
+            return
+        if not self.voice_card.winfo_ismapped():
+            self.voice_title.pack(fill="x", padx=16, pady=(12, 4), after=self.status.master.master)
+            self.voice_card.pack(fill="x", padx=16, after=self.voice_title)
+        self._vstate = v
+        st = v.get("status")
+        if not v.get("on"):
+            text, color = "Desligado", "off"
+        elif st == "listening":
+            text = f"Ouvindo: {v.get('device')}" + ("  (principal no mudo)" if v.get("fallback") else "")
+            color = "ok"
+        elif st == "loading":
+            text, color = "Carregando o reconhecimento de fala...", "wait"
+        else:
+            text, color = f"Erro: {v.get('error')}", "err"
+        self.vdot.itemconfigure(self.vdot_id, fill={**self.STATE_HEX, "err": "#e74c3c"}[color])
+        self.voice_status.configure(text=text)
+        last = v.get("last")
+        self.voice_last.configure(
+            text=(f"Último: \u201c{last['text']}\u201d  >  {last['msg']}" if last else 'Diga "PC" e o comando. Ex.: PC, próxima música'),
+            fg=("#e74c3c" if last and not last.get("ok") else self.DIM))
+        self.voice_on_btn.configure(text="Desligar voz" if v.get("on") else "Ligar voz")
+        self.voice_ov_btn.configure(text="Aviso na tela: " + ("sim" if v.get("overlay") else "não"))
 
     def _open_phone(self):
         err = self.app.open_on_phone()
@@ -350,6 +413,7 @@ class Panel:
         self.game.configure(text=f"Jogando: {st['game']}" if st.get("game") else "Nenhum jogo detectado")
         if "phone" in st:
             self._refresh_phone(st["phone"])
+        self._refresh_voice(st.get("voice"))
 
         try:
             mtime = self.app.log_path.stat().st_mtime

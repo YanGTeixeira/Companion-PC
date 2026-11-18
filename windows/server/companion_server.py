@@ -31,6 +31,7 @@ from websockets.exceptions import ConnectionClosed
 
 import extras
 import games
+import overlay
 import pc_info
 import voice
 import watchers
@@ -852,9 +853,20 @@ async def voice_run(it):
     return it.get("say")
 
 
+OVERLAY = overlay.Overlay()
+
+
 async def voice_event(ev):
     if ev.get("phase") == "done":
         log.info("voz: %s", ev.get("msg"))
+    if VOICE.cfg.get("overlay"):
+        try:
+            if ev.get("phase") == "wake":
+                OVERLAY.show("wake", "Ouvindo...", "Diga o comando", ev.get("secs", 6))
+            elif ev.get("phase") == "done":
+                OVERLAY.show("ok" if ev.get("ok") else "err", ev.get("msg") or "", f"\u201c{ev.get('text', '')}\u201d", 4)
+        except Exception:  # noqa: BLE001
+            log.exception("aviso de voz")
     msg = json.dumps(ev, ensure_ascii=False)
     for ws in list(clients):
         try:
@@ -949,10 +961,11 @@ def status():
     parts = ["aparelho conectado" if n == 1 else f"{n} aparelhos conectados"] if n else []
     phone = {"web": NET["web"], "adb": list(NET["adb"]), "port": WEB["port"],
              "links": phone_links() if NET["web"] else {}}
+    vs = VOICE.state()
     if parts:
-        return {"state": "ok", "text": " + ".join(parts), "game": game, "phone": phone}
+        return {"state": "ok", "text": " + ".join(parts), "game": game, "phone": phone, "voice": vs}
     text = "Aguardando conexão na rede local" if NET["web"] else "Porta do app indisponível (veja o log)"
-    return {"state": "wait" if NET["web"] else "off", "text": text, "game": game, "phone": phone}
+    return {"state": "wait" if NET["web"] else "off", "text": text, "game": game, "phone": phone, "voice": vs}
 
 
 # --------------------------------------------------------------------------
@@ -1145,7 +1158,8 @@ def run_with_tray():
         except Exception:  # noqa: BLE001
             log.exception("servidor parou")
     threading.Thread(target=server_thread, daemon=True, name="server").start()
-    tray.TrayApp(status, LOG_PATH, BASE, VERSION, stop_server, open_on_phone=adb_open_on_phone).run()
+    tray.TrayApp(status, LOG_PATH, BASE, VERSION, stop_server, open_on_phone=adb_open_on_phone,
+                 voice_set=VOICE.set).run()
 
 
 if __name__ == "__main__":

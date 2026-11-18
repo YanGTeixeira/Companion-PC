@@ -33,6 +33,7 @@ DEFAULTS = {
     "device": "",            # parte do nome do microfone; "" = o microfone padrão do Windows
     "speak": False,          # responder falando (voz do Windows)
     "beep": True,
+    "overlay": True,         # aviso no canto da tela do PC
     "model": "base",         # rápido (~0,5 s); "small" é mais preciso e ~3x mais lento
     "fallback_model": "small",  # usado de novo quando o rápido não entende o comando
     "follow_s": 6,           # depois de "PC" sozinho, quanto tempo espera o comando
@@ -383,7 +384,7 @@ class Voice:
     def state(self):
         return {"available": self.available, "on": bool(self.cfg["enabled"]), "status": self.status,
                 "error": self.error, "device": self.device_name, "pick": self.cfg["device"], "fallback": self.fallback,
-                "speak": bool(self.cfg["speak"]), "last": self.last}
+                "speak": bool(self.cfg["speak"]), "overlay": bool(self.cfg["overlay"]), "last": self.last}
 
     def start(self, loop):
         self.loop = loop
@@ -408,6 +409,8 @@ class Voice:
             restart = True
         if "speak" in p:
             self.cfg["speak"] = bool(p["speak"])
+        if "overlay" in p:
+            self.cfg["overlay"] = bool(p["overlay"])
         self._save_cfg(dict(self.cfg))
         if restart and self.available:
             if self.cfg["enabled"]:
@@ -415,7 +418,7 @@ class Voice:
             else:
                 self._stop.set()
                 self.status = "off"
-        log.info("voz: %s", {k: self.cfg[k] for k in ("enabled", "device", "speak")})
+        log.info("voz: %s", {k: self.cfg[k] for k in ("enabled", "device", "speak", "overlay")})
         return self.state()
 
     @staticmethod
@@ -594,7 +597,7 @@ class Voice:
         if not cmd:  # só "PC": espera o comando
             self._follow_until = time.monotonic() + self.cfg["follow_s"]
             self._beep("wake")
-            self._post({"t": "event", "kind": "voice", "phase": "wake"})
+            self._post({"t": "event", "kind": "voice", "phase": "wake", "secs": self.cfg["follow_s"]})
             return
         self._follow_until = 0
         if not intent:
