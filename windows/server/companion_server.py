@@ -673,7 +673,7 @@ async def session(ws, peer, kind):
         return
 
     await ws.send(json.dumps({
-        "t": "welcome", "version": VERSION, "host": socket.gethostname(),
+        "t": "welcome", "version": VERSION, "web": web_build(), "host": socket.gethostname(),
         "os": f"{platform.system()} {platform.release()}",
         "shortcuts": [{"id": s["id"], "name": s["name"]} for s in CFG["shortcuts"]],
         "power": bool(CFG.get("allow_power")),
@@ -688,7 +688,7 @@ async def session(ws, peer, kind):
     sent_gameart[ws] = None
     await send_games(ws, MON.state)
     await push_now(only=ws)
-    log.info("conectado: %s (%s)", kind, peer)
+    log.info("conectado: %s (%s) tela %s", kind, peer, str(hello.get("screen", "?"))[:60])
     try:
         async for raw in ws:
             try:
@@ -882,6 +882,14 @@ MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=ut
         ".css": "text/css; charset=utf-8", ".json": "application/json",
         ".webmanifest": "application/manifest+json", ".png": "image/png", ".svg": "image/svg+xml", ".mp4": "video/mp4", ".webm": "video/webm",
         ".woff2": "font/woff2", ".txt": "text/plain; charset=utf-8"}
+
+
+def web_build():
+    """Muda quando algum arquivo do app web muda: o celular recarrega a página sozinho."""
+    try:
+        return int(max(f.stat().st_mtime for f in WEB_DIR.rglob("*") if f.is_file()))
+    except (OSError, ValueError):
+        return 0
 
 
 def serve_static(connection, request):

@@ -866,6 +866,7 @@ function toast(msg, kind = "") {
 // ---------------------------------------------------------------- conexão
 let ws = null, welcome = {}, nextId = 1, retry = 0, retryT = null, wasOnline = false;
 const pending = new Map();
+let pageBuild = 0;
 const state = { stats: null, now: null, games: null, art: {}, gameart: {}, nowT: 0, gamesT: 0 };
 
 function wsUrl() { return (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws"; }
@@ -876,7 +877,8 @@ function connect() {
   if (!token) { showLogin(); return; }
   setDot("wait", "Conectando…");
   const sock = ws = new WebSocket(wsUrl());
-  sock.onopen = () => sock.send(JSON.stringify({ t: "hello", token, client: "android" }));
+  sock.onopen = () => sock.send(JSON.stringify({ t: "hello", token, client: "android",
+    screen: `${innerWidth}x${innerHeight} dpr${devicePixelRatio} ${matchMedia("(orientation: landscape)").matches ? "deitado" : "em pé"}` }));
   sock.onmessage = (ev) => { if (sock === ws) onMsg(JSON.parse(ev.data)); };
   sock.onclose = (ev) => {
     if (sock !== ws) return;
@@ -910,6 +912,9 @@ function act(a, p, label) {
 function onMsg(m) {
   switch (m.t) {
     case "welcome":
+      // página nova no PC: recarrega (o app reconecta sozinho e nunca baixaria o HTML de novo)
+      if (m.web && pageBuild && m.web !== pageBuild) { location.reload(); return; }
+      pageBuild = pageBuild || m.web;
       welcome = m; retry = 0;
       $("host").textContent = m.host; $("os").textContent = m.os;
       setDot("ok", "");
