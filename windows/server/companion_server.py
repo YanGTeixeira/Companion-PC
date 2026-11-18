@@ -1006,6 +1006,22 @@ async def adb_loop():
         await asyncio.sleep(4)
 
 
+async def web_watch():
+    """Página do app mudou no PC: avisa os aparelhos conectados (eles recarregam)."""
+    last = web_build()
+    while True:
+        await asyncio.sleep(3)
+        cur = await asyncio.to_thread(web_build)
+        if cur != last:
+            last = cur
+            log.info("app web atualizado - recarregando os aparelhos")
+            for ws in list(clients):
+                try:
+                    await ws.send(json.dumps({"t": "welcome", "web": cur}))
+                except Exception:  # noqa: BLE001
+                    pass
+
+
 async def main():
     log.info("Companion PC %s", VERSION)
     pc_info.MEDIA = pc_info.Media()
@@ -1020,6 +1036,7 @@ async def main():
     asyncio.create_task(games_loop())
     asyncio.create_task(adb_loop())
     asyncio.create_task(downloads_loop())
+    asyncio.create_task(web_watch())
     await web_main()
 
 

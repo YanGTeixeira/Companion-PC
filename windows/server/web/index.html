@@ -158,14 +158,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px;
 input[type=range]::-moz-range-track { height: 6px; background: var(--p3); }
 input[type=range]::-moz-range-thumb { width: 14px; height: 26px; background: var(--p); border: 0; border-radius: 1px; }
 input[type=range]:disabled { opacity: .35; }
-/* slider vertical (fader): 0 embaixo, 100 em cima */
-@media (orientation: landscape) and (max-height: 560px) {
-  #mx-list input[type=range], .media > .vol input[type=range] { writing-mode: vertical-lr; direction: rtl; }
-  #mx-list input[type=range]::-webkit-slider-runnable-track, .media > .vol input[type=range]::-webkit-slider-runnable-track {
-    width: 6px; height: 100%; background: repeating-linear-gradient(0deg, var(--p3) 0 5px, transparent 5px 7px); }
-  #mx-list input[type=range]::-webkit-slider-thumb, .media > .vol input[type=range]::-webkit-slider-thumb {
-    width: 26px; height: 14px; margin-top: 0; margin-left: -10px; }
-}
+
 
 /* ------------------------------------------------------------------ Status */
 .grid.dash { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -385,31 +378,23 @@ input[type=range]:disabled { opacity: .35; }
     /* Jogos: capa menor e três colunas (jogo | recentes | semana) */
     .game { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
     .game > div:last-child { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
-    .game .gart { height: 32cqh; width: auto; max-width: 100%; margin: 0 auto; }
-    .gtime { font-size: 38px; } .gname { font-size: 24px; }
+    .game .gart { height: 15cqh; width: auto; max-width: 100%; margin: 0 auto; }
+    #g-head { margin-top: 6px; }
+    #t-games > h2 { margin: 10px 0 6px; }
+    #t-games .lib { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+    .lib::-webkit-scrollbar { display: none; }
+    .lib > .lgame { flex: 0 0 150px; width: 150px; min-width: 0; }
+    .lib > .lgame .gart { height: 62px; aspect-ratio: auto; font-size: 20px; }
+    .lgame .ln { padding: 5px 8px 6px; font-size: 13px; }
+    .gtime { font-size: 32px; } .gname { font-size: 22px; }
+    #g-fps { margin-top: 2px; } #g-fps b { font-size: 30px; }
+    .game .card { padding: 8px 10px; }
     .week { height: 72px; }
-    .lib { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
     /* Mixer: aplicativos em duas colunas */
-    /* Mixer: cada app vira um canal com fader vertical, lado a lado */
-    .mixer { grid-template-columns: minmax(0, 1fr) minmax(0, 2.6fr); height: 100%; align-items: stretch; }
-    .mixer > .card:first-child { align-self: start; }
-    .mixer > .card { min-height: 0; display: flex; flex-direction: column; }
-    #mx-list { flex: 1; min-height: 0; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
-    #mx-list .mxrow { flex: 0 0 84px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 4px 0;
-      border: 0; border-right: 1px dashed var(--p4); }
-    #mx-list .mxrow:last-child { border-right: 0; }
-    #mx-list .mxmid { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    #mx-list .mxname { width: 100%; text-align: center; font-size: 12.5px; order: -1; }
-    #mx-list .mxmid > input { flex: 1; min-height: 60px; height: auto; width: 32px; }
-    #mx-list .peak { display: none; }
-    #mx-list .mxval { order: -1; font-size: 18px; text-align: center; }
-    #mx-list .mxic { order: -2; }
-    #mx-list .mxmute { width: 100%; height: 32px; }
-    /* Tocando: volume numa coluna vertical à direita */
-    .media { grid-template-columns: auto minmax(0, 1fr) 52px; }
-    .media > .vol { grid-column: 3; grid-row: 1 / -1; align-self: stretch; flex-direction: column-reverse; gap: 6px; }
-    .media > .vol input { flex: 1; width: 32px; min-height: 80px; height: auto; }
-    .media > .vol .val { width: auto; text-align: center; font-size: 18px; }
+    /* Mixer: apps em duas colunas, lado a lado */
+    .mixer { grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); }
+    #mx-list { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 18px; }
+    #mx-list .mxrow:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
     /* Arquivos: três colunas estreitas, botões empilhados */
     #t-send .cols { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
     #t-send .cols > div:first-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-content: start; }
@@ -428,10 +413,10 @@ input[type=range]:disabled { opacity: .35; }
     .dbtn { min-height: 80px; padding: 8px 6px; } .dbtn .di { font-size: 30px; } .dbtn .dl { font-size: 12.5px; }
   }
   @container (min-width: 720px) {
-    /* Status: 5 colunas, "Sistema" ocupa a coluna da direita inteira */
-    .grid.dash { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr);
-      grid-template-areas: "cpu ram gpu net sys" "procs procs disks win sys"; }
-    .c-sys { overflow: hidden; }
+    /* Status: 4 + 4 cards do mesmo tamanho */
+    .grid.dash { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr);
+      grid-template-areas: "cpu ram gpu net" "procs disks win sys"; }
+    .c-sys, .c-win { overflow: hidden; }
   }
   @container (min-width: 760px) {
     #t-sys .cols { columns: 3; }
@@ -461,6 +446,16 @@ input[type=range]:disabled { opacity: .35; }
   #t-power > #tmr-sec { grid-column: 2; grid-row: 1 / span 2; }
   #tmr-sec > h2 { margin-top: 4px; }
   .tmr-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* Jogos: jogo | recentes + biblioteca | semana, tudo numa tela */
+  #t-games.on { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr;
+    gap: 10px; align-content: start; overflow: hidden; }
+  #t-games .game, #t-games .game > div:last-child { display: contents !important; }
+  #t-games .game > .card { grid-column: 1; grid-row: 1 / -1; }
+  #t-games .game > div:last-child > .card:first-child { grid-column: 2; grid-row: 1; }
+  #t-games .game > div:last-child > .card:last-child { grid-column: 3; grid-row: 1 / -1; }
+  #t-games > h2 { grid-column: 2; grid-row: 2; margin: 0; }
+  #t-games > .lib { grid-column: 2; grid-row: 3; align-self: start; min-width: 0; }
+  #t-games .game .gart { height: 22cqh; }
   #t-power > .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #t-power .tile { min-height: 72px; }
 }
