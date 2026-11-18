@@ -367,6 +367,54 @@ input[type=range]:disabled { opacity: .35; }
 .gtime { font-size: 44px; }
   .dcbtns .tile { min-height: 50px; padding: 6px; }
 }
+/* celular deitado: telas largas e baixas usam mais colunas (tablet não entra aqui: altura > 560) */
+@media (orientation: landscape) and (max-height: 560px) {
+  :root { --rail: calc(66px + env(safe-area-inset-left, 0px)); }
+  nav button { font-size: 15px; letter-spacing: 0; }
+  .rail-top { font-size: 18px; padding: 6px 0; gap: 4px; }
+  .rail-top .hchip { font-size: 15px; padding: 2px 5px 1px; }
+  @container (min-width: 600px) {
+    /* Jogos: capa menor e três colunas (jogo | recentes | semana) */
+    .game { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+    .game > div:last-child { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+    .game .gart { height: 32cqh; width: auto; max-width: 100%; margin: 0 auto; }
+    .gtime { font-size: 38px; } .gname { font-size: 24px; }
+    .week { height: 72px; }
+    .lib { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+    /* Mixer: aplicativos em duas colunas */
+    .mixer { grid-template-columns: minmax(0, 1fr) minmax(0, 2.3fr); }
+    /* Ajustes: três colunas (Alertas | Visual | Este aparelho) */
+    #t-sys .cols { display: block; columns: 2; column-gap: 14px; }
+    #t-sys .cols .card { break-inside: avoid; }
+    #t-sys .cols h2 { break-after: avoid; }
+    #t-sys .cols > div > h2:first-child { margin-top: 4px; }
+    /* Arquivos */
+    .cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    /* Botões: mais colunas e botões baixos (a regra de tablet deixava gigantes) */
+    .deckgrid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+    .dbtn { min-height: 80px; padding: 8px 6px; } .dbtn .di { font-size: 30px; } .dbtn .dl { font-size: 12.5px; }
+  }
+  @container (min-width: 720px) {
+    /* Status: 5 colunas, "Sistema" ocupa a coluna da direita inteira */
+    .grid.dash { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr);
+      grid-template-areas: "cpu ram gpu net sys" "procs procs disks win sys"; }
+    .c-sys { overflow: hidden; }
+  }
+  @container (min-width: 760px) {
+    #mx-list { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 18px; }
+    #mx-list .mxrow:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
+    #t-sys .cols { columns: 3; }
+  }
+}
+/* Energia: botões à esquerda, timer à direita (a aba é o próprio container, então vai por media query) */
+@media (orientation: landscape) and (max-height: 560px) and (min-width: 700px) {
+  #t-power.on { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 14px; align-content: start; }
+  #t-power > h2:first-child { grid-column: 1; grid-row: 1; }
+  #t-power > .tiles { grid-column: 1; grid-row: 2; align-self: start; }
+  #t-power > #tmr-sec { grid-column: 2; grid-row: 1 / span 2; }
+  #tmr-sec > h2 { margin-top: 4px; }
+  .tmr-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 /* chips do cabeçalho: microfone do PC e timer */
 .hchip { flex: none; padding: 3px 8px 2px; border: 1px solid var(--p3); color: var(--p2); font: 18px/1 var(--display); border-radius: 2px; align-self: center; }
 .hchip.on { background: var(--p); border-color: var(--p); color: var(--bg); text-shadow: none; }
