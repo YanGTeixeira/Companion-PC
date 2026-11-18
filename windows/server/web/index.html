@@ -158,6 +158,14 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px;
 input[type=range]::-moz-range-track { height: 6px; background: var(--p3); }
 input[type=range]::-moz-range-thumb { width: 14px; height: 26px; background: var(--p); border: 0; border-radius: 1px; }
 input[type=range]:disabled { opacity: .35; }
+/* slider vertical (fader): 0 embaixo, 100 em cima */
+@media (orientation: landscape) and (max-height: 560px) {
+  #mx-list input[type=range], .media > .vol input[type=range] { writing-mode: vertical-lr; direction: rtl; }
+  #mx-list input[type=range]::-webkit-slider-runnable-track, .media > .vol input[type=range]::-webkit-slider-runnable-track {
+    width: 6px; height: 100%; background: repeating-linear-gradient(0deg, var(--p3) 0 5px, transparent 5px 7px); }
+  #mx-list input[type=range]::-webkit-slider-thumb, .media > .vol input[type=range]::-webkit-slider-thumb {
+    width: 26px; height: 14px; margin-top: 0; margin-left: -10px; }
+}
 
 /* ------------------------------------------------------------------ Status */
 .grid.dash { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -237,7 +245,7 @@ input[type=range]:disabled { opacity: .35; }
 .mxname { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mxmid input { width: 100%; height: 26px; display: block; }
 .peak { height: 4px; background: var(--p4); }
-.peak i { display: block; height: 100%; width: 0; background: var(--p2); transition: width .2s; }
+.peak i { display: block; height: 100%; width: var(--pk, 0); background: var(--p2); transition: width .2s, height .2s; }
 .mxmute { width: 42px; height: 36px; border: 1px solid var(--p3); font-size: 13px; border-radius: 2px; }
 .mxval { font: 20px/1 var(--display); text-align: right; }
 .mxrow.muted .mxmute { background: var(--p); color: var(--bg); text-shadow: none; }
@@ -382,7 +390,32 @@ input[type=range]:disabled { opacity: .35; }
     .week { height: 72px; }
     .lib { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
     /* Mixer: aplicativos em duas colunas */
-    .mixer { grid-template-columns: minmax(0, 1fr) minmax(0, 2.3fr); }
+    /* Mixer: cada app vira um canal com fader vertical, lado a lado */
+    .mixer { grid-template-columns: minmax(0, 1fr) minmax(0, 2.6fr); height: 100%; align-items: stretch; }
+    .mixer > .card:first-child { align-self: start; }
+    .mixer > .card { min-height: 0; display: flex; flex-direction: column; }
+    #mx-list { flex: 1; min-height: 0; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+    #mx-list .mxrow { flex: 0 0 84px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 4px 0;
+      border: 0; border-right: 1px dashed var(--p4); }
+    #mx-list .mxrow:last-child { border-right: 0; }
+    #mx-list .mxmid { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    #mx-list .mxname { width: 100%; text-align: center; font-size: 12.5px; order: -1; }
+    #mx-list .mxmid > input { flex: 1; min-height: 60px; height: auto; width: 32px; }
+    #mx-list .peak { display: none; }
+    #mx-list .mxval { order: -1; font-size: 18px; text-align: center; }
+    #mx-list .mxic { order: -2; }
+    #mx-list .mxmute { width: 100%; height: 32px; }
+    /* Tocando: volume numa coluna vertical à direita */
+    .media { grid-template-columns: auto minmax(0, 1fr) 52px; }
+    .media > .vol { grid-column: 3; grid-row: 1 / -1; align-self: stretch; flex-direction: column-reverse; gap: 6px; }
+    .media > .vol input { flex: 1; width: 32px; min-height: 80px; height: auto; }
+    .media > .vol .val { width: auto; text-align: center; font-size: 18px; }
+    /* Arquivos: três colunas estreitas, botões empilhados */
+    #t-send .cols { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+    #t-send .cols > div:first-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-content: start; }
+    #t-send .cols > div:first-child > h2 { grid-column: 1 / -1; margin-bottom: -2px; }
+    #t-send .cols > div:first-child > .card { margin-top: 0 !important; }
+    #t-send .brow { flex-direction: column; }
     /* Ajustes: três colunas (Alertas | Visual | Este aparelho) */
     #t-sys .cols { display: block; columns: 2; column-gap: 14px; }
     #t-sys .cols .card { break-inside: avoid; }
@@ -401,8 +434,6 @@ input[type=range]:disabled { opacity: .35; }
     .c-sys { overflow: hidden; }
   }
   @container (min-width: 760px) {
-    #mx-list { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 18px; }
-    #mx-list .mxrow:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
     #t-sys .cols { columns: 3; }
   }
 }
@@ -424,12 +455,14 @@ input[type=range]:disabled { opacity: .35; }
 }
 /* Energia: botões à esquerda, timer à direita (a aba é o próprio container, então vai por media query) */
 @media (orientation: landscape) and (max-height: 560px) and (min-width: 700px) {
-  #t-power.on { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 14px; align-content: start; }
+  #t-power.on { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: 14px; align-content: start; }
   #t-power > h2:first-child { grid-column: 1; grid-row: 1; }
   #t-power > .tiles { grid-column: 1; grid-row: 2; align-self: start; }
   #t-power > #tmr-sec { grid-column: 2; grid-row: 1 / span 2; }
   #tmr-sec > h2 { margin-top: 4px; }
   .tmr-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #t-power > .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #t-power .tile { min-height: 72px; }
 }
 /* chips do cabeçalho: microfone do PC e timer */
 .hchip { flex: none; padding: 3px 8px 2px; border: 1px solid var(--p3); color: var(--p2); font: 18px/1 var(--display); border-radius: 2px; align-self: center; }
@@ -1632,7 +1665,7 @@ function renderMixer() {
     if (mixDrag !== a.key) { row.querySelector("input").value = a.level; row.querySelector(".mxval").textContent = a.level + "%"; }
     row.querySelector(".mxmute").textContent = a.muted ? "MUDO" : "SOM";
     row.classList.toggle("muted", a.muted);
-    row.querySelector(".peak i").style.width = Math.min(100, Math.sqrt(a.peak) * 100) + "%";
+    row.querySelector(".peak i").style.setProperty("--pk", Math.min(100, Math.sqrt(a.peak) * 100) + "%");
   }
   [...list.children].forEach((r) => { if (r.dataset.key && !seen.has(r.dataset.key)) r.remove(); });
   if (!d.apps.length) list.innerHTML = '<div class="empty">Nenhum app tocando som agora</div>';
