@@ -870,7 +870,7 @@ function onMsg(m) {
       snd("on"); wasOnline = true;
       if (m.features?.notif) subNotif();
       libT = 0; if (vis("games")) loadGamesExtra();
-      $("conn-info").textContent = `${m.host} · servidor ${m.version} · ${location.host}`;
+      CONN = `${m.host} · servidor ${m.version} · ${location.host}`; showConn();
       break;
     case "res": {
       const p = pending.get(m.id); if (!p) return; pending.delete(m.id);
@@ -1940,6 +1940,10 @@ setInterval(() => {
   if (vis("games") && state.games?.game) renderGames();
 }, 1000);
 
+// tamanho da tela em Ajustes > Conexão (ajuda a acertar o layout de cada aparelho)
+let CONN = "";
+function showConn() { $("conn-info").textContent = [CONN, `tela ${innerWidth}×${innerHeight}`].filter(Boolean).join(" · "); }
+addEventListener("resize", showConn); showConn();
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
 // visual: cor do terminal e efeito de tubo
 prefs.theme = store.get("theme", "green"); prefs.crt = store.get("crt", true);
