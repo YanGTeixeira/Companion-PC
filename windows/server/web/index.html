@@ -339,6 +339,8 @@ input[type=range]:disabled { opacity: .35; }
 .toast { position: fixed; left: 50%; bottom: 76px; transform: translateX(-50%); z-index: 46; max-width: 90vw; padding: 9px 14px; font-size: 14px;
   background: var(--bg); border: 1px solid var(--p); box-shadow: 0 0 0 3px var(--bg); border-radius: 2px; }
 .toast.ok::before { content: "OK  "; } .toast.bad { border-color: var(--alert); color: var(--alert); } .toast.bad::before { content: "ERRO  "; }
+.voz-help { margin-top: 8px; white-space: normal; line-height: 1.45; }
+#voz-last.bad { color: var(--alert); }
 .toast.warn { background: var(--p); color: var(--bg); text-shadow: none; }
 
 /* ------------------------------------------------------------------ deitado / tablet: barra lateral */
@@ -756,6 +758,16 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <div class="set"><label>Memória cheia<small>Acima de <input class="num" id="al-ram-v" type="number" inputmode="numeric"> %</small></label><button class="switch" id="al-ram" aria-label="Memória cheia"></button></div>
           <div class="set"><label>Notificações do Android<small>Avisa com o app em segundo plano</small></label><button class="btn sm" id="al-notif">Ativar</button></div>
         </div>
+        <div id="voz-sec" class="hidden">
+          <h2>Voz</h2>
+          <div class="card">
+            <div class="set"><label>Comandos de voz<small id="voz-st">Diga "PC" e o comando</small></label><button class="switch" id="sw-voz" aria-label="Comandos de voz"></button></div>
+            <div class="set"><label>Microfone<small>Automático prefere o NVIDIA RTX Voice</small></label><select id="voz-dev" class="sel" aria-label="Microfone dos comandos de voz"><option value="">Automático</option></select></div>
+            <div class="set"><label>Responder falando<small>Voz do Windows; sem isso, só bipes</small></label><button class="switch" id="sw-voz-fala" aria-label="Responder falando"></button></div>
+            <div class="set"><label>Último comando<small id="voz-last">Nenhum ainda</small></label></div>
+            <div class="sub voz-help">PC, próxima música · pausa · toca · volume 30 · aumenta o volume · muta o som · que música é essa · abre o Spotify · joga (jogo) · muta o microfone · muta o Discord · troca a saída de som · tira um print · bloqueia · desliga em 1 hora · cancela o timer · ou o nome de um botão: PC, ausente. Dizer só "PC" e parar também funciona: ele bipa e espera o comando.</div>
+          </div>
+        </div>
       </div>
       <div>
         <h2>Visual</h2>
@@ -980,6 +992,7 @@ function onMsg(m) {
     case "gameart": state.gameart = { [m.id]: "data:image/jpeg;base64," + m.jpg }; renderGames(); break;
     case "event":
       if (m.kind === "notif") { snd("note"); notify(`${m.app}: ${m.title}`, m.body, "pcn-" + m.app); break; }
+      if (m.kind === "voice") { voiceEvent(m); break; }
       if (m.kind === "download" && prefs.alerts.download) notify("Download concluído", m.name + (m.size ? ` · ${fmtBytes(m.size)}` : ""), "dl");
       break;
   }
@@ -1092,7 +1105,7 @@ function renderStats() {
   $("fans").innerHTML = (sen?.fans || []).slice(0, 4).map((f) => `<div class="row"><span>${esc(f.name)}</span><span>${f.rpm} RPM</span></div>`).join("");
   $("al-cpu-note").classList.toggle("hidden", !!sen);
   checkAlerts(s);
-  renderMicTimer(s); deckFollow(s);
+  renderMicTimer(s); deckFollow(s); renderVoice(s.voice);
   $("ram").textContent = Math.round(s.ram_pct) + "%"; setBar("ram-bar", s.ram_pct);
   $("ram-txt").textContent = `${fmtBytes(s.ram_used)} / ${fmtBytes(s.ram_total)}`;
   const g = s.gpu;
@@ -1618,6 +1631,45 @@ document.querySelectorAll("[data-min]").forEach((b) => (b.onclick = () => {
 $("tmr-cancel").onclick = () => act("timer.cancel", {}, "Timer cancelado").then(() => {
   if (state.stats) { state.stats.timer = null; renderMicTimer(state.stats); }
 });
+
+// ---------------------------------------------------------------- comandos de voz ("PC, ...")
+const VOZ_ST = { off: "Desligado", loading: "Carregando o reconhecimento de fala…", listening: "Ouvindo", error: "Erro" };
+let vozDevs = false;
+function renderVoice(v) {
+  $("voz-sec").classList.toggle("hidden", !v || !v.available);
+  if (!v || !v.available) return;
+  $("sw-voz").classList.toggle("on", v.on);
+  $("sw-voz-fala").classList.toggle("on", v.speak);
+  let st = v.on ? VOZ_ST[v.status] || v.status : "Desligado";
+  if (v.on && v.status === "listening") st = `Ouvindo: ${v.device}` + (v.fallback ? " (o microfone principal está no mudo)" : "") + ` · diga "PC" e o comando`;
+  if (v.on && v.status === "error") st = "Erro: " + v.error;
+  $("voz-st").textContent = st;
+  if (v.last) {
+    const el = $("voz-last");
+    el.textContent = `"${v.last.text}" > ${v.last.msg}`; el.classList.toggle("bad", !v.last.ok);
+  }
+  if (!vozDevs && vis("sys")) {
+    vozDevs = true;
+    send("voice.devices", {}, true).then((list) => {
+      const sel = $("voz-dev");
+      sel.innerHTML = `<option value="">Automático</option>` + (list || []).map((n) => `<option value="${esc(n)}">${esc(n + ((n.split("(").length > n.split(")").length) ? ")" : ""))}</option>`).join("");
+      sel.value = v.pick && (list || []).some((n) => n === v.pick) ? v.pick : "";
+    }).catch(() => { vozDevs = false; });
+  }
+}
+function voiceEvent(m) {
+  if (m.phase === "wake") { toast("PC ouvindo... diga o comando", "warn"); return; }
+  if (state.stats?.voice) { state.stats.voice.last = { text: m.text, ok: m.ok, msg: m.msg }; renderVoice(state.stats.voice); }
+  toast(`Voz: ${m.msg}`, m.ok ? "ok" : "bad");
+}
+async function voiceSet(p) {
+  buzz(8);
+  try { const r = await send("voice.set", p); if (state.stats) { state.stats.voice = r; renderVoice(r); } }
+  catch (e) { if (e.message !== "offline") toast(e.message, "bad"); }
+}
+$("sw-voz").onclick = () => voiceSet({ on: !$("sw-voz").classList.contains("on") });
+$("sw-voz-fala").onclick = () => voiceSet({ speak: !$("sw-voz-fala").classList.contains("on") });
+$("voz-dev").onchange = () => voiceSet({ device: $("voz-dev").value });
 
 // ---------------------------------------------------------------- celular parado: passa as telas / relógio
 prefs.dock = store.get("dock", 2);                 // minutos sem tocar

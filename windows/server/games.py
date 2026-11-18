@@ -344,6 +344,15 @@ class GameMonitor:
         out.sort(key=lambda g: (g["ago"] is None, g["ago"] or 0, g["name"].lower()))
         return out
 
+    def launchable(self):
+        """[(id, nome)] dos jogos que dá para abrir (para os comandos de voz)."""
+        out, seen = [], set()
+        for _root, info in self.catalog.roots:
+            if info.get("launch") and info["name"] not in seen:
+                seen.add(info["name"])
+                out.append((self._gid(info), info["name"]))
+        return out
+
     def launch(self, gid):
         for _root, info in self.catalog.roots:
             if self._gid(info) == gid and info.get("launch"):

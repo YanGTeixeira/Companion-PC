@@ -32,9 +32,10 @@ from websockets.exceptions import ConnectionClosed
 import extras
 import games
 import pc_info
+import voice
 import watchers
 
-VERSION = "1.6"
+VERSION = "1.7"
 BASE = Path(__file__).resolve().parent
 CFG_PATH = BASE / "config.json"
 LOG_PATH = BASE / "companion-server.log"
@@ -500,6 +501,8 @@ ASYNC_ACTIONS = {
     "games.history": lambda p: asyncio.to_thread(MON.summary),
     "games.launch": lambda p: asyncio.to_thread(MON.launch, str(p.get("id"))),
     "notif.sub": lambda p: notif_sub(p),
+    "voice.set": lambda p: asyncio.to_thread(VOICE.set, p),
+    "voice.devices": lambda p: asyncio.to_thread(VOICE.devices),
 }
 
 
@@ -680,7 +683,7 @@ async def session(ws, peer, kind):
         "features": {"media": pc_info.HAS_MEDIA, "volume": pc_info.HAS_VOLUME, "mixer": pc_info.HAS_VOLUME,
                      "screen": True, "clipboard": True, "files": True, "deck": True,
                      "mic": pc_info.HAS_VOLUME, "timer": True, "deck_auto": True, "macro": True,
-                     "library": True, "ping": True, "notif": True, "fps": True},
+                     "library": True, "ping": True, "notif": True, "fps": True, "voice": VOICE.available},
     }))
     clients.add(ws)
     client_kind[ws] = kind
@@ -732,7 +735,7 @@ async def session(ws, peer, kind):
 sent_art: dict = {}
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
 QUIET_ACTIONS = {"games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
-                 "screen.shot", "mixer.get", "deck.get"}
+                 "screen.shot", "mixer.get", "deck.get", "voice.devices"}
 
 
 async def now_payload():
@@ -772,6 +775,7 @@ async def stats_loop(stats: Stats):
                 data["timer"] = TIMER.state()
                 data["ping"] = PING.state()
                 data["fps"] = FPS.state(getattr(stats, "fg_pid", 0))
+                data["voice"] = VOICE.state()
                 msg = json.dumps({"t": "stats", "d": data}, ensure_ascii=False)
                 for ws in list(clients):
                     try:
@@ -785,6 +789,82 @@ async def stats_loop(stats: Stats):
 
 MON = games.GameMonitor(CFG, BASE)
 sent_gameart: dict = {}
+
+
+# --------------------------------------------------------------------------
+# Comandos de voz (voice.py): "PC, próxima música"
+# --------------------------------------------------------------------------
+def voice_save_cfg(vcfg):
+    CFG["voice"] = vcfg
+    try:
+        cur = json.loads(CFG_PATH.read_text(encoding="utf-8")) if CFG_PATH.exists() else {}
+        cur["voice"] = vcfg
+        CFG_PATH.write_text(json.dumps(cur, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        log.exception("salvar config de voz")
+
+
+_voice_games = [0.0, []]
+
+
+def voice_catalog():
+    if time.monotonic() - _voice_games[0] > 60:
+        try:
+            _voice_games[:] = [time.monotonic(), MON.launchable()]
+        except Exception:  # noqa: BLE001
+            log.exception("voz: catálogo de jogos")
+    deck = []
+    try:
+        for pi, page in enumerate(DECK.get().get("pages", [])):
+            for bi, b in enumerate(page.get("buttons", [])):
+                if b and b.get("label") and not b.get("confirm"):
+                    deck.append((pi, bi, b["label"]))
+    except Exception:  # noqa: BLE001
+        log.exception("voz: deck")
+    return voice.Catalog([(s["id"], s["name"]) for s in CFG["shortcuts"]], _voice_games[1], deck)
+
+
+async def voice_run(it):
+    a, p = it["action"], dict(it.get("p") or {})
+    if a in ("media.pause", "media.play", "media.what"):
+        info = await pc_info.MEDIA.info()
+        if a == "media.what":
+            if not info or not info.get("title"):
+                return "Nada tocando agora"
+            return f"{info['title']}" + (f", de {info['artist']}" if info.get("artist") else "")
+        playing = bool(info and info.get("status") == "playing")
+        if playing == (a == "media.play"):
+            return "Já está tocando" if playing else "Já está pausado"
+        a = "media.play_pause"
+    elif a == "deck.press":
+        await deck_press(p)
+        return it.get("say")
+    fn = ACTIONS.get(a) or ASYNC_ACTIONS.get(a)
+    if not fn:
+        raise ValueError(f"ação desconhecida: {a}")
+    res = fn(p)
+    if asyncio.iscoroutine(res):
+        res = await res
+    if a == "games.launch" and isinstance(res, str):
+        return f"Abrindo {res}"
+    if a in ("mic.set",) and isinstance(res, dict) and "muted" in res:
+        return "Microfone no mudo" if res["muted"] else "Microfone ligado"
+    return it.get("say")
+
+
+async def voice_event(ev):
+    if ev.get("phase") == "done":
+        log.info("voz: %s", ev.get("msg"))
+    msg = json.dumps(ev, ensure_ascii=False)
+    for ws in list(clients):
+        try:
+            await ws.send(msg)
+        except ConnectionClosed:
+            clients.discard(ws)
+
+
+VOICE = voice.Voice(CFG.get("voice"), BASE, voice_save_cfg, voice_catalog, voice_run, voice_event,
+                    mic_fn=lambda: pc_info.mic_get())
 
 
 async def send_games(ws, state):
@@ -1037,6 +1117,7 @@ async def main():
     asyncio.create_task(adb_loop())
     asyncio.create_task(downloads_loop())
     asyncio.create_task(web_watch())
+    VOICE.start(asyncio.get_running_loop())
     await web_main()
 
 

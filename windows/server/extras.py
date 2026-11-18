@@ -37,6 +37,7 @@ DECK_ACTIONS = {
     "power.monitor_off": ("Desligar monitor", "power", {"action": "monitor_off"}),
     "mic.toggle": ("Microfone do PC: mudo", "mic.set", {"muted": "toggle"}),
     "timer.cancel": ("Cancelar timer de energia", "timer.cancel", {}),
+    "voice.toggle": ("Comandos de voz: liga/desliga", "voice.set", {"on": "toggle"}),
 }
 
 
