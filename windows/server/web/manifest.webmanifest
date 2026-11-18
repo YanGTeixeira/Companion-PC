@@ -1,6 +1,6 @@
 {
-  "name": "PC Companion",
-  "short_name": "PC Companion",
+  "name": "Companion PC",
+  "short_name": "Companion PC",
   "description": "Painel, mídia, mixer, mouse/teclado, tela e arquivos do PC no celular",
   "start_url": "/",
   "scope": "/",

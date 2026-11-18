@@ -25,8 +25,8 @@ kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
 kernel32.SetEvent.argtypes = [wintypes.HANDLE]
 kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
 
-MUTEX_NAME = "Local\\R36SCompanionServer"
-SHOW_EVENT = "Local\\R36SCompanionShowPanel"
+MUTEX_NAME = "Local\\CompanionPCServer"
+SHOW_EVENT = "Local\\CompanionPCShowPanel"
 ERROR_ALREADY_EXISTS = 183
 EVENT_MODIFY_STATE = 0x0002
 
@@ -154,7 +154,7 @@ class TrayApp:
                     if key != self._last_state:
                         self._last_state = key
                         self.icon.icon = make_icon(COLORS[st["state"]])
-                        self.icon.title = f"R36S PC Companion – {st['text']}"[:127]
+                        self.icon.title = f"Companion PC – {st['text']}"[:127]
             except Exception:  # noqa: BLE001
                 log.exception("tray status")
             time.sleep(1.5)
@@ -173,9 +173,9 @@ class TrayApp:
 
         st = self.status_fn()
         self.icon = pystray.Icon(
-            "r36s-companion", make_icon(COLORS[st["state"]]), "R36S PC Companion",
+            "companion-pc", make_icon(COLORS[st["state"]]), "Companion PC",
             menu=Menu(
-                Item(lambda _: f"R36S PC Companion {self.version}", None, enabled=False),
+                Item(lambda _: f"Companion PC {self.version}", None, enabled=False),
                 Item(lambda _: self.status_fn()["text"], None, enabled=False),
                 Menu.SEPARATOR,
                 Item("Abrir painel", self.open_panel, default=True),
@@ -208,7 +208,7 @@ class Panel:
         from tkinter import font as tkfont
 
         root = self.root = tk.Tk()
-        root.title("R36S PC Companion")
+        root.title("Companion PC")
         root.configure(bg=self.BG)
         root.geometry("600x620")
         root.minsize(460, 340)
@@ -226,7 +226,7 @@ class Panel:
 
         head = tk.Frame(root, bg=self.BG)
         head.pack(fill="x", padx=16, pady=(14, 8))
-        tk.Label(head, text="R36S PC Companion", font=f_title, fg=self.TEXT, bg=self.BG).pack(side="left")
+        tk.Label(head, text="Companion PC", font=f_title, fg=self.TEXT, bg=self.BG).pack(side="left")
         tk.Label(head, text=f"v{self.app.version}", font=f, fg=self.DIM, bg=self.BG).pack(side="left", padx=8, pady=(4, 0))
 
         card = tk.Frame(root, bg=self.CARD)

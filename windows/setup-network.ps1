@@ -1,14 +1,14 @@
-﻿# R36S PC Companion - prepara o PC para o app do celular (Android).
+﻿# Companion PC - libera o acesso pela rede local (e, opcional, pelo cabo USB do Android).
 # Rode UMA vez (duplo clique > Executar com o PowerShell, ou no terminal):
-#   powershell -ExecutionPolicy Bypass -File setup-android.ps1
+#   powershell -ExecutionPolicy Bypass -File setup-network.ps1
 #  1) libera a porta 8770 no Firewall (só redes Privadas) -> Wi-Fi   [pede admin (UAC)]
 #  2) instala o adb (Android Platform Tools) -> cabo USB              [sem admin]
 # O winget NÃO pode rodar como Administrador (ele recusa), por isso só o
 # firewall é elevado.
 param([int]$Port = 8770)
 
-$name = "R36S PC Companion - celular ($Port)"
-if (Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue) {
+$name = "Companion PC ($Port)"
+if (Get-NetFirewallRule -DisplayName $name, "R36S PC Companion - celular ($Port)" -ErrorAction SilentlyContinue) {
     Write-Host "Firewall: regra da porta $Port já existe."
 } else {
     Write-Host "Firewall: liberando a porta $Port (o Windows vai pedir permissão)..."

@@ -324,7 +324,7 @@ class GameMonitor:
 
     def _sessions(self, now):
         cur = [{"name": self.current["name"], "start": self.current["start"], "end": now}] if self.current else []
-        return [s for s in self.history if s.get("store") != "PC" or s["name"] != "Jogo Teste R36S"] + cur
+        return self.history + cur
 
     def library(self):
         """Jogos instalados que dá para abrir, os jogados por último primeiro."""

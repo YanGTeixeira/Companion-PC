@@ -1,37 +1,29 @@
-# R36S PC Companion
+# Companion PC
 
-Transforma o R36S (dArkOS) em uma extensão do PC com Windows 11: painel do
-sistema (CPU, memória, GPU, discos, rede), o que está tocando (capa, faixa,
-progresso, volume), atalhos, mouse/teclado pelo controle e ações de energia —
-tudo via cabo USB, numa interface 640×480. O R36S liga direto no Companion;
-ao sair (SELECT+START) abre o EmulationStation.
+Painel de dados pessoais e atalhos do PC (Windows 11), acessado pelo navegador
+de qualquer aparelho da rede local — celular, tablet ou outro computador.
+Mostra o sistema (CPU, memória, GPU, discos, rede), o que está tocando, jogos e
+tempo jogado, notificações, e controla o PC: botões estilo Stream Deck, mouse e
+teclado, tela ao vivo, arquivos, área de transferência e energia.
 
-```
-R36S (cliente pygame)  ──USB RNDIS──  Windows 11 (servidor Python)
-10.55.0.2                              10.55.0.1:8765  (WebSocket + token)
-```
-
-## Celular (Android)
-
-O mesmo servidor também serve um **app web** para o celular (porta 8770). Não
-precisa instalar APK: abra no Chrome e use "Adicionar à tela inicial". Funciona
-em pé e deitado (deitado as abas viram uma barra lateral).
+Não precisa instalar nada no aparelho: abra no navegador e, no celular, use
+"Adicionar à tela inicial" (é um PWA). Funciona em pé e deitado.
 
 ```
-Celular (Chrome/PWA) ──cabo USB (adb reverse)──  http://localhost:8770
-                     ──Wi-Fi (mesma rede)──────  http://<IP do PC>:8770
+Aparelho (navegador/PWA) ──rede local (Wi-Fi/cabo)──  http://<IP do PC>:8770
+Celular Android          ──cabo USB (adb reverse)───  http://localhost:8770
 ```
 
-**Preparar o PC (uma vez):** `windows\setup-android.ps1`
-(libera a porta 8770 no firewall em redes Privadas e instala o adb).
+**Preparar o PC (uma vez):** `windows\setup-network.ps1`
+(libera a porta 8770 no firewall em redes Privadas e instala o adb, usado só no modo cabo).
 
-- **Wi-Fi:** abra o painel (ícone na bandeja) e escaneie o QR code com a câmera
+- **Rede local:** abra o painel (ícone na bandeja) e escaneie o QR code com a câmera
   do celular — o link já leva o token. Ou abra `http://<IP do PC>:8770` e cole o token.
-- **Cabo:** no celular ative *Opções do desenvolvedor → Depuração USB*, ligue no
+- **Cabo (opcional, Android):** no celular ative *Opções do desenvolvedor → Depuração USB*, ligue no
   PC e aceite a permissão. O servidor faz o `adb reverse` sozinho; abra
   `http://localhost:8770` no Chrome (o botão "Abrir app no celular (cabo)" do
   painel abre já com o token). Pelo cabo dá para instalar como app de verdade;
-  "manter a tela ligada", notificações e "Compartilhar com PC Companion" só
+  "manter a tela ligada", notificações e "Compartilhar com Companion PC" só
   funcionam assim.
 
 ### Abas
@@ -46,9 +38,9 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
 | **Rádio** | *Tocando*: capa, faixa, progresso (arraste para pular), volume e saída de áudio (toque para alternar). *Mixer*: volume e mudo por aplicativo e escolha da saída (fone, caixa, monitor). |
 | **Controle** | *Mouse e teclado*: touchpad (toque = clique; 2 dedos: toque = direito, arrastar = rolar; toque duplo e arraste = segurar), teclas especiais e o teclado do Android digitando no PC. *Tela do PC*: a tela ao vivo; toque = clique, segurar = botão direito, pinça = zoom, faixa da direita = rolar. |
 | **Botões** | Páginas de botões estilo Stream Deck. **Editar** cria/edita botões (atalho de teclado, texto, ação pronta ou programa do config.json), com ícone, cor e confirmação. Ficam salvos em `deck.json` no PC. |
-| **PC** | *Arquivos*: texto/link para a área de transferência do PC (ou já colar), fotos e arquivos para `Downloads\PC Companion`, e "Pegar o que está copiado no PC". *Energia*: bloquear, monitor, suspender, reiniciar, desligar. *Ajustes*: alertas (download concluído, GPU/CPU quente, memória cheia), cor do terminal e ajustes do aparelho. |
+| **PC** | *Arquivos*: texto/link para a área de transferência do PC (ou já colar), fotos e arquivos para `Downloads\Companion PC`, e "Pegar o que está copiado no PC". *Energia*: bloquear, monitor, suspender, reiniciar, desligar. *Ajustes*: alertas (download concluído, GPU/CPU quente, memória cheia), cor do terminal e ajustes do aparelho. |
 
-**Extras do app do celular**
+**Extras**
 
 - **Botões que seguem o programa:** cada página pode ter uma lista de programas (`code.exe`,
   `spotify.exe`...; `@jogo` = qualquer jogo detectado). Quando um deles entra em foco no PC, a página
@@ -84,91 +76,52 @@ o servidor lê de `http://127.0.0.1:8085` e mostra no Painel. Neste PC a versão
 ventoinha, consumo) vem do `nvidia-smi` e funciona sem nada extra.
 
 Para aceitar só o cabo, use `"web": {"host": "127.0.0.1"}` no `config.json`;
-para desligar, `"web": {"enabled": false}`. Pastas: `"upload_dir"` (onde chegam
+para mudar a porta, `"web": {"port": 8770}`. Pastas: `"upload_dir"` (onde chegam
 os arquivos do celular) e `"downloads_dir"` (a pasta vigiada para o alerta de download).
 
 ## Estrutura
 
 | Caminho | O que é |
 |---|---|
-| `r36s/app/companion.py` | App do R36S (vai em `/roms/ports/pc-companion/`) |
-| `r36s/PC Companion.sh` | Lançador do menu Ports |
-| `r36s/run-companion.sh` | Garante a rede USB e abre o app (`/opt/r36s-companion/`) |
-| `r36s/boot-companion.sh` + `emulationstation-companion.conf` | Abre o app no boot, antes do EmulationStation |
-| `r36s/companion-usbnet.sh` | Liga a rede USB (RNDIS por padrão) |
-| `r36s/r36s-companion-usbnet.service` | Liga a rede USB no boot |
-| `r36s/companion-ssh.sh` | Ativa SSH e autoriza a chave do PC |
-| `r36s/Companion-Diag.sh` | Diagnóstico do USB gadget |
-| `windows/server/companion_server.py` | Servidor no Windows |
-| `windows/server/tray.py` | Ícone na bandeja + painel de status (sem janela de console) |
-| `windows/server/web/` | App do celular (HTML/JS, PWA) |
-| `windows/server/extras.py` | Deck, área de transferência, arquivos, tela do PC, vigia de downloads |
-| `windows/setup-android.ps1` | Firewall da porta 8770 + adb (uma vez; pede admin só para o firewall) |
+| `windows/server/companion_server.py` | Servidor (HTTP + WebSocket na porta 8770) |
+| `windows/server/web/` | App web (HTML/JS, PWA) |
+| `windows/server/tray.py` | Ícone na bandeja + painel de status com QR code |
 | `windows/server/pc_info.py` | Mídia tocando (GSMTC), volume, mixer e saída de áudio (pycaw), GPU (nvidia-smi), sensores (LHM) |
+| `windows/server/extras.py` | Deck, área de transferência, arquivos, tela do PC, vigia de downloads |
+| `windows/server/games.py` | Jogo aberto, biblioteca (Steam/Epic/GOG) e histórico de horas |
+| `windows/server/watchers.py` | Ping, notificações do Windows, FPS (PresentMon) |
 | `windows/install-server.ps1` | Instala dependências e inicia o servidor com o Windows |
-| `windows/setup-usbnet.ps1` | Define o IP 10.55.0.1 no adaptador USB (Admin) |
+| `windows/setup-network.ps1` | Firewall da porta 8770 + adb (uma vez; pede admin só para o firewall) |
 
 ## Instalação
 
-**Windows**
 1. `powershell -ExecutionPolicy Bypass -File windows\install-server.ps1`
-2. Uma vez, como Administrador, com o R36S conectado: `windows\setup-usbnet.ps1`
-3. O token fica em `%USERPROFILE%\r36s-companion\server\config.json`.
+2. Uma vez: `windows\setup-network.ps1`
+3. O token fica em `%USERPROFILE%\companion-pc\server\config.json`
+   (quem tinha a instalação antiga em `r36s-companion` tem o token, deck e histórico migrados).
 
 O servidor roda em segundo plano (pythonw), só com um ícone na bandeja:
-verde = R36S conectado, amarelo = rede USB ok aguardando o app, cinza = desconectado.
-Duplo clique no ícone (ou abrir "R36S PC Companion" no Menu Iniciar) mostra o
-painel com status, jogo atual e log; o menu tem Reiniciar e Sair. Só roda uma
+verde = aparelho conectado, amarelo = aguardando conexão, cinza = porta indisponível.
+Duplo clique no ícone (ou abrir "Companion PC" no Menu Iniciar) mostra o
+painel com status, QR code, jogo atual e log; o menu tem Reiniciar e Sair. Só roda uma
 instância — abrir de novo apenas mostra o painel. Para depurar no terminal:
 `py -3 companion_server.py --console`.
 
-**R36S** (via `ssh r36s`)
-1. Copie `r36s/app/companion.py` para `/roms/ports/pc-companion/`
-   e `r36s/PC Companion.sh` para `/roms/ports/`.
-2. Crie `/roms/ports/pc-companion/config.json`:
-   `{"host": "10.55.0.1", "port": 8765, "token": "<token do Windows>"}`
-3. Instale `run-companion.sh` e `boot-companion.sh` em `/opt/r36s-companion/`
-   e `emulationstation-companion.conf` em
-   `/etc/systemd/system/emulationstation.service.d/companion.conf`
-   (`sudo systemctl daemon-reload`).
-4. No EmulationStation: Start → Game Settings → Update Gamelists.
-
-Para não abrir no boot: aba Sistema → "Iniciar no Companion", ou crie
-`~/.config/.NO_BOOT_COMPANION`.
-
-## Controles
-
-Aba **Tocando**: ←→ escolhe, A executa, Y play/pause, ↑↓ volume ±5%,
-X mudo, L2/R2 volta/avança 10 s.
-
-
-| Botão | Global |
-|---|---|
-| L1 / R1 | Aba anterior / próxima |
-| SELECT + START (segurar 1 s) | Sair |
-
-Na aba **Controle**: analógico esquerdo = mouse (R2 rápido, L2 preciso),
-analógico direito = rolagem, A = clique/arrastar, B = clique direito,
-L3 = clique do meio, X = Windows, Y = Alt+Tab, direcional = setas,
-R3 = espaço, START = Enter, SELECT = Esc.
-
 ## Segurança
 
-- O servidor do R36S só escuta em `10.55.0.1` (rede USB) e só aceita o IP `10.55.0.2`.
-- O app do celular escuta na porta 8770 (rede local + cabo) e exige o mesmo token.
+- O servidor escuta na porta 8770 (rede local + cabo) e exige o token do `config.json`.
   O tráfego no Wi-Fi não é criptografado: use em rede doméstica de confiança
   (o firewall só libera redes Privadas). Texto digitado ou copiado pelo celular não vai para o log.
 - Quem tem o token controla o PC (teclado, mouse, tela). Botões criados pelo
   celular só podem apertar teclas, digitar, usar ações prontas ou abrir programas
   já listados no `config.json` — caminhos novos de programas só pelo PC.
-- Arquivos do PC só ficam acessíveis ao celular quando você os copia e toca em
+- Arquivos do PC só ficam acessíveis ao aparelho quando você os copia e toca em
   "Pegar o que está copiado", por um link aleatório que expira em 15 min.
-- Exige o token do `config.json`.
 - Só executa ações de uma lista fechada (`ACTIONS` no servidor); programas
   só abrem se estiverem em `"shortcuts"` do `config.json`. Não há execução
   de comandos arbitrários.
 - Desligar/reiniciar usam atraso de 30 s (`shutdown_delay_s`) e podem ser
-  cancelados pela aba Sistema. `"allow_power": false` desativa a energia.
+  cancelados em **PC › Energia**. `"allow_power": false` desativa a energia.
 - Ao desconectar, o servidor solta Alt e o botão do mouse se estavam presos.
 
 ## Personalizar atalhos

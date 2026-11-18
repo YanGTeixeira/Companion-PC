@@ -1,8 +1,7 @@
-"""R36S PC Companion - servidor Windows.
+"""Companion PC - painel de dados pessoais e atalhos do PC, pela rede local.
 
-R36S: escuta somente no IP da rede USB (10.55.0.1).
-Celular (Android): serve o app web + WebSocket na porta "web" (8770) - pela
-rede local ou pelo cabo (adb reverse, feito automaticamente).
+Serve o app web (PWA) + WebSocket na porta "web" (8770) - acessível de qualquer
+aparelho da rede local ou pelo cabo USB do celular (adb reverse, automático).
 Exige token e executa apenas ações de uma lista fechada (ACTIONS). Atalhos de
 programas vêm do config.json.
 
@@ -42,15 +41,12 @@ LOG_PATH = BASE / "companion-server.log"
 WEB_DIR = BASE / "web"
 
 DEFAULT_CFG = {
-    "host": "10.55.0.1",
-    "port": 8765,
     "token": "",
-    "allowed_clients": ["10.55.0.2"],
     "allow_power": True,
     "shutdown_delay_s": 30,
     # App do celular. host "0.0.0.0" = rede local + cabo; "127.0.0.1" = só cabo (adb).
-    "web": {"enabled": True, "host": "0.0.0.0", "port": 8770, "adb_reverse": True, "adb_path": ""},
-    "upload_dir": "%USERPROFILE%\\Downloads\\PC Companion",  # arquivos enviados pelo celular
+    "web": {"host": "0.0.0.0", "port": 8770, "adb_reverse": True, "adb_path": ""},
+    "upload_dir": "%USERPROFILE%\\Downloads\\Companion PC",  # arquivos enviados pelo celular
     "downloads_dir": "%USERPROFILE%\\Downloads",               # avisa no celular quando um download termina
     # Teclas que o servidor aperta para o Discord. Configure as MESMAS como
     # atalhos globais no Discord (Configurações > Atalhos de teclado).
@@ -274,9 +270,9 @@ def power(action):
     elif action == "sleep":
         ctypes.windll.powrprof.SetSuspendState(0, 1, 0)
     elif action == "shutdown":
-        run("/s", "/t", delay, "/c", "Desligamento pedido pelo R36S")
+        run("/s", "/t", delay, "/c", "Desligamento pedido pelo Companion PC")
     elif action == "restart":
-        run("/r", "/t", delay, "/c", "Reinício pedido pelo R36S")
+        run("/r", "/t", delay, "/c", "Reinício pedido pelo Companion PC")
     elif action == "cancel":
         run("/a")
     else:
@@ -656,22 +652,11 @@ STATS_REF = [None]
 # WebSocket
 # --------------------------------------------------------------------------
 clients = set()
-client_kind: dict = {}  # ws -> "r36s" | "celular"
-
-
-async def handler(ws):
-    """Conexão do R36S (rede USB, IP na lista allowed_clients)."""
-    peer = ws.remote_address[0] if ws.remote_address else "?"
-    allowed = CFG.get("allowed_clients") or []
-    if allowed and peer not in allowed:
-        log.warning("recusado: IP %s fora da lista", peer)
-        await ws.close(4003, "ip")
-        return
-    await session(ws, peer, "r36s")
+client_kind: dict = {}  # ws -> "celular"
 
 
 async def web_handler(ws):
-    """Conexão do celular (rede local ou cabo via adb reverse): só o token."""
+    """Conexão de um aparelho (rede local ou cabo via adb reverse): só o token."""
     peer = ws.remote_address[0] if ws.remote_address else "?"
     await session(ws, "cabo USB" if peer in ("127.0.0.1", "::1") else peer, "celular")
 
@@ -853,7 +838,7 @@ async def now_loop():
         await asyncio.sleep(1)
 
 
-NET = {"present": False, "listening": False, "web": False, "adb": []}
+NET = {"web": False, "adb": []}
 
 
 def lan_ip():
@@ -880,19 +865,13 @@ def status():
     """Estado para o ícone da bandeja/painel."""
     kinds = [client_kind.get(ws) for ws in list(clients)]
     game = (MON.state.get("game") or {}).get("name")
-    parts = []
-    if "r36s" in kinds:
-        parts.append("R36S conectado")
-    if "celular" in kinds:
-        n = kinds.count("celular")
-        parts.append("celular conectado" if n == 1 else f"{n} celulares conectados")
+    n = kinds.count("celular")
+    parts = ["aparelho conectado" if n == 1 else f"{n} aparelhos conectados"] if n else []
     phone = {"web": NET["web"], "adb": list(NET["adb"]), "port": WEB["port"],
              "links": phone_links() if NET["web"] else {}}
     if parts:
         return {"state": "ok", "text": " + ".join(parts), "game": game, "phone": phone}
-    if NET["listening"]:
-        return {"state": "wait", "text": "Rede USB ok – aguardando o app no R36S", "game": game, "phone": phone}
-    text = "Aguardando R36S ou celular" if NET["web"] else "R36S desconectado (rede USB ausente)"
+    text = "Aguardando conexão na rede local" if NET["web"] else "Porta do app indisponível (veja o log)"
     return {"state": "wait" if NET["web"] else "off", "text": text, "game": game, "phone": phone}
 
 
@@ -951,7 +930,7 @@ def find_adb():
     cands = [WEB.get("adb_path") or "", "adb",
              os.path.expandvars(r"%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"),
              os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WinGet\Links\adb.exe"),
-             os.path.expandvars(r"%USERPROFILE%\r36s-companion\platform-tools\adb.exe")]
+             os.path.expandvars(r"%USERPROFILE%\companion-pc\platform-tools\adb.exe")]
     import glob
     import shutil
     cands += glob.glob(os.path.expandvars(
@@ -971,7 +950,7 @@ def adb_open_on_phone(serial=None):
     """Abre o app no celular conectado pelo cabo (já com o token)."""
     path = find_adb()
     if not path:
-        raise RuntimeError("adb não encontrado (rode windows\\setup-android.ps1)")
+        raise RuntimeError("adb não encontrado (rode windows\\setup-network.ps1)")
     serials = [serial] if serial else list(NET["adb"])
     if not serials:
         raise RuntimeError("nenhum celular com depuração USB conectado")
@@ -982,7 +961,7 @@ def adb_open_on_phone(serial=None):
 
 async def adb_loop():
     """Com o celular no cabo (depuração USB), mapeia localhost:8770 do celular para o PC."""
-    if not WEB["enabled"] or not WEB.get("adb_reverse", True):
+    if not WEB.get("adb_reverse", True):
         return
     port = int(os.environ.get("COMPANION_WEB_PORT", WEB["port"]))
     path, warned = None, False
@@ -1019,13 +998,8 @@ async def adb_loop():
         await asyncio.sleep(4)
 
 
-def host_ip_present(ip):
-    return any(a.address == ip for addrs in psutil.net_if_addrs().values() for a in addrs)
-
-
 async def main():
-    host, port = CFG["host"], int(os.environ.get("COMPANION_PORT", CFG["port"]))
-    log.info("R36S PC Companion %s - aguardando %s:%s", VERSION, host, port)
+    log.info("Companion PC %s", VERSION)
     pc_info.MEDIA = pc_info.Media()
     st = STATS_REF[0] = Stats()
     asyncio.create_task(stats_loop(st))
@@ -1036,32 +1010,9 @@ async def main():
     asyncio.create_task(FPS.loop(fps_wanted))
     asyncio.create_task(now_loop())
     asyncio.create_task(games_loop())
-    if WEB["enabled"]:
-        asyncio.create_task(web_main())
-        asyncio.create_task(adb_loop())
-        asyncio.create_task(downloads_loop())
-    waiting_logged = False
-    while True:
-        NET["present"] = host_ip_present(host)
-        if not NET["present"]:
-            if not waiting_logged:
-                log.info("IP %s ausente (R36S desconectado?) - aguardando...", host)
-                waiting_logged = True
-            await asyncio.sleep(3)
-            continue
-        waiting_logged = False
-        try:
-            async with serve(handler, host, port, ping_interval=5, ping_timeout=10) as server:
-                log.info("escutando em ws://%s:%s", host, port)
-                NET["listening"] = True
-                while host_ip_present(host):
-                    await asyncio.sleep(3)
-                NET["listening"] = False
-                log.info("IP %s sumiu - fechando servidor", host)
-                server.close()
-        except OSError as e:
-            log.warning("não consegui escutar em %s:%s: %s", host, port, e)
-            await asyncio.sleep(3)
+    asyncio.create_task(adb_loop())
+    asyncio.create_task(downloads_loop())
+    await web_main()
 
 
 def stop_server():

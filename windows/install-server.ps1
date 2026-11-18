@@ -1,12 +1,18 @@
-﻿# R36S PC Companion - instala o servidor no Windows e faz ele iniciar com o logon.
+﻿# Companion PC - instala o servidor no Windows e faz ele iniciar com o logon.
 # Uso (não precisa de Administrador):
 #   powershell -ExecutionPolicy Bypass -File install-server.ps1
 param([string]$Source = $PSScriptRoot)
 
-$Dest = Join-Path $env:USERPROFILE "r36s-companion\server"
+$Dest = Join-Path $env:USERPROFILE "companion-pc\server"
 New-Item -ItemType Directory -Force -Path $Dest | Out-Null
+# Migra token, deck e histórico da instalação antiga (r36s-companion), se existir
+$OldDir = Join-Path $env:USERPROFILE "r36s-companion\server"
+foreach ($f in "config.json", "deck.json", "games-history.json") {
+    $src = Join-Path $OldDir $f
+    if ((Test-Path $src) -and -not (Test-Path (Join-Path $Dest $f))) { Copy-Item $src $Dest; Write-Host "Migrado: $f" }
+}
 Copy-Item (Join-Path $Source "server\*.py") $Dest -Force
-# App do celular (servido pelo próprio servidor na porta 8770)
+# App web (servido pelo próprio servidor na porta 8770)
 New-Item -ItemType Directory -Force -Path (Join-Path $Dest "web") | Out-Null
 Copy-Item (Join-Path $Source "server\web\*") (Join-Path $Dest "web") -Recurse -Force
 
@@ -27,28 +33,26 @@ function New-Shortcut($lnk) {
     $s.TargetPath = $pyw
     $s.Arguments = "`"$script`""
     $s.WorkingDirectory = $Dest
-    $s.Description = "R36S PC Companion - servidor (ícone na bandeja)"
+    $s.Description = "Companion PC - servidor (ícone na bandeja)"
     $s.Save()
     Write-Host "Atalho: $lnk"
 }
+# Remove atalhos da versão antiga
+foreach ($dir in [Environment]::GetFolderPath("Startup"), [Environment]::GetFolderPath("Programs")) {
+    Remove-Item (Join-Path $dir "Companion PC.lnk") -ErrorAction SilentlyContinue
+}
 # Inicia junto com o Windows (sem janela, só o ícone na bandeja)
-New-Shortcut (Join-Path ([Environment]::GetFolderPath("Startup")) "R36S PC Companion.lnk")
+New-Shortcut (Join-Path ([Environment]::GetFolderPath("Startup")) "Companion PC.lnk")
 # Menu Iniciar: abrir pelo menu mostra o painel (ou inicia o servidor se estiver parado)
-New-Shortcut (Join-Path ([Environment]::GetFolderPath("Programs")) "R36S PC Companion.lnk")
+New-Shortcut (Join-Path ([Environment]::GetFolderPath("Programs")) "Companion PC.lnk")
 
 # Reinicia o servidor
 $old = Get-CimInstance Win32_Process |
     Where-Object { $_.ProcessId -ne $PID -and $_.Name -match '^(py|pythonw?)\.exe$' -and $_.CommandLine -match 'companion_server\.py' }
 $old | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Start-Sleep 1
-# Processos abertos como Administrador não mostram a linha de comando e não podem ser fechados daqui
-$busy = Get-NetTCPConnection -State Listen -LocalPort 8765 -ErrorAction SilentlyContinue
-if ($busy) {
-    Write-Warning "A porta 8765 ainda está em uso pelo processo $($busy.OwningProcess -join ', ') (provavelmente um servidor antigo aberto como Administrador)."
-    Write-Warning "Feche-o pelo Gerenciador de Tarefas ou rode, como Admin: Stop-Process -Id $($busy.OwningProcess -join ',')"
-}
 Start-Process -FilePath $pyw -ArgumentList "`"$script`"" -WorkingDirectory $Dest
 Start-Sleep 3
 Get-Content (Join-Path $Dest "companion-server.log") -Tail 3
-Write-Host "Token do R36S: veja 'token' em $Dest\config.json"
-Write-Host "Celular: abra o painel (ícone na bandeja) e escaneie o QR code. Uma vez, como Admin: windows\setup-android.ps1"
+Write-Host "Token: veja 'token' em $Dest\config.json"
+Write-Host "Abra o painel (ícone na bandeja) e escaneie o QR code. Uma vez: windows\setup-network.ps1"
