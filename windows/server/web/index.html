@@ -342,7 +342,18 @@ input[type=range]:disabled { opacity: .35; }
 .row .ell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
 #voz-dash-last.bad { color: var(--alert); }
 .hchip.voz-off { opacity: .45; }
-.voz-help { margin-top: 8px; white-space: normal; line-height: 1.45; }
+.inp { padding: 9px 10px; border: 1px solid var(--p3); background: var(--bg); color: var(--p); font: 15px var(--mono); border-radius: 2px; }
+.vtry { display: flex; gap: 8px; } .vtry .inp { flex: 1; min-width: 0; }
+#voz-try-out { margin-top: 8px; white-space: normal; }
+.vtips p { margin: 0 0 8px; font-size: 14px; line-height: 1.4; color: var(--p2); } .vtips p:last-child { margin: 0; } .vtips b { color: var(--p); font-weight: 400; }
+#voz-help { display: grid; gap: 10px; }
+.vgrp h3 { margin-bottom: 4px; }
+.vex { display: block; width: 100%; text-align: left; padding: 7px 0; border-bottom: 1px dashed var(--p4); }
+.vex:last-child { border: 0; }
+.vex b { display: block; font: 19px/1.1 var(--display); color: var(--p); font-weight: 400; }
+.vex small, .vchip small { display: block; color: var(--p3); font-size: 12.5px; margin-top: 2px; }
+.vchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.vchip { border: 1px solid var(--p3); padding: 6px 9px; text-align: left; font-size: 14px; color: var(--p); border-radius: 2px; max-width: 100%; }
 #voz-last.bad { color: var(--alert); }
 .toast.warn { background: var(--p); color: var(--bg); text-shadow: none; }
 
@@ -748,6 +759,43 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
     </div>
   </section>
 
+  <!-- PC > Voz: ajustes + ajuda dos comandos -->
+  <section class="tab" id="t-voz">
+    <div class="cols">
+      <div>
+          <div id="voz-sec" class="hidden">
+            <h2>Comandos de voz</h2>
+            <div class="card">
+              <div class="set"><label>Comandos de voz<small id="voz-st">Diga "PC" e o comando</small></label><button class="switch" id="sw-voz" aria-label="Comandos de voz"></button></div>
+              <div class="set"><label>Microfone<small>Automático usa o microfone padrão do Windows</small></label><select id="voz-dev" class="sel" aria-label="Microfone dos comandos de voz"><option value="">Automático (padrão do Windows)</option></select></div>
+              <div class="set"><label>Aviso na tela do PC<small>Caixinha no canto: "Ouvindo..." e o resultado</small></label><button class="switch" id="sw-voz-ov" aria-label="Aviso na tela do PC"></button></div>
+              <div class="set"><label>Responder falando<small>Voz do Windows; sem isso, só bipes</small></label><button class="switch" id="sw-voz-fala" aria-label="Responder falando"></button></div>
+              <div class="set"><label>Último comando<small id="voz-last">Nenhum ainda</small></label></div>
+            </div>
+          </div>
+        <div id="voz-na" class="card hidden"><div class="sub" style="white-space:normal">Os comandos de voz não estão disponíveis neste PC (faltam pacotes: rode o install-server.ps1 de novo).</div></div>
+        <h2>Testar</h2>
+        <div class="card">
+          <div class="sub" style="white-space:normal;margin-bottom:8px">Escreva como falaria (sem o "PC") ou toque num exemplo. Executa de verdade no PC.</div>
+          <div class="vtry"><input id="voz-try" class="inp" type="text" placeholder="ex.: próxima música" autocomplete="off" enterkeyhint="go"><button class="btn primary" id="voz-try-go">Executar</button></div>
+          <div class="sub" id="voz-try-out"></div>
+        </div>
+        <h2>Como falar</h2>
+        <div class="card vtips">
+          <p>Comece com <b>"PC"</b> e diga o comando na mesma frase: <b>"PC, próxima música"</b>.</p>
+          <p>Ou diga só <b>"PC"</b>, espere o bipe e fale o comando (tem 6 segundos).</p>
+          <p>Bipe agudo = feito. Bipe grave = não entendeu ou não deu. O resultado aparece no canto da tela do PC e aqui.</p>
+          <p>Só frases que <b>começam</b> com "PC" contam. "Meu PC travou" no meio da conversa é ignorado.</p>
+          <p>Desligar o PC na hora não existe por voz (só com tempo: "desliga em 10 minutos"), e botões que pedem confirmação não funcionam por voz.</p>
+        </div>
+      </div>
+      <div>
+        <h2>O que dá para falar</h2>
+        <div id="voz-help"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- PC > Ajustes -->
   <section class="tab" id="t-sys">
     <div class="cols">
@@ -761,17 +809,6 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <div class="set"><label>Notificações do PC<small id="pcn-note">WhatsApp, Discord, e-mail e outros avisos do Windows</small></label><button class="switch" id="sw-pcnotif" aria-label="Notificações do PC"></button></div>
           <div class="set"><label>Memória cheia<small>Acima de <input class="num" id="al-ram-v" type="number" inputmode="numeric"> %</small></label><button class="switch" id="al-ram" aria-label="Memória cheia"></button></div>
           <div class="set"><label>Notificações do Android<small>Avisa com o app em segundo plano</small></label><button class="btn sm" id="al-notif">Ativar</button></div>
-        </div>
-        <div id="voz-sec" class="hidden">
-          <h2>Voz</h2>
-          <div class="card">
-            <div class="set"><label>Comandos de voz<small id="voz-st">Diga "PC" e o comando</small></label><button class="switch" id="sw-voz" aria-label="Comandos de voz"></button></div>
-            <div class="set"><label>Microfone<small>Automático usa o microfone padrão do Windows</small></label><select id="voz-dev" class="sel" aria-label="Microfone dos comandos de voz"><option value="">Automático (padrão do Windows)</option></select></div>
-            <div class="set"><label>Aviso na tela do PC<small>Caixinha no canto: "Ouvindo..." e o resultado</small></label><button class="switch" id="sw-voz-ov" aria-label="Aviso na tela do PC"></button></div>
-            <div class="set"><label>Responder falando<small>Voz do Windows; sem isso, só bipes</small></label><button class="switch" id="sw-voz-fala" aria-label="Responder falando"></button></div>
-            <div class="set"><label>Último comando<small id="voz-last">Nenhum ainda</small></label></div>
-            <div class="sub voz-help">PC, próxima música · pausa · toca · volume 30 · aumenta o volume · muta o som · que música é essa · abre o Spotify · joga (jogo) · muta o microfone · muta o Discord · troca a saída de som · tira um print · bloqueia · desliga em 1 hora · cancela o timer · ou o nome de um botão: PC, ausente. Dizer só "PC" e parar também funciona: ele bipa e espera o comando.</div>
-          </div>
         </div>
       </div>
       <div>
@@ -983,6 +1020,7 @@ function onMsg(m) {
       snd("on"); wasOnline = true;
       if (m.features?.notif) subNotif();
       libT = 0; if (vis("games")) loadGamesExtra();
+      vozHelpT = 0; vozDevs = false; if (vis("voz")) loadVoiceHelp();
       CONN = `${m.host} · servidor ${m.version} · ${location.host}`; showConn();
       break;
     case "res": {
@@ -1032,10 +1070,10 @@ const SECTIONS = {
   radio: [["media", "Tocando"], ["mix", "Mixer"]],
   ctrl: [["mouse", "Mouse e teclado"], ["screen", "Tela do PC"]],
   deck: [["deck", "Botões"]],
-  pc: [["send", "Arquivos"], ["power", "Energia"], ["sys", "Ajustes"]],
+  pc: [["send", "Arquivos"], ["power", "Energia"], ["voz", "Voz"], ["sys", "Ajustes"]],
 };
 const SPLIT = { status: "minmax(0,1.7fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
-  ctrl: "minmax(0,1fr) minmax(0,1.7fr)", pc: "minmax(0,1.25fr) minmax(0,.75fr) minmax(0,1.2fr)" };
+  ctrl: "minmax(0,1fr) minmax(0,1.7fr)", pc: "minmax(0,1.1fr) minmax(0,.7fr) minmax(0,1.3fr) minmax(0,1.1fr)" };
 const VIEWS = Object.values(SECTIONS).flat().map(([n]) => n);
 const secOf = (v) => Object.keys(SECTIONS).find((s) => SECTIONS[s].some(([n]) => n === v)) || "status";
 const wideMQ = matchMedia("(min-width: 1000px) and (min-height: 600px) and (orientation: landscape)");
@@ -1061,6 +1099,7 @@ function showView(name, temp) {
   if (vis("screen")) requestAnimationFrame(() => { layoutScreen(); screenLoop(); });
   if (vis("media") || vis("mix")) { mixT = 0; renderMixer(); pollMixer(); }
   if (vis("games")) loadGamesExtra();
+  if (vis("voz")) setTimeout(loadVoiceHelp);  // no início, as funções da voz ainda nem foram declaradas
 }
 $("subtabs").onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) { buzz(8); showView(b.dataset.view); } };
 document.querySelectorAll("nav button").forEach((b) => (b.onclick = () => { buzz(8); showView(lastView[b.dataset.sec] || SECTIONS[b.dataset.sec][0][0]); }));
@@ -1644,6 +1683,7 @@ let vozFlash = 0;
 function renderVoice(v) {
   const ok = !!(v && v.available);
   $("voz-sec").classList.toggle("hidden", !ok);
+  $("voz-na").classList.toggle("hidden", ok || !v);
   $("voz-row").classList.toggle("hidden", !ok);
   for (const id of ["voz-chip", "voz-chip2"]) $(id).classList.toggle("hidden", !ok);
   if (!ok) return;
@@ -1668,7 +1708,7 @@ function renderVoice(v) {
     const el = $("voz-last");
     el.textContent = `"${v.last.text}" > ${v.last.msg}`; el.classList.toggle("bad", !v.last.ok);
   }
-  if (!vozDevs && vis("sys")) {
+  if (!vozDevs && vis("voz")) {
     vozDevs = true;
     send("voice.devices", {}, true).then((list) => {
       const sel = $("voz-dev");
@@ -1682,7 +1722,54 @@ function vozChip(text, ms) {
   for (const id of ["voz-chip", "voz-chip2"]) { const b = $(id); b.textContent = text; b.classList.add("on"); b.classList.remove("voz-off"); }
   setTimeout(() => { if (performance.now() >= vozFlash && state.stats) renderVoice(state.stats.voice); }, ms + 50);
 }
-$("voz-chip").onclick = $("voz-chip2").onclick = () => { buzz(8); showView("sys"); setTimeout(() => $("voz-sec").scrollIntoView({ block: "start" }), 60); };
+$("voz-chip").onclick = $("voz-chip2").onclick = () => { buzz(8); showView("voz"); };
+const VOZ_HELP = [
+  ["Música", [["próxima música", "pula para a próxima (também: pula, avança)"], ["volta", "faixa anterior"], ["pausa", "pausa o que está tocando"],
+    ["toca", "continua tocando"], ["que música é essa", "mostra o nome e o artista"]]],
+  ["Volume", [["volume 30", "põe o volume em 30%"], ["aumenta o volume", "+10 (ou \"aumenta 20\")"], ["abaixa o volume 20", "-20"],
+    ["volume no máximo", "100%"], ["muta o som", "liga/desliga o mudo do PC"]]],
+  ["Abrir programas e jogos", [["abre o Spotify", "qualquer atalho de \"Seus atalhos\""], ["abre o navegador", "também entende apelidos"],
+    ["joga Counter Strike", "abre um jogo da biblioteca"], ["abre o GTA", "siglas funcionam"]]],
+  ["Microfone e Discord", [["muta o microfone", "microfone do PC no mudo"], ["desmuta o microfone", "liga de novo"],
+    ["muta o Discord", "aperta o atalho de mudo do Discord"], ["ensurdece", "ensurdecer no Discord"]]],
+  ["Energia", [["desliga em 1 hora", "timer: desligar"], ["suspende em meia hora", "timer: suspender"], ["desliga a tela em 20 minutos", "timer: monitor"],
+    ["cancela o timer", "cancela qualquer timer"], ["bloqueia", "bloqueia o PC agora"], ["desliga a tela", "apaga o monitor agora"]]],
+  ["Outros", [["troca a saída de som", "fone / caixas"], ["tira um print", "salva em Imagens > Capturas de tela"]]],
+];
+let vozHelpT = 0;
+function vexBtn(say, what) { return `<button class="vex" data-say="${esc(say)}"><b>PC, ${esc(say)}</b>${what ? `<small>${esc(what)}</small>` : ""}</button>`; }
+function renderVoiceHelp(cat) {
+  let h = VOZ_HELP.map(([t, items]) => `<div class="card vgrp"><h3><span>${t}</span></h3>${items.map(([a, b]) => vexBtn(a, b)).join("")}</div>`).join("");
+  if (cat) {
+    if (cat.deck?.length) h += `<div class="card vgrp"><h3><span>Seus botões</span><span>PC, (nome)</span></h3><div class="vchips">${cat.deck.map((l) => `<button class="vchip" data-say="${esc(l)}">${esc(l)}</button>`).join("")}</div></div>`;
+    if (cat.apps?.length) h += `<div class="card vgrp"><h3><span>Seus atalhos</span><span>PC, abre o ...</span></h3><div class="vchips">${cat.apps.map((a) => `<button class="vchip" data-say="abre o ${esc(a.name)}">${esc(a.name)}${a.say.length ? `<small>ou: ${esc(a.say.join(", "))}</small>` : ""}</button>`).join("")}</div></div>`;
+    if (cat.games?.length) h += `<div class="card vgrp"><h3><span>Seus jogos</span><span>PC, joga ...</span></h3><div class="vchips">${cat.games.map((g) => `<button class="vchip" data-say="joga ${esc(g)}">${esc(g)}</button>`).join("")}</div></div>`;
+  }
+  $("voz-help").innerHTML = h;
+}
+function loadVoiceHelp() {
+  if (!$("voz-help").innerHTML) renderVoiceHelp(null);
+  if ((vozHelpT && performance.now() - vozHelpT < 60000) || !ws || ws.readyState !== 1) return;
+  vozHelpT = performance.now();
+  send("voice.help", {}, true).then(renderVoiceHelp).catch(() => { vozHelpT = 0; });
+}
+$("voz-help").onclick = (e) => {
+  const b = e.target.closest("[data-say]"); if (!b) return;
+  buzz(8); $("voz-try").value = b.dataset.say;
+  $("voz-try-out").textContent = "Toque em Executar para rodar no PC.";
+  $("voz-try").scrollIntoView({ block: "center", behavior: "smooth" });
+};
+async function voiceTry() {
+  const text = $("voz-try").value.trim(); if (!text) return;
+  buzz();
+  try {
+    const r = await send("voice.try", { text });
+    $("voz-try-out").textContent = "OK: " + r.msg; toast(r.msg, "ok");
+  } catch (e) { if (e.message !== "offline") { $("voz-try-out").textContent = "Não deu: " + e.message; toast(e.message, "bad"); } }
+}
+$("voz-try-go").onclick = voiceTry;
+$("voz-try").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); voiceTry(); } };
+
 function voiceEvent(m) {
   if (m.phase === "wake") { vozChip("OUVINDO", (m.secs || 6) * 1000); toast("PC ouvindo... diga o comando", "warn"); return; }
   vozChip(m.ok ? "VOZ OK" : "VOZ ?", 2500);

@@ -504,6 +504,8 @@ ASYNC_ACTIONS = {
     "notif.sub": lambda p: notif_sub(p),
     "voice.set": lambda p: asyncio.to_thread(VOICE.set, p),
     "voice.devices": lambda p: asyncio.to_thread(VOICE.devices),
+    "voice.help": lambda p: voice_help(),
+    "voice.try": lambda p: voice_try(p),
 }
 
 
@@ -736,7 +738,7 @@ async def session(ws, peer, kind):
 sent_art: dict = {}
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
 QUIET_ACTIONS = {"games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
-                 "screen.shot", "mixer.get", "deck.get", "voice.devices"}
+                 "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
 async def now_payload():
@@ -854,6 +856,29 @@ async def voice_run(it):
 
 
 OVERLAY = overlay.Overlay()
+
+
+async def voice_help():
+    """O que dá para falar: atalhos (com apelidos), jogos e botões do deck do usuário."""
+    cat = await asyncio.to_thread(voice_catalog)
+    apps = [{"name": name, "say": [a for a in voice.APP_ALIASES.get(sid, []) if a != voice.norm(name)][:4]}
+            for sid, name in cat.apps]
+    return {"apps": apps, "games": sorted({n for _g, n in cat.games}, key=str.lower),
+            "deck": list(dict.fromkeys(label for _p, _i, label in cat.deck))}
+
+
+async def voice_try(p):
+    """Comando escrito no app (como se tivesse falado "PC, ...")."""
+    text = str(p.get("text", ""))[:200]
+    cat = await asyncio.to_thread(voice_catalog)
+    _w, _cmd, it = voice.interpret(text, cat, following=True)
+    if not it:
+        raise ValueError("não entendi esse comando")
+    if it.get("error"):
+        raise ValueError(it["error"])
+    msg = await voice_run(it)
+    log.info("voz (escrito): \"%s\" -> %s", text, it["action"])
+    return {"msg": msg or it.get("say") or "Feito", "action": it["action"]}
 
 
 async def voice_event(ev):
