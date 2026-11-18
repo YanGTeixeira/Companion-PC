@@ -688,7 +688,7 @@ async def session(ws, peer, kind):
     sent_gameart[ws] = None
     await send_games(ws, MON.state)
     await push_now(only=ws)
-    log.info("conectado: %s (%s) tela %s", kind, peer, str(hello.get("screen", "?"))[:60])
+    log.info("conectado: %s (%s) tela %s", kind, peer, str(hello.get("screen", "?"))[:120])
     try:
         async for raw in ws:
             try:

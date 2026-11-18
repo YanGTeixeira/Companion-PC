@@ -43,7 +43,7 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--p); overscroll-behavior: none; }
 body {
-  font: 15px/1.4 var(--mono); height: 100dvh; overflow: hidden;
+  font: 15px/1.4 var(--mono); height: 100vh; height: 100dvh; overflow: hidden;
   display: grid; grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   grid-template-areas: "banner" "header" "subtabs" "main" "nav";
@@ -315,7 +315,7 @@ input[type=range]:disabled { opacity: .35; }
 
 /* ------------------------------------------------------------------ diálogos, boot, toast */
 .overlay { position: fixed; inset: 0; background: #000c; display: grid; place-items: center; z-index: 40; padding: 16px; }
-.dialog { background: var(--bg); border: 1px solid var(--p); padding: 18px; width: min(440px, 100%); max-height: calc(100dvh - 24px); overflow-y: auto; border-radius: 2px; box-shadow: 0 0 0 4px var(--bg), 0 0 0 5px var(--p3); }
+.dialog { background: var(--bg); border: 1px solid var(--p); padding: 18px; width: min(440px, 100%); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; border-radius: 2px; box-shadow: 0 0 0 4px var(--bg), 0 0 0 5px var(--p3); }
 .dialog.wide { width: min(540px, 100%); }
 .dialog h1 { font: 30px/1 var(--display); margin: 0 0 12px; font-weight: 400; }
 .dialog p { color: var(--p2); margin: 0 0 14px; font-size: 14px; }
@@ -391,6 +391,15 @@ input[type=range]:disabled { opacity: .35; }
     .game .card { padding: 8px 10px; }
     .week { height: 72px; }
     /* Mixer: aplicativos em duas colunas */
+    /* Tocando: capa | música e controles | volume e saída */
+    .media { grid-template-columns: auto minmax(0, 1.5fr) minmax(0, 1fr); grid-template-rows: 1fr auto auto auto 1fr; column-gap: 20px; }
+    .media .art { grid-row: 1 / -1; width: min(30cqw, calc(100cqh - 8px), 260px); }
+    .media > :nth-child(2) { grid-column: 2; grid-row: 2; } .media > :nth-child(3) { grid-column: 2; grid-row: 3; }
+    .media > .ctrls { grid-column: 2; grid-row: 4; }
+    .media > .vol { grid-column: 3; grid-row: 2 / 4; align-self: center; flex-wrap: wrap; border: 1px solid var(--p4); padding: 10px; }
+    .media > .vol::before { content: "Volume do PC"; flex-basis: 100%; color: var(--p2); font-size: 13px; }
+    .media > .outchip { grid-column: 3; grid-row: 4; justify-self: stretch; }
+    .outchip span { white-space: normal; text-align: left; }
     /* Mixer: apps em duas colunas, lado a lado */
     .mixer { grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); }
     #mx-list { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 18px; }
@@ -506,6 +515,50 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 </style>
+<script>
+// Navegadores sem container queries (Chrome < 105, ex.: Chrome 96 do Android antigo):
+// reescreve cada "@container (min-width/min-height)" como classes .cq-wN/.cq-hN nas abas
+// (.tab), ligadas por ResizeObserver, e as unidades cqw/cqh como variáveis --cqw/--cqh.
+(function cqShim() {
+  const force = /[?&]cqshim\b/.test(location.search);
+  if (CSS.supports("container-type: size") && !force) return;
+  const st = document.querySelector("style");
+  let css = st.textContent.replace(/\/\*[\s\S]*?\*\//g, "");
+  const ws = new Set(), hs = new Set();
+  const block = (str, open) => { let d = 0; for (let k = open; k < str.length; k++) { if (str[k] === "{") d++; else if (str[k] === "}" && !--d) return k; } return str.length - 1; };
+  const splitSel = (sel) => { const out = []; let d = 0, cur = ""; for (const c of sel) { if (c === "(") d++; if (c === ")") d--; if (c === "," && !d) { out.push(cur); cur = ""; } else cur += c; } out.push(cur); return out.map((x) => x.trim()).filter(Boolean); };
+  let res = "", pos = 0, m;
+  const re = /@container\s*([^{]*)\{/g;
+  while ((m = re.exec(css))) {
+    const open = m.index + m[0].length - 1, close = block(css, open);
+    const w = /min-width:\s*(\d+)px/.exec(m[1]), h = /min-height:\s*(\d+)px/.exec(m[1]);
+    const pre = (w ? ".cq-w" + w[1] : "") + (h ? ".cq-h" + h[1] : "");
+    const w0 = ":where(" + pre + ")";  // sem especificidade extra: a cascata fica igual à do navegador novo
+    if (w) ws.add(+w[1]); if (h) hs.add(+h[1]);
+    let body = css.slice(open + 1, close), conv = "", p = 0;
+    while (true) {
+      const b = body.indexOf("{", p); if (b < 0) break;
+      const e = block(body, b);
+      // "#t-sys .cols": a própria aba é o container, então a classe vai nela também
+      conv += splitSel(body.slice(p, b)).flatMap((x) => /^#t-[\w-]+\s/.test(x) ? [w0 + " " + x, x.replace(/^(#t-[\w-]+)/, "$1" + w0)] : [w0 + " " + x]).join(", ") + body.slice(b, e + 1) + "\n";
+      p = e + 1;
+    }
+    res += css.slice(pos, m.index) + conv; pos = close + 1; re.lastIndex = pos;
+  }
+  res += css.slice(pos);
+  res = res.replace(/(-?[\d.]+)cq(w|h)\b/g, "calc($1 * var(--cq$2, 1v$2))");
+  st.textContent = res;
+  const fit = (el, r) => {
+    for (const n of ws) el.classList.toggle("cq-w" + n, r.width >= n);
+    for (const n of hs) el.classList.toggle("cq-h" + n, r.height >= n);
+    el.style.setProperty("--cqw", r.width / 100 + "px"); el.style.setProperty("--cqh", r.height / 100 + "px");
+  };
+  const ro = new ResizeObserver((es) => es.forEach((e) => fit(e.target, e.contentRect)));
+  const go = () => document.querySelectorAll(".tab").forEach((t) => ro.observe(t));
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
+  window.CQ_SHIM = { ws: [...ws], hs: [...hs] };
+})();
+</script>
 </head>
 <body class="crt">
 <div id="boot" aria-hidden="true"><div id="boot-lines"></div></div>
@@ -873,7 +926,7 @@ function connect() {
   setDot("wait", "Conectando…");
   const sock = ws = new WebSocket(wsUrl());
   sock.onopen = () => sock.send(JSON.stringify({ t: "hello", token, client: "android",
-    screen: `${innerWidth}x${innerHeight} dpr${devicePixelRatio} ${matchMedia("(orientation: landscape)").matches ? "deitado" : "em pé"}` }));
+    screen: `${innerWidth}x${innerHeight} dpr${devicePixelRatio} ${matchMedia("(orientation: landscape)").matches ? "deitado" : "em pé"} cq=${CSS.supports("container-type: size")} ${(navigator.userAgent.match(/Chrome\/[\d.]+/) || [navigator.userAgent.slice(0, 40)])[0]}` }));
   sock.onmessage = (ev) => { if (sock === ws) onMsg(JSON.parse(ev.data)); };
   sock.onclose = (ev) => {
     if (sock !== ws) return;
