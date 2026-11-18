@@ -762,7 +762,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <h2>Voz</h2>
           <div class="card">
             <div class="set"><label>Comandos de voz<small id="voz-st">Diga "PC" e o comando</small></label><button class="switch" id="sw-voz" aria-label="Comandos de voz"></button></div>
-            <div class="set"><label>Microfone<small>Automático prefere o NVIDIA RTX Voice</small></label><select id="voz-dev" class="sel" aria-label="Microfone dos comandos de voz"><option value="">Automático</option></select></div>
+            <div class="set"><label>Microfone<small>Automático usa o microfone padrão do Windows</small></label><select id="voz-dev" class="sel" aria-label="Microfone dos comandos de voz"><option value="">Automático (padrão do Windows)</option></select></div>
             <div class="set"><label>Responder falando<small>Voz do Windows; sem isso, só bipes</small></label><button class="switch" id="sw-voz-fala" aria-label="Responder falando"></button></div>
             <div class="set"><label>Último comando<small id="voz-last">Nenhum ainda</small></label></div>
             <div class="sub voz-help">PC, próxima música · pausa · toca · volume 30 · aumenta o volume · muta o som · que música é essa · abre o Spotify · joga (jogo) · muta o microfone · muta o Discord · troca a saída de som · tira um print · bloqueia · desliga em 1 hora · cancela o timer · ou o nome de um botão: PC, ausente. Dizer só "PC" e parar também funciona: ele bipa e espera o comando.</div>
@@ -1652,7 +1652,7 @@ function renderVoice(v) {
     vozDevs = true;
     send("voice.devices", {}, true).then((list) => {
       const sel = $("voz-dev");
-      sel.innerHTML = `<option value="">Automático</option>` + (list || []).map((n) => `<option value="${esc(n)}">${esc(n + ((n.split("(").length > n.split(")").length) ? ")" : ""))}</option>`).join("");
+      sel.innerHTML = `<option value="">Automático (padrão do Windows)</option>` + (list || []).map((n) => `<option value="${esc(n)}">${esc(n + ((n.split("(").length > n.split(")").length) ? ")" : ""))}</option>`).join("");
       sel.value = v.pick && (list || []).some((n) => n === v.pick) ? v.pick : "";
     }).catch(() => { vozDevs = false; });
   }

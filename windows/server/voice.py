@@ -30,14 +30,13 @@ os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 
 DEFAULTS = {
     "enabled": True,
-    "device": "",            # parte do nome do microfone; "" = escolhe sozinho
+    "device": "",            # parte do nome do microfone; "" = o microfone padrão do Windows
     "speak": False,          # responder falando (voz do Windows)
     "beep": True,
     "model": "base",         # rápido (~0,5 s); "small" é mais preciso e ~3x mais lento
     "fallback_model": "small",  # usado de novo quando o rápido não entende o comando
     "follow_s": 6,           # depois de "PC" sozinho, quanto tempo espera o comando
 }
-PREFERRED_MICS = ("rtx voice", "broadcast", "fifine")
 
 # ==========================================================================
 # Texto: normalização, números e o interpretador de comandos
@@ -430,12 +429,15 @@ class Voice:
                 out.append(d["name"])
         return out
 
-    def _pick_device(self, avoid=None):
-        """avoid = nome do microfone mudo: escolhe outro físico (ex.: o da webcam)."""
+    def _pick_device(self, default=None, avoid=None):
+        """Microfone escolhido no app ou, no automático, o padrão do Windows (default).
+        avoid = nome do microfone mudo: escolhe outro físico (ex.: o da webcam)."""
         import sounddevice as sd
         names = self.devices()
         want = self.cfg["device"].lower()
         pick = next((n for n in names if want and want in n.lower()), None)
+        if not pick and default:  # o MME corta o nome em 31 letras
+            pick = next((n for n in names if n == default or default.startswith(n)), None)
         if avoid:
             key = re.sub(r"^.*\(|\).*$", "", avoid).lower().strip()[:20] or avoid.lower()
             others = [n for n in names if key[:20] not in n.lower()
@@ -443,11 +445,6 @@ class Voice:
             if not others:
                 return None, None
             pick = next((n for n in others if "webcam" in n.lower() or "cam" in n.lower()), others[0])
-        if not pick:
-            for pref in PREFERRED_MICS:
-                pick = next((n for n in names if pref in n.lower()), None)
-                if pick:
-                    break
         mme = next((i for i, h in enumerate(sd.query_hostapis()) if h["name"] == "MME"), None)
         for i, d in enumerate(sd.query_devices()):
             if d["name"] == pick and d["hostapi"] == mme:
@@ -497,21 +494,23 @@ class Voice:
         def cb(indata, _n, _t, _s):
             frames.put(indata[:, 0].copy())
 
-        main = (idx, self.device_name)
         while not stop.is_set():
-            muted = self._muted_name()
+            info = self._mic_info()
+            muted = info["name"] if info.get("muted") else None
             self.fallback = False
+            try:
+                idx, self.device_name = self._pick_device(default=info.get("name"))
+            except Exception:  # noqa: BLE001
+                pass
             if muted:
                 alt = self._pick_device(avoid=muted)
                 if alt[0] is not None:
                     (idx, self.device_name), self.fallback = alt, True
-            else:
-                idx, self.device_name = main
             try:
                 with sd.InputStream(device=idx, channels=1, samplerate=SR, blocksize=FRAME, dtype="float32", callback=cb):
                     self.status, self.error = "listening", ""
                     log.info("voz: ouvindo (%s)%s", self.device_name, " - o principal está no mudo" if self.fallback else "")
-                    self._listen(stop, frames, np, bool(muted))
+                    self._listen(stop, frames, np, (bool(muted), info.get("name")))
                     while not frames.empty():
                         frames.get_nowait()
             except Exception as e:  # noqa: BLE001  (microfone desconectado etc.)
@@ -520,31 +519,28 @@ class Voice:
                 log.warning("voz: microfone: %s", e)
                 self.status, self.error = "error", f"microfone: {str(e)[:150]}"
                 stop.wait(5)
-                try:
-                    main = self._pick_device()
-                except Exception:  # noqa: BLE001
-                    pass
         if self.status != "error":
             self.status = "off"
 
-    def _muted_name(self):
+    def _mic_info(self):
+        """Microfone padrão do Windows: {"name", "muted"} (vazio se não der para saber)."""
         if not self._mic or not self.loop:
-            return None
+            return {}
         try:
-            m = asyncio.run_coroutine_threadsafe(self._mic(), self.loop).result(timeout=5)
-            return m["name"] if m and m.get("muted") else None
+            return asyncio.run_coroutine_threadsafe(self._mic(), self.loop).result(timeout=5) or {}
         except Exception:  # noqa: BLE001
-            return None
+            return {}
 
-    def _listen(self, stop, frames, np, was_muted):
-        """Ouve até parar ou até o microfone principal mudar de mudo/ligado (aí troca o aparelho)."""
+    def _listen(self, stop, frames, np, sig):
+        """Ouve até parar, ou até o microfone padrão do Windows mudar ou ir para o mudo (aí reabre)."""
         floor, pre, buf = 0.003, [], None
         hits, silence, too_long = [], 0, False
         next_check = time.monotonic() + 2
         while not stop.is_set():
             if buf is None and time.monotonic() > next_check:
                 next_check = time.monotonic() + 2
-                if bool(self._muted_name()) != was_muted:
+                info = self._mic_info()
+                if info and (bool(info.get("muted")), info.get("name")) != sig:
                     return
             try:
                 f = frames.get(timeout=0.5)
