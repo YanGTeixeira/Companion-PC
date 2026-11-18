@@ -39,7 +39,7 @@ function New-Shortcut($lnk) {
 }
 # Remove atalhos da versão antiga
 foreach ($dir in [Environment]::GetFolderPath("Startup"), [Environment]::GetFolderPath("Programs")) {
-    Remove-Item (Join-Path $dir "Companion PC.lnk") -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $dir "R36S PC Companion.lnk") -ErrorAction SilentlyContinue
 }
 # Inicia junto com o Windows (sem janela, só o ícone na bandeja)
 New-Shortcut (Join-Path ([Environment]::GetFolderPath("Startup")) "Companion PC.lnk")
