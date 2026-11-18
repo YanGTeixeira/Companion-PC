@@ -339,6 +339,9 @@ input[type=range]:disabled { opacity: .35; }
 .toast { position: fixed; left: 50%; bottom: 76px; transform: translateX(-50%); z-index: 46; max-width: 90vw; padding: 9px 14px; font-size: 14px;
   background: var(--bg); border: 1px solid var(--p); box-shadow: 0 0 0 3px var(--bg); border-radius: 2px; }
 .toast.ok::before { content: "OK  "; } .toast.bad { border-color: var(--alert); color: var(--alert); } .toast.bad::before { content: "ERRO  "; }
+.row .ell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+#voz-dash-last.bad { color: var(--alert); }
+.hchip.voz-off { opacity: .45; }
 .voz-help { margin-top: 8px; white-space: normal; line-height: 1.45; }
 #voz-last.bad { color: var(--alert); }
 .toast.warn { background: var(--p); color: var(--bg); text-shadow: none; }
@@ -565,6 +568,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   <span class="via" id="via"></span>
   <span class="hchip hidden" id="fps-chip"></span>
   <button class="hchip hidden" id="tmr-chip" aria-label="Timer de energia"></button>
+  <button class="hchip hidden" id="voz-chip" aria-label="Comandos de voz">VOZ</button>
   <button class="hchip hidden" id="mic-chip" aria-label="Microfone do PC">MIC</button>
   <span class="clock" id="clock"></span>
 </header>
@@ -581,7 +585,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
       <div class="card c-win"><h3><span>Janela ativa</span></h3><div id="window" class="sub">–</div></div>
       <div class="card c-procs"><h3><span>Processos</span><span>CPU / memória</span></h3><div id="procs"></div></div>
       <div class="card c-disks"><h3><span>Discos</span></h3><div id="disks"></div></div>
-      <div class="card c-sys"><h3><span>Sistema</span></h3><div class="row"><span>Ligado há</span><span id="uptime">–</span></div><div class="row" id="bat-row"><span>Bateria</span><span id="bat">–</span></div><div class="row"><span>Windows</span><span id="os">–</span></div><div id="fans"></div></div>
+      <div class="card c-sys"><h3><span>Sistema</span></h3><div class="row"><span>Ligado há</span><span id="uptime">–</span></div><div class="row" id="bat-row"><span>Bateria</span><span id="bat">–</span></div><div class="row"><span>Windows</span><span id="os">–</span></div><div class="row hidden" id="voz-row"><span>Voz</span><span id="voz-dash" class="ell">–</span></div><div class="row hidden" id="voz-row2"><span>Último</span><span id="voz-dash-last" class="ell">–</span></div><div id="fans"></div></div>
     </div>
   </section>
 
@@ -798,7 +802,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 </main>
 
 <nav id="nav">
-  <div class="rail-top"><span id="dot2" class="dot"></span><span id="clock2"></span><button class="hchip hidden" id="mic-chip2" aria-label="Microfone do PC">MIC</button></div>
+  <div class="rail-top"><span id="dot2" class="dot"></span><span id="clock2"></span><button class="hchip hidden" id="voz-chip2" aria-label="Comandos de voz">VOZ</button><button class="hchip hidden" id="mic-chip2" aria-label="Microfone do PC">MIC</button></div>
   <button data-sec="status">Status</button>
   <button data-sec="radio">Rádio</button>
   <button data-sec="ctrl">Controle</button>
@@ -1636,9 +1640,23 @@ $("tmr-cancel").onclick = () => act("timer.cancel", {}, "Timer cancelado").then(
 // ---------------------------------------------------------------- comandos de voz ("PC, ...")
 const VOZ_ST = { off: "Desligado", loading: "Carregando o reconhecimento de fala…", listening: "Ouvindo", error: "Erro" };
 let vozDevs = false;
+let vozFlash = 0;
 function renderVoice(v) {
-  $("voz-sec").classList.toggle("hidden", !v || !v.available);
-  if (!v || !v.available) return;
+  const ok = !!(v && v.available);
+  $("voz-sec").classList.toggle("hidden", !ok);
+  $("voz-row").classList.toggle("hidden", !ok);
+  for (const id of ["voz-chip", "voz-chip2"]) $(id).classList.toggle("hidden", !ok);
+  if (!ok) return;
+  if (performance.now() > vozFlash) {
+    for (const id of ["voz-chip", "voz-chip2"]) {
+      const b = $(id); b.classList.remove("on"); b.textContent = "VOZ";
+      b.classList.toggle("voz-off", !v.on || v.status !== "listening");
+    }
+  }
+  $("voz-dash").textContent = !v.on ? "desligada" : v.status === "listening"
+    ? "ouvindo" + (v.fallback ? " (webcam, mic no mudo)" : "") : v.status === "loading" ? "carregando" : "erro";
+  $("voz-row2").classList.toggle("hidden", !v.last);
+  if (v.last) { const d = $("voz-dash-last"); d.textContent = v.last.msg; d.title = v.last.text; d.classList.toggle("bad", !v.last.ok); }
   $("sw-voz").classList.toggle("on", v.on);
   $("sw-voz-fala").classList.toggle("on", v.speak);
   $("sw-voz-ov").classList.toggle("on", v.overlay);
@@ -1659,8 +1677,15 @@ function renderVoice(v) {
     }).catch(() => { vozDevs = false; });
   }
 }
+function vozChip(text, ms) {
+  vozFlash = performance.now() + ms;
+  for (const id of ["voz-chip", "voz-chip2"]) { const b = $(id); b.textContent = text; b.classList.add("on"); b.classList.remove("voz-off"); }
+  setTimeout(() => { if (performance.now() >= vozFlash && state.stats) renderVoice(state.stats.voice); }, ms + 50);
+}
+$("voz-chip").onclick = $("voz-chip2").onclick = () => { buzz(8); showView("sys"); setTimeout(() => $("voz-sec").scrollIntoView({ block: "start" }), 60); };
 function voiceEvent(m) {
-  if (m.phase === "wake") { toast("PC ouvindo... diga o comando", "warn"); return; }
+  if (m.phase === "wake") { vozChip("OUVINDO", (m.secs || 6) * 1000); toast("PC ouvindo... diga o comando", "warn"); return; }
+  vozChip(m.ok ? "VOZ OK" : "VOZ ?", 2500);
   if (state.stats?.voice) { state.stats.voice.last = { text: m.text, ok: m.ok, msg: m.msg }; renderVoice(state.stats.voice); }
   toast(`Voz: ${m.msg}`, m.ok ? "ok" : "bad");
 }
