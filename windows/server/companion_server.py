@@ -39,7 +39,7 @@ import screentime
 import voice
 import watchers
 
-VERSION = "1.7"
+VERSION = "1.8"
 BASE = Path(__file__).resolve().parent
 CFG_PATH = BASE / "config.json"
 LOG_PATH = BASE / "companion-server.log"
@@ -447,7 +447,7 @@ ACTIONS = {
     "discord.open": lambda p: open_discord(),
     # celular: deck, área de transferência, arquivos
     "deck.get": lambda p: deck_payload(),
-    "deck.save": lambda p: {**deck_payload(DECK.save(p["deck"], valid_combo, shortcut_map()))},
+    "deck.save": lambda p: deck_saved(DECK.save(p["deck"], valid_combo, shortcut_map())),
     "deck.reset": lambda p: deck_payload(DECK.reset()),
     "clip.set": lambda p: clip_set(p),
     "file.begin": lambda p: UPLOADS.begin(p["name"], p["size"]),
@@ -460,6 +460,73 @@ ACTIONS = {
 DECK = extras.Deck(BASE)
 UPLOADS = extras.Uploads(CFG.get("upload_dir") or DEFAULT_CFG["upload_dir"])
 DOWNLOADS = extras.DownloadWatcher(CFG.get("downloads_dir") or DEFAULT_CFG["downloads_dir"])
+
+
+LAYOUT_PATH = BASE / "layout.json"
+LAYOUT_VIEWS = {"dash", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"}
+LAYOUT_CARDS = {"cpu", "ram", "gpu", "net", "procs", "disks", "bat", "sys"}
+SKINS = {"fallout", "synth", "minimal", "hud", "lcd", "paper"}
+
+
+def layout_get():
+    try:
+        return json.loads(LAYOUT_PATH.read_text(encoding="utf-8")) if LAYOUT_PATH.exists() else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _clean_orient(o):
+    """Menu (seções com abas) e cartões do Status de uma orientação; ignora o que não existe."""
+    if not isinstance(o, dict):
+        return None
+    out = {}
+    if isinstance(o.get("nav"), list):
+        nav, seen = [], set()
+        for sec in o["nav"][:8]:
+            if not isinstance(sec, dict):
+                continue
+            views = [v for v in sec.get("views") or [] if v in LAYOUT_VIEWS and v not in seen]
+            seen.update(views)
+            if views:
+                nav.append({"id": str(sec.get("id") or f"s{len(nav)}")[:20], "label": str(sec.get("label") or "")[:14], "views": views})
+        if nav:
+            out["nav"] = nav
+    if isinstance(o.get("dash"), list):
+        dash = []
+        for d in o["dash"][:12]:
+            if isinstance(d, dict) and d.get("id") in LAYOUT_CARDS:
+                dash.append({"id": d["id"], "span": max(1, min(4, int(d.get("span") or 1))), "hidden": bool(d.get("hidden"))})
+        if dash:
+            out["dash"] = dash
+    return out or None
+
+
+def layout_set(p):
+    lay = p.get("layout")
+    if not isinstance(lay, dict):
+        raise ValueError("layout inválido")
+    clean = {}
+    if lay.get("skin") in SKINS:
+        clean["skin"] = lay["skin"]
+    if isinstance(lay.get("theme"), str):
+        clean["theme"] = lay["theme"][:16]
+    if isinstance(lay.get("crt"), bool):
+        clean["crt"] = lay["crt"]
+    for k in ("portrait", "landscape"):
+        o = _clean_orient(lay.get(k))
+        if o:
+            clean[k] = o
+    tmp = LAYOUT_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(clean, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(LAYOUT_PATH)
+    asyncio.get_running_loop().create_task(broadcast({"t": "layout", "d": clean}))
+    return clean
+
+
+def deck_saved(data):
+    payload = deck_payload(data)
+    asyncio.get_running_loop().create_task(broadcast({"t": "deck", "d": payload}))
+    return payload
 
 
 def shortcut_map():
@@ -546,6 +613,8 @@ ASYNC_ACTIONS = {
     "voice.try": lambda p: voice_try(p),
     "bat.refresh": lambda p: asyncio.to_thread(BAT.refresh),
     "meet.cmd": lambda p: meet_cmd(p),
+    "layout.get": lambda p: _async(layout_get()),
+    "layout.set": lambda p: _async(layout_set(p)),
     "usage.get": lambda p: asyncio.to_thread(SCREEN.report, p.get("range", "day"), p.get("day")),
     "usage.app": lambda p: asyncio.to_thread(SCREEN.app_report, str(p["app"]), int(p.get("days", 7))),
     "usage.cat": lambda p: asyncio.to_thread(screen_cat, p),
@@ -734,13 +803,15 @@ async def session(ws, peer, kind):
         "t": "welcome", "version": VERSION, "web": web_build(), "host": socket.gethostname(),
         "os": f"{platform.system()} {platform.release()}",
         "shortcuts": [{"id": s["id"], "name": s["name"]} for s in CFG["shortcuts"]],
-        "power": bool(CFG.get("allow_power")),
+        "power": bool(CFG.get("allow_power")), "layout": layout_get(),
         "features": {"media": pc_info.HAS_MEDIA, "volume": pc_info.HAS_VOLUME, "mixer": pc_info.HAS_VOLUME,
                      "screen": True, "clipboard": True, "files": True, "deck": True,
                      "mic": pc_info.HAS_VOLUME, "timer": True, "deck_auto": True, "macro": True,
                      "library": True, "ping": True, "notif": True, "fps": True, "voice": VOICE.available,
                      "battery": devices.hid is not None, "usage": True, "meet": True},
     }))
+    if hello.get("role") in ("editor", "preview") and peer == "cabo USB":
+        kind = hello["role"]  # editor no PC e as prévias dele: não contam como aparelho
     clients.add(ws)
     client_kind[ws] = kind
     sent_art[ws] = None
@@ -751,7 +822,8 @@ async def session(ws, peer, kind):
     if GSI.current():
         await ws.send(json.dumps({"t": "gsi", "d": GSI.current()}, ensure_ascii=False))
     await push_now(only=ws)
-    log.info("conectado: %s (%s) tela %s", kind, peer, str(hello.get("screen", "?"))[:120])
+    if kind == "celular":
+        log.info("conectado: %s (%s) tela %s", kind, peer, str(hello.get("screen", "?"))[:120])
     try:
         async for raw in ws:
             try:
@@ -789,7 +861,8 @@ async def session(ws, peer, kind):
         sent_gameart.pop(ws, None)
         release_modifiers()
         user32.mouse_event(0x4, 0, 0, 0, 0)  # solta botão esquerdo se ficou preso (drag)
-        log.info("desconectado: %s (%s)", kind, peer)
+        if kind == "celular":
+            log.info("desconectado: %s (%s)", kind, peer)
 
 
 sent_art: dict = {}
@@ -800,6 +873,10 @@ sent_art: dict = {}
 # --------------------------------------------------------------------------
 MEET = {"ws": None, "state": None, "since": None}
 MEET_CMDS = {"mic", "cam", "hand", "share", "leave", "join", "captions", "chat", "focus", "sharePrep"}
+
+
+async def _async(value):
+    return value
 
 
 async def broadcast(obj):
@@ -876,7 +953,7 @@ async def meet_cmd(p):
         raise ValueError("não consegui trazer o Meet para a frente")
     await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"layout.get", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -1221,7 +1298,7 @@ def serve_static(connection, request):
                            ("Content-Disposition", f"attachment; filename*=UTF-8''{quote(name)}"),
                            ("Cache-Control", "no-store")])
         return Response(200, "OK", headers, body)
-    name = "index.html" if path in ("/", "") else path.lstrip("/")
+    name = "index.html" if path in ("/", "") else "editor.html" if path.rstrip("/") == "/editor" else path.lstrip("/")
     f = (WEB_DIR / name).resolve()
     if WEB_DIR.resolve() not in f.parents or not f.is_file() or f.suffix not in MIME:
         return connection.respond(HTTPStatus.NOT_FOUND, "não encontrado\n")

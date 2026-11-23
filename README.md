@@ -28,17 +28,44 @@ Celular Android          ──cabo USB (adb reverse)───  http://localhost
 
 ### Abas
 
-Visual de terminal de fósforo (verde, âmbar ou ciano, com linhas de varredura opcionais;
-troque em **PC › Ajustes › Visual**). Cinco seções na barra; cada uma tem sub-abas no topo.
+Seis temas: **Fallout** (terminal de fósforo verde, âmbar ou ciano), **Synthwave**, **Minimal**
+(escuro ou claro), **Cockpit**, **LCD 8-bit** e **Papel**. Troque em **PC › Ajustes › Visual** ou no editor
+do PC. Cinco seções na barra (padrão); cada uma tem sub-abas no topo.
 Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem lado a lado.
 
 | Seção | Sub-abas e o que tem |
 |---|---|
-| **Status** | *Sistema*: CPU, memória, GPU (consumo, ventoinha) e rede com gráfico do último minuto, processos, discos; temperatura da CPU e ventoinhas se o LibreHardwareMonitor estiver rodando. *Jogos*: jogo aberto, tempo jogado, recentes e Discord (microfone/áudio). |
+| **Status** | *Sistema*: CPU, memória, GPU (consumo, ventoinha) e rede com gráfico do último minuto, processos, discos, **bateria** do mouse, teclado, fone e controle; temperatura da CPU e ventoinhas se o LibreHardwareMonitor estiver rodando. *Jogos*: jogo aberto, tempo jogado, recentes e biblioteca. *Tempo*: tempo de tela por app e categoria (hoje, semana, mês). Com um jogo aberto aparece *Jogando*; numa chamada do Meet, *Reunião*. |
 | **Rádio** | *Tocando*: capa, faixa, progresso (arraste para pular), volume e saída de áudio (toque para alternar). *Mixer*: volume e mudo por aplicativo e escolha da saída (fone, caixa, monitor). |
 | **Controle** | *Mouse e teclado*: touchpad (toque = clique; 2 dedos: toque = direito, arrastar = rolar; toque duplo e arraste = segurar), teclas especiais e o teclado do Android digitando no PC. *Tela do PC*: a tela ao vivo; toque = clique, segurar = botão direito, pinça = zoom, faixa da direita = rolar. |
 | **Botões** | Páginas de botões estilo Stream Deck. **Editar** cria/edita botões (atalho de teclado, texto, ação pronta ou programa do config.json), com ícone, cor e confirmação. Ficam salvos em `deck.json` no PC. |
 | **PC** | *Arquivos*: texto/link para a área de transferência do PC (ou já colar), fotos e arquivos para `Downloads\Companion PC`, e "Pegar o que está copiado no PC". *Energia*: bloquear, monitor, suspender, reiniciar, desligar. *Ajustes*: alertas (download concluído, GPU/CPU quente, memória cheia), cor do terminal e ajustes do aparelho. |
+
+**Novidades da 1.8**
+
+- **Personalizar pelo PC:** ícone da bandeja › *Personalizar* abre `http://localhost:8770/editor`.
+  Escolha o tema, arraste as abas entre as seções do menu (ou esconda), renomeie e reordene as seções,
+  ordene/esconda os cartões do Status e mude a largura deles, e reordene os botões e as páginas.
+  Em pé e deitado têm layouts separados. Fica salvo em `layout.json` e muda na hora em todos os aparelhos
+  (as prévias do editor são o próprio app).
+- **Bateria:** mouse Attack Shark X11 (receptor 1d57:fa60, o mouse avisa sozinho a cada ~2 s enquanto
+  está acordado), teclado AULA F75 no 2.4G (receptor 3554:fa09, perguntado a cada 5 min), fones e outros
+  aparelhos Bluetooth (o que o Windows informa) e controles XInput (8BitDo no modo X; só 4 níveis).
+  Toque no cartão para atualizar. Precisa do pacote `hidapi` (o instalador já põe).
+- **Tempo de tela:** soma o programa em foco; para depois de 2 min sem mexer em mouse/teclado, a não ser
+  que haja jogo, tela cheia ou mídia tocando. Categorias automáticas; troque a de um app tocando nela
+  (fica em `"screentime": {"categories": {...}}` do config.json). Dados em `screentime.db`.
+- **Reunião (Google Meet no Edge):** carregue a extensão uma vez: `edge://extensions` › *Modo de
+  desenvolvedor* › *Carregar sem compactação* › `%USERPROFILE%\companion-pc\edge-extension`. Durante a
+  chamada o app abre a aba *Reunião*: microfone, câmera, mão, legendas, chat, compartilhar tela (o Meet
+  vem para a frente e o Edge abre a escolha da tela no PC) e sair (segure). Funciona com a aba em segundo
+  plano. O servidor só aceita a extensão vinda do próprio PC.
+- **Jogando:** ao abrir um jogo, o app muda para *Jogando*: tempo de sessão, horas, FPS, GPU/CPU,
+  ping e atalhos (MIC, Discord, print F12). **CS2** e **Dota 2** mostram a partida (placar, vida, colete,
+  dinheiro, munição, KDA / herói, ouro, GPM, itens) pelo *Game State Integration* da Valve: o servidor
+  instala sozinho o arquivo `gamestate_integration_companionpc.cfg` na pasta do jogo (porta 8772).
+  No **Dota 2** falta um passo: Steam › Dota 2 › Propriedades › Opções de inicialização:
+  `-gamestateintegration`.
 
 **Extras**
 
@@ -90,6 +117,11 @@ os arquivos do celular) e `"downloads_dir"` (a pasta vigiada para o alerta de do
 | `windows/server/extras.py` | Deck, área de transferência, arquivos, tela do PC, vigia de downloads |
 | `windows/server/games.py` | Jogo aberto, biblioteca (Steam/Epic/GOG) e histórico de horas |
 | `windows/server/watchers.py` | Ping, notificações do Windows, FPS (PresentMon) |
+| `windows/server/devices.py` | Bateria: Attack Shark X11, AULA F75, Bluetooth, XInput |
+| `windows/server/screentime.py` | Tempo de tela por app (SQLite) |
+| `windows/server/gsi.py` | Game State Integration de CS2 e Dota 2 |
+| `windows/server/web/editor.html` | Editor de tema e layout (abra pela bandeja) |
+| `windows/edge-extension/` | Extensão do Edge para o Google Meet |
 | `windows/install-server.ps1` | Instala dependências e inicia o servidor com o Windows |
 | `windows/setup-network.ps1` | Firewall da porta 8770 + adb (uma vez; pede admin só para o firewall) |
 

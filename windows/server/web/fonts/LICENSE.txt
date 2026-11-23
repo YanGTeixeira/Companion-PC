@@ -1,3 +1,8 @@
 VT323 (c) 2011 The VT323 Project Authors (Peter Hull) — SIL Open Font License 1.1
 Share Tech Mono (c) 2012 Carrois Type Design (Ralph du Carrois) — SIL Open Font License 1.1
 https://openfontlicense.org
+
+Fontes dos temas (todas SIL Open Font License 1.1, baixadas do Google Fonts, subconjunto latino):
+Orbitron (The Orbitron Project Authors), Exo 2 (Natanael Gama), Inter (The Inter Project Authors),
+Rajdhani (Indian Type Foundry), Press Start 2P (CodeMan38), Pixelify Sans (The Pixelify Sans Project Authors),
+Playfair Display (Claus Eggers Sørensen), Lora (The Lora Project Authors). https://openfontlicense.org

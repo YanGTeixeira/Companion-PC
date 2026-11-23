@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personalizar · Companion PC</title>
+<link rel="icon" href="icon-192.png">
+<style>
+@font-face { font-family: "Inter"; src: url(fonts/inter.woff2) format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "VT323"; src: url(fonts/vt323.woff2) format("woff2"); }
+@font-face { font-family: "Orbitron"; src: url(fonts/orbitron.woff2) format("woff2"); font-weight: 400 900; }
+@font-face { font-family: "Rajdhani"; src: url(fonts/rajdhani-700.woff2) format("woff2"); font-weight: 700; }
+@font-face { font-family: "Press Start 2P"; src: url(fonts/press-start-2p.woff2) format("woff2"); }
+@font-face { font-family: "Playfair Display"; src: url(fonts/playfair-display.woff2) format("woff2"); font-weight: 400 900; }
+:root {
+  --bg: #0e1014; --panel: #161920; --panel2: #1d212a; --line: #2a2f39; --text: #e9edf2; --dim: #9aa3b1; --faint: #6b7380;
+  --acc: #4c8dff; --acc2: #4c8dff22; --bad: #ff5d5d; --r: 10px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 "Inter", system-ui, sans-serif; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--panel2); border-radius: 8px; padding: 6px 12px; }
+button:hover { border-color: var(--faint); }
+button.pri { background: var(--acc); border-color: var(--acc); color: #fff; }
+button.on { background: var(--acc); border-color: var(--acc); color: #fff; }
+input[type=text] { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; width: 100%; }
+header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 14px; padding: 12px 24px; background: #0e1014ee; border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
+header h1 { margin: 0; font-size: 17px; font-weight: 700; }
+header h1 span { color: var(--dim); font-weight: 400; }
+#status { margin-left: auto; color: var(--dim); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+#status i { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); display: inline-block; }
+#status.ok i { background: #3ecf72; } #status.bad i { background: var(--bad); } #status.saving i { background: #f5b74a; }
+.wrap { display: grid; grid-template-columns: minmax(0, 1fr) 600px; gap: 24px; padding: 20px 24px 60px; align-items: start; }
+@media (max-width: 1250px) { .wrap { grid-template-columns: minmax(0, 1fr); } .previews { position: static !important; } }
+section.box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-bottom: 18px; }
+section.box > h2 { margin: 0 0 4px; font-size: 16px; }
+section.box > p.hint { margin: 0 0 14px; color: var(--dim); font-size: 13px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; padding: 7px 16px; }
+.seg button.on { background: var(--acc); color: #fff; }
+
+/* temas */
+.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.thm { border-radius: 12px; padding: 12px; border: 2px solid transparent; cursor: pointer; min-height: 108px; display: flex; flex-direction: column; gap: 6px; }
+.thm.on { border-color: var(--acc); box-shadow: 0 0 0 4px var(--acc2); }
+.thm .tn { font-size: 20px; line-height: 1.1; }
+.thm small { opacity: .75; font-size: 12px; }
+.thm .bars { display: flex; gap: 4px; margin-top: auto; }
+.thm .bars i { height: 6px; flex: 1; }
+.thm .vars { display: flex; gap: 6px; }
+.thm .vars button { width: 22px; height: 18px; padding: 0; border-radius: 4px; border: 1px solid #0006; }
+.thm .vars button.on { outline: 2px solid var(--acc); outline-offset: 1px; }
+label.chk { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; color: var(--dim); }
+
+/* menu: seções com abas */
+.nav { display: flex; gap: 10px; align-items: stretch; overflow-x: auto; padding-bottom: 6px; }
+.sec { flex: 0 0 170px; background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.sec.hiddenzone { background: transparent; border-style: dashed; }
+.sec .sh { display: flex; gap: 6px; align-items: center; }
+.sec .grip { cursor: grab; color: var(--faint); user-select: none; padding: 0 2px; font-size: 16px; }
+.sec .del { padding: 2px 8px; color: var(--faint); }
+.chips { display: flex; flex-direction: column; gap: 6px; min-height: 40px; flex: 1; border-radius: 8px; padding: 2px; }
+.chip { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; cursor: grab; user-select: none; display: flex; justify-content: space-between; align-items: center; }
+.chip:hover { border-color: var(--acc); }
+.chip.lock { cursor: default; }
+.chip small { color: var(--faint); }
+.addsec { flex: 0 0 120px; border: 1px dashed var(--line); background: transparent; color: var(--dim); border-radius: 12px; }
+.dragging { opacity: .35; }
+.drop-ok { background: var(--acc2); outline: 1px dashed var(--acc); }
+.ph { height: 3px; background: var(--acc); border-radius: 2px; flex: none; }
+.ph.v { width: 3px; height: auto; align-self: stretch; }
+
+/* cartões */
+.cards { display: grid; gap: 6px; }
+.card { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; cursor: grab; }
+.card.off { opacity: .45; }
+.card .grip { color: var(--faint); }
+.minigrid { display: grid; gap: 4px; margin-top: 12px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; }
+.minigrid div { background: var(--panel2); border-radius: 5px; padding: 6px 8px; font-size: 12px; color: var(--dim); min-height: 34px; }
+
+/* botões (deck) */
+.pages { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.pages .pg { cursor: grab; }
+.pages .pg.on { background: var(--acc); border-color: var(--acc); color: #fff; }
+.pages .pg.drop-ok { outline: 2px solid var(--acc); }
+.btns { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; min-height: 60px; }
+.dbtn { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 8px; text-align: center; cursor: grab; user-select: none; box-shadow: inset 4px 0 0 var(--c, transparent); }
+.dbtn b { display: block; font-size: 18px; color: var(--dim); font-weight: 600; min-height: 22px; }
+.dbtn span { font-size: 12.5px; }
+.empty { color: var(--faint); font-size: 13px; padding: 10px; }
+
+/* prévias */
+.previews { position: sticky; top: 70px; display: flex; flex-direction: column; gap: 14px; }
+.pv { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.pv.cur { border-color: var(--acc); }
+.pv h3 { margin: 0 0 8px; font-size: 13px; color: var(--dim); font-weight: 600; display: flex; justify-content: space-between; }
+.frame { position: relative; overflow: hidden; border-radius: 10px; background: #000; margin: 0 auto; }
+.frame iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; }
+#login { max-width: 520px; margin: 80px auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Companion PC <span>· Personalizar</span></h1>
+  <div id="status"><i></i><span>Conectando…</span></div>
+</header>
+
+<div id="login" class="box" hidden>
+  <section class="box"><h2>Abra pelo PC</h2>
+    <p class="hint">Use o ícone do Companion PC perto do relógio &gt; <b>Personalizar</b>. Ou cole o token do config.json:</p>
+    <div class="row"><input type="text" id="tok" placeholder="token"><button class="pri" id="tok-ok">Entrar</button></div></section>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <div>
+    <section class="box">
+      <h2>Tema</h2>
+      <p class="hint">Vale para todos os aparelhos. A mudança aparece na hora no celular e nas prévias.</p>
+      <div class="themes" id="themes"></div>
+      <div class="row" style="margin-top:12px"><label class="chk" id="crt-wrap"><input type="checkbox" id="crt"> Efeito de tubo (linhas e brilho)</label></div>
+    </section>
+
+    <section class="box">
+      <h2>Layout</h2>
+      <p class="hint">Em pé e deitado são separados. Arraste as abas entre as seções do menu, reordene as seções pelo <b>::</b> e esconda o que não usa.</p>
+      <div class="row" style="margin-bottom:14px">
+        <div class="seg" id="orient"><button data-o="portrait" class="on">Em pé</button><button data-o="landscape">Deitado</button></div>
+        <button id="copy-other">Copiar do outro</button>
+        <button id="reset">Voltar ao padrão</button>
+      </div>
+      <h3 style="margin:6px 0 8px;font-size:14px">Menu</h3>
+      <div class="nav" id="nav"></div>
+      <h3 style="margin:18px 0 8px;font-size:14px">Cartões do Status &gt; Sistema</h3>
+      <div class="cards" id="cards"></div>
+      <div class="minigrid" id="minigrid"></div>
+    </section>
+
+    <section class="box">
+      <h2>Botões</h2>
+      <p class="hint">Arraste para reordenar. Solte um botão em cima de outra página para mover. Para criar ou editar o que cada botão faz, use o app (Botões &gt; Editar).</p>
+      <div class="pages" id="pages"></div>
+      <div class="row" style="margin-bottom:10px"><input type="text" id="pg-name" style="max-width:240px" placeholder="nome da página"><span id="pg-auto" class="empty" hidden>Página automática (seus atalhos)</span></div>
+      <div class="btns" id="btns"></div>
+    </section>
+  </div>
+
+  <div class="previews">
+    <div class="pv" id="pv-landscape"><h3><span>Deitado</span><span>prévia ao vivo</span></h3><div class="frame" id="fr-landscape"></div></div>
+    <div class="pv cur" id="pv-portrait"><h3><span>Em pé</span><span>prévia ao vivo</span></h3><div class="frame" id="fr-portrait"></div></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+// mesmos nomes do app (index.html)
+const VIEW_LABEL = { dash: "Sistema", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
+  screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes" };
+const BASE_VIEWS = Object.keys(VIEW_LABEL);
+const DEFAULT_NAV = [
+  { id: "status", label: "Status", views: ["dash", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
+  { id: "ctrl", label: "Controle", views: ["mouse", "screen"] }, { id: "deck", label: "Botões", views: ["deck"] },
+  { id: "pc", label: "PC", views: ["send", "power", "voz", "sys"] }];
+const CARD_LABEL = { cpu: "CPU", ram: "Memória", gpu: "GPU", net: "Rede", procs: "Processos", disks: "Discos", bat: "Bateria", sys: "Sistema" };
+const DEFAULT_DASH = {
+  portrait: [["cpu", 1], ["ram", 1], ["gpu", 1], ["net", 1], ["bat", 2], ["procs", 2], ["disks", 2], ["sys", 2]],
+  landscape: [["cpu", 1], ["ram", 1], ["gpu", 1], ["net", 1], ["procs", 1], ["disks", 1], ["bat", 1], ["sys", 1]],
+};
+const COLS = { portrait: 2, landscape: 4 };
+const THEMES = [
+  { id: "fallout", name: "Fallout", desc: "Terminal de fósforo", font: "VT323", crt: true, variants: [["green", "#040d07", "#5cff8a", "#1c7a3d"], ["amber", "#0c0703", "#ffbf47", "#8a5a17"], ["cyan", "#030b0d", "#7cf4ff", "#1b6f7a"]] },
+  { id: "synth", name: "Synthwave", desc: "Neon rosa e ciano", font: "Orbitron", crt: true, variants: [["neon", "#0d0518", "#ff4fd8", "#3ef0ff"]] },
+  { id: "minimal", name: "Minimal", desc: "Limpo e moderno", font: "Inter", variants: [["dark", "#171a20", "#eef1f5", "#4c8dff"], ["light", "#f3f5f8", "#15181d", "#2563eb"]] },
+  { id: "hud", name: "Cockpit", desc: "HUD laranja e branco", font: "Rajdhani", variants: [["orange", "#0a0e12", "#eef3f7", "#ff8a1f"]] },
+  { id: "lcd", name: "LCD 8-bit", desc: "Tela de pixel verde", font: "Press Start 2P", variants: [["olive", "#a4b465", "#1f2a10", "#5b6c32"]] },
+  { id: "paper", name: "Papel", desc: "E-ink, preto no creme", font: "Playfair Display", variants: [["cream", "#f2ede2", "#161514", "#8a857a"]] },
+];
+
+// ------------------------------------------------------------ conexão
+const m = location.hash.match(/[#&]t=([^&]+)/);
+if (m) { try { localStorage.setItem("pcc.token", JSON.stringify(decodeURIComponent(m[1]))); } catch {} history.replaceState(null, "", location.pathname); }
+let TOKEN = ""; try { TOKEN = JSON.parse(localStorage.getItem("pcc.token") || '""'); } catch {}
+let ws = null, rid = 0, LAY = {}, DECK = null, O = "portrait", page = 0;
+const pending = new Map();
+function status(cls, text) { $("status").className = cls; $("status").lastElementChild.textContent = text; }
+function send(a, p) {
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error("desconectado"));
+    const id = ++rid; pending.set(id, { res, rej }); ws.send(JSON.stringify({ t: "req", id, a, p }));
+    setTimeout(() => pending.delete(id) && rej(new Error("sem resposta")), 8000);
+  });
+}
+function connect() {
+  if (!TOKEN) { $("login").hidden = false; $("app").hidden = true; status("bad", "Sem token"); return; }
+  ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
+  ws.onopen = () => ws.send(JSON.stringify({ t: "hello", token: TOKEN, role: "editor" }));
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.t === "welcome") { LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); mountPreviews(); }
+    else if (msg.t === "res") { const p = pending.get(msg.id); if (p) { pending.delete(msg.id); msg.ok ? p.res(msg.d) : p.rej(new Error(msg.e)); } }
+    else if (msg.t === "layout" && !saveT) { LAY = msg.d || {}; renderAll(); }
+    else if (msg.t === "deck" && msg.d) { DECK = msg.d.deck; renderDeck(); }
+  };
+  ws.onclose = (e) => {
+    ws = null;
+    if (e.code === 4001) { TOKEN = ""; try { localStorage.removeItem("pcc.token"); } catch {} connect(); return; }
+    status("bad", "Desconectado · tentando de novo"); setTimeout(connect, 2000);
+  };
+}
+$("tok-ok").onclick = () => { TOKEN = $("tok").value.trim(); try { localStorage.setItem("pcc.token", JSON.stringify(TOKEN)); } catch {} connect(); };
+
+// ------------------------------------------------------------ salvar (automático)
+let saveT = null;
+function save() {
+  status("saving", "Salvando…");
+  clearTimeout(saveT);
+  saveT = setTimeout(async () => {
+    try { LAY = await send("layout.set", { layout: LAY }); status("ok", "Conectado · tudo salvo"); }
+    catch (e) { status("bad", "Erro ao salvar: " + e.message); }
+    saveT = null;
+  }, 250);
+}
+
+// ------------------------------------------------------------ modelo
+function navOf(o) { return clone(LAY[o]?.nav || DEFAULT_NAV); }
+function dashOf(o) { return clone(LAY[o]?.dash || DEFAULT_DASH[o].map(([id, span]) => ({ id, span, hidden: false }))); }
+function setNav(nav) { LAY[O] = { ...(LAY[O] || {}), nav }; save(); renderLayout(); }
+function setDash(dash) { LAY[O] = { ...(LAY[O] || {}), dash }; save(); renderLayout(); }
+
+// ------------------------------------------------------------ arrastar e soltar
+// Itens com data-drag="tipo:id" vão para listas com data-drop="tipo"; a posição vem do mouse.
+let drag = null;
+document.addEventListener("dragstart", (e) => {
+  const el = e.target.closest?.("[data-drag]"); if (!el) return;
+  const [kind, id] = el.dataset.drag.split(":");
+  drag = { kind, id, el }; el.classList.add("dragging");
+  e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", el.dataset.drag);
+});
+document.addEventListener("dragend", () => { drag?.el.classList.remove("dragging"); drag = null; clearPh(); });
+function clearPh() { document.querySelectorAll(".ph").forEach((p) => p.remove()); document.querySelectorAll(".drop-ok").forEach((d) => d.classList.remove("drop-ok")); }
+function dropIndex(list, e, horizontal) {
+  const items = [...list.children].filter((c) => c.dataset.drag && !c.classList.contains("dragging"));
+  for (let i = 0; i < items.length; i++) {
+    const r = items[i].getBoundingClientRect();
+    if (horizontal ? e.clientX < r.left + r.width / 2 : e.clientY < r.top + r.height / 2) return [i, items[i]];
+  }
+  return [items.length, null];
+}
+document.addEventListener("dragover", (e) => {
+  if (!drag) return;
+  const pageTab = e.target.closest?.(".pg");
+  if (drag.kind === "btn" && pageTab && +pageTab.dataset.i !== page) { e.preventDefault(); clearPh(); pageTab.classList.add("drop-ok"); return; }
+  const list = e.target.closest?.(`[data-drop="${drag.kind}"]`); if (!list) return;
+  e.preventDefault();
+  const horizontal = list.dataset.dir === "h";
+  const [, before] = dropIndex(list, e, horizontal);
+  clearPh(); list.classList.add("drop-ok");
+  const ph = document.createElement("div"); ph.className = "ph" + (horizontal ? " v" : "");
+  list.insertBefore(ph, before);
+});
+document.addEventListener("drop", (e) => {
+  if (!drag) return;
+  e.preventDefault();
+  const pageTab = e.target.closest?.(".pg");
+  if (drag.kind === "btn" && pageTab && +pageTab.dataset.i !== page) { moveBtnToPage(+drag.id, +pageTab.dataset.i); clearPh(); return; }
+  const list = e.target.closest?.(`[data-drop="${drag.kind}"]`); if (!list) { clearPh(); return; }
+  const [idx] = dropIndex(list, e, list.dataset.dir === "h");
+  clearPh();
+  onDrop(drag.kind, drag.id, list, idx);
+});
+function onDrop(kind, id, list, idx) {
+  if (kind === "view") {
+    const nav = navOf(O);
+    for (const s of nav) s.views = s.views.filter((v) => v !== id);
+    const target = list.dataset.sec;
+    if (target === "_hidden") { if (id === "sys") return alert("Ajustes não pode ficar escondido (é onde fica o tema e a conexão)."); }
+    else { const s = nav.find((x) => x.id === target); s.views.splice(idx, 0, id); }
+    setNav(nav.filter((s) => s.views.length || s._new));
+    preview(id);
+  } else if (kind === "sec") {
+    const nav = navOf(O), from = nav.findIndex((s) => s.id === id);
+    const [s] = nav.splice(from, 1); nav.splice(idx > from ? idx - 1 : idx, 0, s);
+    setNav(nav);
+  } else if (kind === "card") {
+    const dash = dashOf(O), from = dash.findIndex((d) => d.id === id);
+    const [d] = dash.splice(from, 1); dash.splice(idx > from ? idx - 1 : idx, 0, d);
+    setDash(dash); preview("dash");
+  } else if (kind === "btn") {
+    const btns = DECK.pages[page].buttons, from = +id;
+    const [b] = btns.splice(from, 1); btns.splice(idx > from ? idx - 1 : idx, 0, b);
+    saveDeck();
+  } else if (kind === "page") {
+    const from = +id, [p] = DECK.pages.splice(from, 1); const to = idx > from ? idx - 1 : idx;
+    DECK.pages.splice(to, 0, p); page = to; saveDeck();
+  }
+}
+
+// ------------------------------------------------------------ desenho
+function renderAll() { renderThemes(); renderLayout(); }
+function renderThemes() {
+  const skin = LAY.skin || "fallout", theme = LAY.theme;
+  $("themes").innerHTML = THEMES.map((t) => {
+    const v = t.variants.find(([id]) => id === theme && t.id === skin) || t.variants[0];
+    const [, bg, fg, acc] = v;
+    return `<div class="thm${t.id === skin ? " on" : ""}" data-skin="${t.id}" style="background:${bg};color:${fg}">
+      <span class="tn" style="font-family:'${t.font}';font-size:${t.id === "lcd" ? 12 : 20}px">${t.name}</span><small>${t.desc}</small>
+      ${t.variants.length > 1 ? `<div class="vars">${t.variants.map(([id, b, f]) => `<button data-var="${id}" class="${t.id === skin && id === (theme || t.variants[0][0]) ? "on" : ""}" style="background:${id === "light" || id === "dark" ? b : f}" title="${id}"></button>`).join("")}</div>` : ""}
+      <div class="bars"><i style="background:${fg}"></i><i style="background:${acc}"></i><i style="background:${fg};opacity:.4"></i></div></div>`;
+  }).join("");
+  const t = THEMES.find((x) => x.id === skin) || THEMES[0];
+  $("crt-wrap").hidden = !t.crt;
+  $("crt").checked = LAY.crt !== false;
+}
+$("themes").onclick = (e) => {
+  const card = e.target.closest(".thm"); if (!card) return;
+  const t = THEMES.find((x) => x.id === card.dataset.skin);
+  const v = e.target.closest("[data-var]")?.dataset.var;
+  LAY.skin = t.id; LAY.theme = v || (LAY.skin === t.id && t.variants.some(([id]) => id === LAY.theme) ? LAY.theme : t.variants[0][0]);
+  renderThemes(); save();
+};
+$("crt").onchange = () => { LAY.crt = $("crt").checked; save(); };
+
+function renderLayout() {
+  document.querySelectorAll("#orient button").forEach((b) => b.classList.toggle("on", b.dataset.o === O));
+  $("pv-portrait").classList.toggle("cur", O === "portrait"); $("pv-landscape").classList.toggle("cur", O === "landscape");
+  $("copy-other").textContent = O === "portrait" ? "Copiar de deitado" : "Copiar de em pé";
+  const nav = navOf(O), used = new Set(nav.flatMap((s) => s.views));
+  const hidden = BASE_VIEWS.filter((v) => !used.has(v));
+  const chip = (v) => `<div class="chip${v === "sys" ? " lock" : ""}" draggable="true" data-drag="view:${v}" data-view="${v}"><span>${VIEW_LABEL[v]}</span>${v === "sys" ? "<small>fixa</small>" : ""}</div>`;
+  $("nav").innerHTML = `<div class="nav" data-drop="sec" data-dir="h" style="display:contents">${nav.map((s) => `
+    <div class="sec" draggable="true" data-drag="sec:${esc(s.id)}">
+      <div class="sh"><span class="grip" title="arraste para mudar a ordem">::</span><input type="text" value="${esc(s.label)}" data-label="${esc(s.id)}" maxlength="14">
+        <button class="del" data-del="${esc(s.id)}" title="apagar seção (as abas vão para Escondidas)">×</button></div>
+      <div class="chips" data-drop="view" data-sec="${esc(s.id)}">${s.views.map(chip).join("")}</div></div>`).join("")}</div>
+    <button class="addsec" id="addsec">+ Nova seção</button>
+    <div class="sec hiddenzone"><div class="sh"><b style="color:var(--dim)">Escondidas</b></div>
+      <div class="chips" data-drop="view" data-sec="_hidden">${hidden.map(chip).join("") || '<div class="empty">Arraste aqui o que não usa</div>'}</div></div>`;
+  const dash = dashOf(O), maxSpan = COLS[O];
+  $("cards").dataset.drop = "card";
+  $("cards").innerHTML = dash.map((d) => `<div class="card${d.hidden ? " off" : ""}" draggable="true" data-drag="card:${d.id}">
+    <span class="grip">::</span><span>${CARD_LABEL[d.id]}</span>
+    <div class="seg">${[1, 2, 3, 4].filter((n) => n <= maxSpan).map((n) => `<button data-span="${d.id}:${n}" class="${Math.min(d.span, maxSpan) === n ? "on" : ""}">${n === maxSpan ? "inteiro" : n === 1 ? "1 col" : n + " col"}</button>`).join("")}</div>
+    <label class="chk"><input type="checkbox" data-show="${d.id}" ${d.hidden ? "" : "checked"}> mostrar</label></div>`).join("");
+  $("minigrid").style.gridTemplateColumns = `repeat(${maxSpan}, minmax(0, 1fr))`;
+  $("minigrid").innerHTML = dash.filter((d) => !d.hidden).map((d) => `<div style="grid-column:span ${Math.min(d.span, maxSpan)}">${CARD_LABEL[d.id]}</div>`).join("");
+}
+$("orient").onclick = (e) => { const b = e.target.closest("[data-o]"); if (!b) return; O = b.dataset.o; renderLayout(); };
+$("copy-other").onclick = () => { const other = O === "portrait" ? "landscape" : "portrait"; LAY[O] = { nav: navOf(other), dash: dashOf(other).map((d) => ({ ...d, span: Math.min(d.span, COLS[O]) })) }; save(); renderLayout(); };
+$("reset").onclick = () => { if (!confirm(`Voltar o layout ${O === "portrait" ? "em pé" : "deitado"} ao padrão?`)) return; delete LAY[O]; save(); renderLayout(); };
+$("nav").addEventListener("change", (e) => {
+  const id = e.target.dataset.label; if (!id) return;
+  const nav = navOf(O); nav.find((s) => s.id === id).label = e.target.value.trim() || VIEW_LABEL[nav.find((s) => s.id === id).views[0]];
+  LAY[O] = { ...(LAY[O] || {}), nav }; save();
+});
+$("nav").addEventListener("click", (e) => {
+  if (e.target.id === "addsec") {
+    const name = prompt("Nome da seção (até 14 letras):", "Nova"); if (!name) return;
+    const nav = navOf(O), used = new Set(nav.flatMap((s) => s.views));
+    const first = BASE_VIEWS.find((v) => !used.has(v));
+    if (!first) return alert("Todas as abas já estão no menu. Tire uma de outra seção primeiro (arraste para Escondidas).");
+    nav.push({ id: "s" + Date.now().toString(36), label: name.slice(0, 14), views: [first] }); setNav(nav); return;
+  }
+  const del = e.target.dataset.del;
+  if (del) { const nav = navOf(O); if (nav.length <= 1) return; const s = nav.find((x) => x.id === del); if (s.views.includes("sys")) return alert("Esta seção tem Ajustes: mova Ajustes para outra seção antes."); setNav(nav.filter((x) => x.id !== del)); return; }
+  const chip = e.target.closest("[data-view]"); if (chip) preview(chip.dataset.view);
+});
+$("cards").addEventListener("click", (e) => {
+  const sp = e.target.dataset.span; if (!sp) return;
+  const [id, n] = sp.split(":"); const dash = dashOf(O); dash.find((d) => d.id === id).span = +n; setDash(dash); preview("dash");
+});
+$("cards").addEventListener("change", (e) => {
+  const id = e.target.dataset.show; if (!id) return;
+  const dash = dashOf(O); dash.find((d) => d.id === id).hidden = !e.target.checked; setDash(dash); preview("dash");
+});
+
+// ------------------------------------------------------------ botões (deck)
+async function loadDeck() { try { DECK = (await send("deck.get")).deck; renderDeck(); } catch {} }
+function renderDeck() {
+  if (!DECK) return;
+  page = Math.min(page, DECK.pages.length - 1);
+  $("pages").dataset.drop = "page"; $("pages").dataset.dir = "h";
+  $("pages").innerHTML = DECK.pages.map((p, i) => `<button class="pg${i === page ? " on" : ""}" draggable="true" data-drag="page:${i}" data-i="${i}">${esc(p.name)}</button>`).join("");
+  const pg = DECK.pages[page];
+  $("pg-name").value = pg.name;
+  $("pg-auto").hidden = pg.auto !== "shortcuts";
+  $("btns").dataset.drop = "btn";
+  $("btns").innerHTML = pg.auto === "shortcuts" ? "" : (pg.buttons || []).map((b, i) => `<div class="dbtn" draggable="true" data-drag="btn:${i}" style="--c:${esc(b.color || "transparent")}">
+    <b>${esc(b.icon || "")}</b><span>${esc(b.label)}</span></div>`).join("") || '<div class="empty">Página vazia</div>';
+}
+$("pages").addEventListener("click", (e) => { const b = e.target.closest(".pg"); if (!b) return; page = +b.dataset.i; renderDeck(); preview("deck"); });
+$("pg-name").addEventListener("change", () => { DECK.pages[page].name = $("pg-name").value.trim().slice(0, 24) || "Página"; saveDeck(); });
+function moveBtnToPage(i, to) {
+  const target = DECK.pages[to];
+  if (target.auto === "shortcuts") return alert("Essa página é automática (mostra seus atalhos); não recebe botões.");
+  const [b] = DECK.pages[page].buttons.splice(i, 1); (target.buttons = target.buttons || []).push(b); saveDeck();
+}
+let deckT = null;
+function saveDeck() {
+  renderDeck(); status("saving", "Salvando botões…");
+  clearTimeout(deckT);
+  deckT = setTimeout(async () => {
+    try { DECK = (await send("deck.save", { deck: DECK })).deck; renderDeck(); status("ok", "Conectado · tudo salvo"); }
+    catch (e) { status("bad", "Erro ao salvar botões: " + e.message); loadDeck(); }
+  }, 300);
+}
+
+// ------------------------------------------------------------ prévias (o próprio app em iframes)
+const PV = { portrait: [412, 860, 0.52], landscape: [1104, 405, 0.5] };
+function mountPreviews() {
+  for (const [o, [w, h, sc]] of Object.entries(PV)) {
+    const box = $("fr-" + o); if (box.firstChild) continue;
+    box.style.width = w * sc + "px"; box.style.height = h * sc + "px";
+    const f = document.createElement("iframe");
+    f.src = `/?preview=1#t=${encodeURIComponent(TOKEN)}`; f.width = w; f.height = h; f.style.transform = `scale(${sc})`;
+    f.title = "Prévia " + o; box.appendChild(f);
+  }
+}
+function preview(view) {
+  document.querySelectorAll(".frame iframe").forEach((f) => { try { f.contentWindow.postMessage({ pcc: "view", view }, location.origin); } catch {} });
+}
+
+connect();
+</script>
+</body>
+</html>

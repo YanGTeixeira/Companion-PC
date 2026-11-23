@@ -110,6 +110,13 @@ class TrayApp:
     def open_folder(self, *_):
         os.startfile(self.base)
 
+    def open_editor(self, *_):
+        """Página de personalizar (tema, menu, cartões, botões) no navegador do PC."""
+        links = (self.status_fn().get("phone") or {}).get("links") or {}
+        url = links.get("cabo")  # http://localhost:<porta>/#t=TOKEN
+        if url:
+            os.startfile(url.replace("/#t=", "/editor#t=", 1))
+
     def open_log(self, *_):
         os.startfile(self.log_path)
 
@@ -181,6 +188,7 @@ class TrayApp:
                 Item(lambda _: self.status_fn()["text"], None, enabled=False),
                 Menu.SEPARATOR,
                 Item("Abrir painel", self.open_panel, default=True),
+                Item("Personalizar (tema e layout)", self.open_editor),
                 Item("Abrir app no celular (cabo)", self.open_on_phone,
                      visible=lambda _: bool(self.open_on_phone_fn and self.status_fn().get("phone", {}).get("adb"))),
                 Item("Ver log", self.open_log),
@@ -300,6 +308,7 @@ class Panel:
                           borderwidth=0, padx=12, pady=5, cursor="hand2")
             b.pack(side=side, padx=(0, 8) if side == "left" else (8, 0))
 
+        button("Personalizar", self.app.open_editor)
         button("Abrir pasta", self.app.open_folder)
         button("Ver log completo", self.app.open_log)
         button("Fechar", root.destroy, "right")
