@@ -41,6 +41,20 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
 | **Botões** | Páginas de botões estilo Stream Deck. **Editar** cria/edita botões (atalho de teclado, texto, ação pronta ou programa do config.json), com ícone, cor e confirmação. Ficam salvos em `deck.json` no PC. |
 | **PC** | *Arquivos*: texto/link para a área de transferência do PC (ou já colar), fotos e arquivos para `Downloads\Companion PC`, e "Pegar o que está copiado no PC". *Energia*: bloquear, monitor, suspender, reiniciar, desligar. *Ajustes*: alertas (download concluído, GPU/CPU quente, memória cheia), cor do terminal e ajustes do aparelho. |
 
+**Depois da 1.9**
+
+- **Fim de partida:** quando uma partida de CS2 ou Dota 2 termina, o celular avisa e mostra seus números
+  comparados com a sua média naquele mapa/herói (ou geral), sequência de vitórias e % de vitórias. Fica em Jogos e
+  em Jogando por 30 min.
+- **Steam (Status › Jogos):** downloads e atualizações com progresso, velocidade e tempo restante (lidos dos
+  `appmanifest` do PC), chip *STEAM %* no topo e aviso quando termina. Amigos online e jogando o quê, com aviso quando
+  alguém começa um jogo: precisa de uma chave grátis de steamcommunity.com/dev/apikey em Personalizar › *Steam*.
+- **Reunião automática:** 1 minuto antes de um compromisso com link do Meet o celular mostra *Reunião em 1 min* com
+  botão Entrar e o PC aplica o perfil de áudio escolhido (e, se marcado, já abre a reunião). Em Personalizar › *Hoje*.
+- **Seu dia (Status › Hoje):** tempo de tela (e a diferença da média), foco, horas jogando, partidas ganhas/perdidas,
+  reuniões e app mais usado. Depois das 21h o modo base mostra o resumo.
+- Aba nova (como *Hoje*) entra sozinha em menus já salvos; clima usa wttr.in quando o Open-Meteo falha.
+
 **Novidades da 1.9**
 
 - **Dota 2 (aba Jogando):** timers pelo relógio da partida (runas de recompensa, poder, água e sabedoria, lótus,
@@ -145,6 +159,7 @@ os arquivos do celular) e `"downloads_dir"` (a pasta vigiada para o alerta de do
 | `windows/server/gsi.py` | Game State Integration de CS2 e Dota 2 |
 | `windows/server/matches.py` | Acompanha rounds/minutos das partidas e guarda o histórico |
 | `windows/server/daily.py` | Clima (Open-Meteo) e agenda (iCal) |
+| `windows/server/steam.py` | Steam: downloads (appmanifest) e amigos (Web API com a chave do usuário) |
 | `windows/server/web/editor.html` | Editor de tema e layout (abra pela bandeja) |
 | `windows/edge-extension/` | Extensão do Edge para o Google Meet |
 | `windows/install-server.ps1` | Instala dependências e inicia o servidor com o Windows |

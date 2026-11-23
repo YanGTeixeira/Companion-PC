@@ -36,6 +36,7 @@ import games
 import gsi
 import matches
 import daily
+import steam
 import overlay
 import pc_info
 import screentime
@@ -636,6 +637,9 @@ ASYNC_ACTIONS = {
     "layout.get": lambda p: _async(layout_get()),
     "matches.get": lambda p: asyncio.to_thread(matches_get, p),
     "daily.get": lambda p: _async(daily_public()),
+    "day.summary": lambda p: asyncio.to_thread(day_summary, p),
+    "steam.set": lambda p: steam_set(p),
+    "steam.get": lambda p: _async({**STEAM_STATE, "steamid": STEAM.steamid()}),
     "daily.set": lambda p: daily_set(p),
     "daily.open": lambda p: _async(daily_open(p)),
     "focus.start": lambda p: focus_start(p),
@@ -855,6 +859,9 @@ async def session(ws, peer, kind):
     if GSI.current():
         await ws.send(json.dumps({"t": "gsi", "d": GSI.current()}, ensure_ascii=False))
     await ws.send(json.dumps({"t": "daily", "d": daily_public()}, ensure_ascii=False))
+    await ws.send(json.dumps({"t": "steam", "d": STEAM_STATE}, ensure_ascii=False))
+    if LAST_MATCH["d"] and time.time() - LAST_MATCH["d"]["t"] < 1800:
+        await ws.send(json.dumps({"t": "match_end", "d": LAST_MATCH["d"]}, ensure_ascii=False))
     await ws.send(json.dumps({"t": "focus", "d": focus_state()}, ensure_ascii=False))
     await push_now(only=ws)
     if kind == "celular":
@@ -881,8 +888,8 @@ async def session(ws, peer, kind):
                 res = {"t": "res", "id": rid, "a": action, "ok": True, "d": data if isinstance(data, (str, int, float, dict, list)) else None}
                 if action not in QUIET_ACTIONS:
                     lp = msg.get("p") or ""
-                    if isinstance(lp, dict) and lp.get("ics"):
-                        lp = {**lp, "ics": "(link da agenda oculto)"}
+                    if isinstance(lp, dict) and (lp.get("ics") or lp.get("key")):
+                        lp = {**lp, **({"ics": "(oculto)"} if lp.get("ics") else {}), **({"key": "(oculta)"} if lp.get("key") else {})}
                     log.info("%s %s", action, lp)
             except Exception as e:  # noqa: BLE001
                 log.warning("falha %s: %s", action, e)
@@ -991,7 +998,7 @@ async def meet_cmd(p):
         raise ValueError("não consegui trazer o Meet para a frente")
     await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"layout.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"layout.get", "day.summary", "steam.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -1254,7 +1261,8 @@ def daily_cfg():
 def daily_public():
     c = daily_cfg()
     return {"weather": DAILY["weather"] if c.get("city") else None, "events": DAILY["events"] if c.get("ics") else [],
-            "city": c.get("city", ""), "has_ics": bool(c.get("ics")), "err": DAILY["err"]}
+            "city": c.get("city", ""), "has_ics": bool(c.get("ics")), "err": DAILY["err"],
+            "meet_auto": c.get("meet_auto", True), "meet_open": bool(c.get("meet_open")), "meet_profile": c.get("meet_profile", "")}
 
 
 async def daily_refresh(force=False):
@@ -1283,20 +1291,62 @@ async def daily_refresh(force=False):
         await broadcast({"t": "daily", "d": daily_public()})
 
 
+MEET_PREP = set()
+
+
+async def meet_prepare():
+    """1 minuto antes de uma reunião com link do Meet: aplica o perfil de áudio escolhido e avisa o celular."""
+    import datetime as _dt
+    c = daily_cfg()
+    if not c.get("meet_auto", True):
+        return
+    now = _dt.datetime.now()
+    for e in DAILY["events"]:
+        if e["all_day"] or not e.get("link"):
+            continue
+        key = e["start"] + e["title"]
+        left = (_dt.datetime.fromisoformat(e["start"]) - now).total_seconds()
+        if key in MEET_PREP or not 0 < left <= 75:
+            continue
+        MEET_PREP.add(key)
+        applied = None
+        if c.get("meet_profile"):
+            try:
+                await audio_profile_apply({"name": c["meet_profile"]})
+                applied = c["meet_profile"]
+            except Exception as ex:  # noqa: BLE001
+                log.warning("reunião: perfil %s: %s", c["meet_profile"], ex)
+        if c.get("meet_open"):
+            try:
+                daily_open({"link": e["link"]})
+            except Exception as ex:  # noqa: BLE001
+                log.warning("reunião: abrir: %s", ex)
+        log.info("reunião em 1 min: %s (perfil: %s)", e["title"], applied or "nenhum")
+        await broadcast({"t": "meet_soon", "d": {**e, "profile": applied, "opened": bool(c.get("meet_open"))}})
+
+
 async def daily_loop():
     while True:
         try:
             await daily_refresh()
+            await meet_prepare()
         except Exception:  # noqa: BLE001
             log.exception("hoje")
-        await asyncio.sleep(30)
+        await asyncio.sleep(15)
 
 
 async def daily_set(p):
     c = dict(daily_cfg())
     if "city" in p:
-        c["city"] = str(p["city"] or "").strip()[:80]
-        DAILY["weather"] = None
+        city = str(p["city"] or "").strip()[:80]
+        if city != c.get("city"):
+            DAILY["weather"] = None
+        c["city"] = city
+    for k in ("meet_auto", "meet_open"):
+        if k in p:
+            c[k] = bool(p[k])
+    if "meet_profile" in p:
+        c["meet_profile"] = str(p["meet_profile"] or "")[:24]
     if "ics" in p:
         ics = str(p["ics"] or "").strip()
         if ics and not ics.startswith(("https://", "webcal://")):
@@ -1423,6 +1473,94 @@ async def audio_profile_apply(p):
 def audio_profile_del(p):
     save_cfg_key("audio_profiles", [x for x in audio_profiles() if x["name"] != p.get("name")])
     return audio_profiles()
+
+
+# --------------------------------------------------------------------------
+# Pós-partida
+# --------------------------------------------------------------------------
+LAST_MATCH = {"d": None}
+
+
+def match_saved(pm):
+    LAST_MATCH["d"] = pm
+    asyncio.get_running_loop().create_task(broadcast({"t": "match_end", "d": pm}))
+
+
+MATCHES.on_saved = match_saved
+
+
+# --------------------------------------------------------------------------
+# Steam: downloads e amigos
+# --------------------------------------------------------------------------
+STEAM = steam.Steam(MON.catalog, CFG.setdefault("steam", {}))
+STEAM_STATE = {"downloads": [], "friends": None, "err": None, "has_key": bool(CFG["steam"].get("key"))}
+
+
+async def steam_loop():
+    friends_next = 0.0
+    while True:
+        changed = False
+        try:
+            dls, finished = await asyncio.to_thread(STEAM.downloads)
+            if dls != STEAM_STATE["downloads"]:
+                STEAM_STATE["downloads"], changed = dls, True
+            for name in finished:
+                await broadcast({"t": "event", "kind": "steam_done", "name": name})
+        except Exception:  # noqa: BLE001
+            log.exception("steam downloads")
+        if CFG["steam"].get("key") and time.monotonic() > friends_next:
+            friends_next = time.monotonic() + 60
+            try:
+                fr = await asyncio.to_thread(STEAM.friends)
+                if fr != STEAM_STATE["friends"] or STEAM_STATE["err"]:
+                    STEAM_STATE.update(friends=fr, err=None)
+                    changed = True
+            except Exception as e:  # noqa: BLE001
+                if STEAM_STATE["err"] != str(e)[:160]:
+                    STEAM_STATE["err"], changed = str(e)[:160], True
+                    log.warning("steam amigos: %s", e)
+                friends_next = time.monotonic() + 300
+        if changed:
+            await broadcast({"t": "steam", "d": STEAM_STATE})
+        await asyncio.sleep(5)
+
+
+async def steam_set(p):
+    key = str(p.get("key") or "").strip()
+    if key and not steam.KEY_RE.fullmatch(key):
+        raise ValueError("a chave da Steam tem 32 letras e números (copie de steamcommunity.com/dev/apikey)")
+    c = dict(CFG["steam"]); c["key"] = key
+    save_cfg_key("steam", c)
+    STEAM.cfg = CFG["steam"]
+    STEAM.friend_ids = []
+    STEAM_STATE.update(has_key=bool(key), friends=None, err=None)
+    if key:
+        try:
+            STEAM_STATE["friends"] = await asyncio.to_thread(STEAM.friends)
+        except Exception as e:  # noqa: BLE001
+            STEAM_STATE["err"] = str(e)[:160]
+    await broadcast({"t": "steam", "d": STEAM_STATE})
+    return {"has_key": bool(key), "friends": len(STEAM_STATE["friends"] or []), "err": STEAM_STATE["err"], "steamid": STEAM.steamid()}
+
+
+# --------------------------------------------------------------------------
+# Resumo do dia
+# --------------------------------------------------------------------------
+def day_summary(p=None):
+    import datetime as _dt
+    scr = SCREEN.report("day")
+    midnight = time.mktime(time.localtime()[:3] + (0, 0, 0, 0, 0, -1))
+    with MATCHES.lock:
+        rows = MATCHES.db.execute("SELECT game, title, win FROM matches WHERE ended >= ?", (midnight,)).fetchall()
+    games_today = MON.summary(1)
+    today = _dt.date.today().isoformat()
+    meets = [e for e in DAILY["events"] if not e["all_day"] and e["start"][:10] == today]
+    mmin = sum((_dt.datetime.fromisoformat(e["end"]) - _dt.datetime.fromisoformat(e["start"])).total_seconds() / 60 for e in meets)
+    return {"screen": scr.get("total", 0), "prev_avg": scr.get("prev_avg"),
+            "cats": (scr.get("cats") or [])[:3], "apps": [{"name": a["name"], "secs": a["secs"]} for a in (scr.get("apps") or [])[:3]],
+            "focus_min": focus_today(), "game_s": games_today["week_s"], "games": games_today["top"][:3],
+            "matches": {"n": len(rows), "w": sum(1 for r in rows if r[2] == 1), "l": sum(1 for r in rows if r[2] == 0)},
+            "meetings": {"n": len(meets), "min": round(mmin)}}
 
 
 def matches_get(p):
@@ -1665,6 +1803,7 @@ async def main():
     asyncio.create_task(screentime_loop())
     asyncio.create_task(daily_loop())
     asyncio.create_task(focus_loop())
+    asyncio.create_task(steam_loop())
     asyncio.create_task(GSI.serve())
     asyncio.create_task(adb_loop())
     asyncio.create_task(downloads_loop())

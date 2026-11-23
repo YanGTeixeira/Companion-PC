@@ -30,6 +30,7 @@ class Store:
         self.db.execute("""CREATE TABLE IF NOT EXISTS matches (
             id INTEGER PRIMARY KEY, game TEXT, key TEXT UNIQUE, ended REAL, title TEXT, win INTEGER, data TEXT)""")
         self.db.commit()
+        self.on_saved = None   # callback(resumo do pós-partida)
 
     def add(self, game, key, title, win, data):
         with self.lock:
@@ -38,6 +39,37 @@ class Store:
                              json.dumps(data, ensure_ascii=False)))
             self.db.commit()
         log.info("partida salva: %s %s (%s)", game, title, {True: "vitória", False: "derrota", None: "empate"}[win])
+        if self.on_saved:
+            try:
+                self.on_saved(self.post_match(game, key, title, win, data))
+            except Exception:  # noqa: BLE001
+                log.exception("pós-partida")
+
+    COMPARE = {"cs2": ["k", "d", "a", "hs_pct", "adr", "mvp"], "dota2": ["k", "d", "a", "gpm", "xpm", "lh", "dur"]}
+
+    def post_match(self, game, key, title, win, data):
+        """A partida que acabou + a sua média nas anteriores do mesmo mapa/herói e no jogo todo."""
+        with self.lock:
+            rows = self.db.execute("SELECT key, title, win, data FROM matches WHERE game=? ORDER BY ended DESC LIMIT 300",
+                                   (game,)).fetchall()
+        prev = [(t, w, json.loads(d)) for k, t, w, d in rows if k != key]
+
+        def avg(items):
+            out = {}
+            for f in self.COMPARE[game]:
+                vals = [d.get(f) for _, _, d in items if isinstance(d.get(f), (int, float))]
+                if vals:
+                    out[f] = round(sum(vals) / len(vals), 1)
+            return out
+        same = [x for x in prev if x[0] == title]
+        streak, results = 0, [win] + [bool(w) if w is not None else None for _, w, _ in prev]
+        for r in results:
+            if r is None or r != win:
+                break
+            streak += 1
+        return {"game": game, "title": title, "win": win, "data": data, "n_same": len(same), "avg_same": avg(same),
+                "n_all": len(prev), "avg_all": avg(prev), "streak": streak if win is not None else 0,
+                "winrate_same": round(100 * sum(1 for x in same if x[1]) / len(same)) if same else None, "t": time.time()}
 
     def report(self, game, limit=15):
         with self.lock:

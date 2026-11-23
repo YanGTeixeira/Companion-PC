@@ -785,6 +785,21 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .approw .btn:first-child { flex: 1; text-align: left; }
 .approw small { color: var(--p3); }
 
+/* steam, pós-partida, seu dia */
+.frow { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 3px 0; font-size: 14px; }
+.frow img { width: 28px; height: 28px; border: 1px solid var(--p4); filter: grayscale(.6); }
+.frow .fn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frow small { display: block; color: var(--p3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frow.play small { color: var(--hl); } .frow.off { opacity: .45; }
+.dlrow { padding: 4px 0; } .dlrow .bar { margin-top: 4px; height: 8px; }
+.post .res { font: 44px/1 var(--display); } .post .res.l { color: var(--alert); }
+.cmp { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 2px 12px; font-size: 14px; margin-top: 8px; }
+.cmp .up { color: var(--p); } .cmp .dn { color: var(--alert); } .cmp .h { color: var(--p3); font-size: 12px; }
+.dayg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.dayg div { border: 1px solid var(--p4); padding: 6px 8px; border-radius: var(--r); }
+.dayg b { display: block; font: 28px/1.1 var(--display); font-weight: 400; color: var(--p); }
+.dayg small { color: var(--p3); font-size: 12px; }
+
 /* tempo de tela */
 .ubar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .ubar .chips { display: flex; gap: 6px; }
@@ -913,6 +928,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   <span class="hchip hidden" id="fps-chip"></span>
   <button class="hchip hidden" id="tmr-chip" aria-label="Timer de energia"></button>
   <button class="hchip hidden" id="fo-chip" aria-label="Modo foco"></button>
+  <button class="hchip hidden" id="dl-chip" aria-label="Download da Steam"></button>
   <button class="hchip hidden meetchip" id="meet-chip" aria-label="Reunião">REUNIÃO</button>
   <button class="hchip hidden" id="voz-chip" aria-label="Comandos de voz">VOZ</button>
   <button class="hchip hidden" id="mic-chip" aria-label="Microfone do PC">MIC</button>
@@ -940,6 +956,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
     <div class="cols tday">
       <div class="card" data-b="weather" id="td-weather"><h3><span>Clima</span></h3><div class="empty">Carregando…</div></div>
       <div class="card" data-b="agenda" id="td-agenda"><h3><span>Agenda</span></h3><div class="empty">Carregando…</div></div>
+      <div class="card" data-b="day" id="td-day"><h3><span>Seu dia</span><span id="day-when"></span></h3><div id="day-body"><div class="empty">Carregando…</div></div></div>
       <div class="card" data-b="focus" id="td-focus">
         <h3><span>Foco</span><span id="fo-today"></span></h3>
         <div id="fo-on" class="hidden"><div class="big" id="fo-left" style="font-size:64px">0:00</div><div class="sub">As notificações do PC não chegam no celular até acabar.</div>
@@ -963,6 +980,9 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
       </div>
         <div class="card" data-b="recent"><h3><span>Jogados recentemente</span></h3><div id="g-recent"></div></div>
         <div class="card" data-b="week"><h3><span>Esta semana</span><span id="gh-total"></span></h3><div class="week" id="gh-days"></div><div id="gh-top" style="margin-top:10px"></div></div>
+      <div class="card post hidden" data-b="post" id="g-post"></div>
+      <div class="card hidden" data-b="dl" id="g-dl"></div>
+      <div class="card" data-b="friends" id="g-friends"></div>
       <div class="card hist" data-b="hist"><h3><span>Partidas</span><span class="chips" id="hist-g" style="flex:none"><button class="chip2 on" data-hg="cs2">CS2</button><button class="chip2" data-hg="dota2">Dota 2</button></span></h3><div id="hist"><div class="empty">Carregando…</div></div></div>
       <div class="glib" data-b="lib"><h2>Biblioteca</h2><div class="lib" id="g-lib"><div class="empty">Carregando…</div></div></div>
     </div>
@@ -994,6 +1014,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
         <div class="fps-hint hidden" id="pl-fps-hint"></div>
       </div>
       <div class="card pgsi hidden" id="pl-gsi" data-b="gsi"></div>
+      <div class="card pgsi ppost hidden" id="pl-post" data-b="post"></div>
       <div class="card pgsi ptact hidden" id="pl-tact" data-b="tact"></div>
       <div class="card pgsi pgraph hidden" id="pl-graph" data-b="graph"></div>
     </div>
@@ -1235,6 +1256,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <div class="set"><label>Internet caiu<small>O PC ficou sem conexão (e quando volta)</small></label><button class="switch" id="al-net" aria-label="Internet caiu"></button></div>
           <div class="set"><label>Notificações do PC<small id="pcn-note">WhatsApp, Discord, e-mail e outros avisos do Windows</small></label><button class="switch" id="sw-pcnotif" aria-label="Notificações do PC"></button></div>
           <div class="set"><label>Bateria fraca<small>Mouse, teclado, fone ou controle abaixo de <input class="num" id="al-bat-v" type="number" inputmode="numeric"> %</small></label><button class="switch" id="al-bat" aria-label="Bateria fraca"></button></div>
+          <div class="set"><label>Steam<small>Download ou atualização de jogo terminou; amigo começou a jogar</small></label><button class="switch" id="al-steam" aria-label="Avisos da Steam"></button></div>
           <div class="set"><label>Memória cheia<small>Acima de <input class="num" id="al-ram-v" type="number" inputmode="numeric"> %</small></label><button class="switch" id="al-ram" aria-label="Memória cheia"></button></div>
           <div class="set"><label>Notificações do Android<small>Avisa com o app em segundo plano</small></label><button class="btn sm" id="al-notif">Ativar</button></div>
         </div>
@@ -1309,12 +1331,17 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   <div class="dialog"><h1 id="confirm-q"></h1><p id="confirm-sub">Confirme para executar no PC.</p>
     <div class="acts"><button class="btn" id="confirm-no">Cancelar</button><button class="btn primary" id="confirm-yes">Confirmar</button></div></div>
 </div>
+<div class="overlay hidden" id="meetsoon">
+  <div class="dialog"><h1 id="ms-title">Reunião em 1 min</h1><p id="ms-sub"></p>
+    <div class="acts"><button class="btn" id="ms-close">Fechar</button><button class="btn primary" id="ms-join">Entrar</button></div></div>
+</div>
 <div id="dock" class="hidden" aria-label="Modo base. Toque para voltar."><div class="dk" id="dk">
   <div class="dk-time"><span id="dk-h">--</span><i>:</i><span id="dk-m">--</span></div>
   <div class="dk-date" id="dk-date"></div>
   <div class="dk-line" id="dk-stats"></div>
   <div class="dk-line hi" id="dk-media"></div>
   <div class="dk-line" id="dk-extra"></div>
+  <div class="dk-line" id="dk-day"></div>
   <div class="dk-line" id="dk-wx"></div>
   <div class="dk-line hi" id="dk-ag"></div>
   <button class="btn primary hidden" id="dk-join">Entrar na reunião</button>
@@ -1474,12 +1501,16 @@ function onMsg(m) {
     case "deck": if (m.d && !deckEdit) { deckData = m.d; renderDeck(); } break;
     case "gsi": state.gsi = m.d; state.gsiT = Date.now(); renderGsi(); break;
     case "daily": state.daily = m.d; renderToday(); break;
+    case "steam": onSteam(m.d); break;
+    case "match_end": onMatchEnd(m.d); break;
+    case "meet_soon": onMeetSoon(m.d); break;
     case "focus": onFocus(m.d); break;
     case "games": state.games = m.d; state.gamesT = performance.now(); renderGames(); onGameState(); break;
     case "gameart": state.gameart = { [m.id]: "data:image/jpeg;base64," + m.jpg }; renderGames(); renderPlay(); break;
     case "event":
       if (m.kind === "notif") { snd("note"); notify(`${m.app}: ${m.title}`, m.body, "pcn-" + m.app); break; }
       if (m.kind === "voice") { voiceEvent(m); break; }
+      if (m.kind === "steam_done" && prefs.alerts.steam) notify("Steam: pronto para jogar", m.name, "steam-dl");
       if (m.kind === "download" && prefs.alerts.download) notify("Download concluído", m.name + (m.size ? ` · ${fmtBytes(m.size)}` : ""), "dl");
       break;
   }
@@ -1580,9 +1611,11 @@ function applyBlocks(blocks) {
   for (const [view, list] of Object.entries(blocks)) {
     const tab = $("t-" + view); if (!tab || !Array.isArray(list)) continue;
     const els = [...tab.querySelectorAll("[data-b]")], pos = new Map(list.map((b, i) => [b.id, [b, i]]));
+    let prevOrder = -1;   // bloco que o layout salvo não conhece (veio numa versão nova): fica logo depois do vizinho de cima
     for (const el of els) {
       const hit = pos.get(el.dataset.b);
-      if (!hit) { el.style.order = 99; continue; }
+      if (!hit) { el.style.order = prevOrder; continue; }
+      prevOrder = hit[1];
       const [b, i] = hit;
       el.style.order = i;
       el.classList.toggle("lhide", !!b.hidden);
@@ -1661,7 +1694,8 @@ function showView(name, temp) {
   if (vis("dash")) requestAnimationFrame(drawSparks);
   if (vis("games") && welcome) loadHist();
   if (vis("mix") && welcome) loadProfiles();
-  if (vis("today")) renderToday();
+  if (vis("today")) { renderToday(); setTimeout(() => loadDay(true)); }
+  if (vis("games")) { renderSteam(); renderPost(); }
   if (vis("screen")) requestAnimationFrame(() => { layoutScreen(); screenLoop(); });
   if (vis("media") || vis("mix")) { mixT = 0; renderMixer(); pollMixer(); }
   if (vis("games")) loadGamesExtra();
@@ -1950,6 +1984,7 @@ function renderGsi() {
   const play = $("pl-gsi").parentElement;
   play.classList.toggle("has-gsi", !!h[0]);
   play.classList.toggle("match", !!(h[1] || h[2]));
+  if (state.post) $("pl-post").classList.toggle("hidden", play.classList.contains("match") || Date.now() / 1000 - state.post.t > 1800);
   if (d && d.g === "dota2" && !d.menu) dotaAlerts(d);
 }
 
@@ -2821,7 +2856,7 @@ function idleStep() {
   docked = v === "clock";
   $("dock").classList.toggle("hidden", !docked);
   $("idle-catch").classList.toggle("hidden", docked);
-  if (docked) renderDock(); else showView(v, true);
+  if (docked) { renderDock(); const h = new Date().getHours(); if (h >= 21 || h < 4) loadDay(); else $("dk-day").textContent = ""; } else showView(v, true);
 }
 function idleStop() {
   if (!idleOn) return;
@@ -3205,11 +3240,123 @@ $("ap-list").addEventListener("click", async (e) => {
   if (a) { const r = await act("audio.profile_apply", { name: a.dataset.ap }, `Perfil: ${a.dataset.ap}`); if (r?.warn?.length) toast(r.warn.join(" · "), "warn"); pollMixer?.(); }
 });
 
+// ---------------------------------------------------------------- Steam: downloads e amigos
+const fmtRate = (b) => b ? (b >= 1048576 ? (b / 1048576).toFixed(1) + " MB/s" : Math.round(b / 1024) + " KB/s") : "";
+const fmtGB = (b) => b >= 1073741824 ? (b / 1073741824).toFixed(1) + " GB" : Math.round(b / 1048576) + " MB";
+let prevPlaying = null;
+function onSteam(d) {
+  const fr = d.friends || [];
+  // aviso quando um amigo começa a jogar (não no primeiro carregamento)
+  const now = new Map(fr.filter((f) => f.game).map((f) => [f.id, f.game]));
+  if (prevPlaying && prefs.alerts.steam && !PREVIEW) for (const [id, g] of now) if (prevPlaying.get(id) !== g) {
+    const f = fr.find((x) => x.id === id); toast(`${f.name} começou a jogar ${g}`);
+  }
+  if (d.friends) prevPlaying = now;
+  state.steam = d; renderSteam();
+}
+function renderSteam() {
+  const d = state.steam; if (!d) return;
+  const dls = d.downloads || [], top = dls[0];
+  const dl = $("g-dl"); dl.classList.toggle("hidden", !dls.length);
+  dl.innerHTML = `<h3><span>Steam</span><span>${dls.length} ${dls.length > 1 ? "na fila" : "baixando"}</span></h3>` + dls.map((x) => `<div class="dlrow">
+    <div class="row"><span>${esc(x.name)}</span><span>${x.state}${x.pct != null ? " " + Math.floor(x.pct) + "%" : ""}</span></div>
+    ${x.total ? `<div class="bar"><i style="width:${x.pct || 0}%"></i></div><div class="sub">${fmtGB(x.done)} de ${fmtGB(x.total)}${x.speed ? " · " + fmtRate(x.speed) + (x.state === "baixando" && x.speed ? " · falta " + humanDur((x.total - x.done) / x.speed) : "") : ""}</div>` : ""}</div>`).join("");
+  const chip = $("dl-chip"); chip.classList.toggle("hidden", !top || top.state !== "baixando");
+  if (top) chip.textContent = `STEAM ${top.pct != null ? Math.floor(top.pct) + "%" : ""}`;
+  const fc = $("g-friends");
+  if (!d.has_key) { fc.innerHTML = `<h3><span>Amigos</span></h3><div class="sub" style="white-space:normal">Para ver os amigos da Steam: crie uma chave em steamcommunity.com/dev/apikey e cole no editor do PC (Personalizar &gt; Steam).</div>`; return; }
+  if (d.err) { fc.innerHTML = `<h3><span>Amigos</span></h3><div class="sub" style="white-space:normal">Erro: ${esc(d.err)}</div>`; return; }
+  const fr = d.friends || [], on = fr.filter((f) => f.on), playing = fr.filter((f) => f.game);
+  const row = (f) => `<div class="frow${f.game ? " play" : ""}${f.on ? "" : " off"}">${f.avatar ? `<img src="${esc(f.avatar)}" alt="" loading="lazy">` : "<span></span>"}
+    <span class="fn">${esc(f.name)}<small>${f.game ? "jogando " + esc(f.game) : f.state}</small></span><span></span></div>`;
+  fc.innerHTML = `<h3><span>Amigos</span><span>${playing.length ? playing.length + " jogando · " : ""}${on.length} online</span></h3>
+    ${on.length ? on.slice(0, 12).map(row).join("") : '<div class="empty">Ninguém online</div>'}`;
+}
+$("dl-chip").onclick = () => { buzz(8); showView("games"); };
+
+// ---------------------------------------------------------------- Pós-partida
+const CMP_LABEL = { k: "Abates", d: "Mortes", a: "Assist.", hs_pct: "HS %", adr: "ADR", mvp: "MVPs", gpm: "GPM", xpm: "XPM", lh: "Last hits", dur: "Duração" };
+function onMatchEnd(pm) {
+  const fresh = !state.post || state.post.t !== pm.t;
+  state.post = pm; renderPost();
+  if (fresh && !PREVIEW && Date.now() / 1000 - pm.t < 120) {
+    snd("note"); notify(`${pm.win === true ? "Vitória" : pm.win === false ? "Derrota" : "Fim de partida"}: ${pm.title}`, postLine(pm), "post");
+  }
+}
+function postLine(pm) {
+  const d = pm.data || {};
+  return pm.game === "cs2" ? `${d.k ?? 0}/${d.d ?? 0}/${d.a ?? 0} · ADR ${d.adr ?? "-"} · HS ${d.hs_pct ?? "-"}%` : `${d.k ?? 0}/${d.d ?? 0}/${d.a ?? 0} · GPM ${d.gpm ?? "-"} · XPM ${d.xpm ?? "-"}`;
+}
+function renderPost() {
+  const pm = state.post;
+  const show = pm && Date.now() / 1000 - pm.t < 1800;
+  $("g-post").classList.toggle("hidden", !show);
+  $("pl-post").classList.toggle("hidden", !show || $("pl-gsi").parentElement.classList.contains("match"));
+  if (!show) return;
+  const d = pm.data || {}, cs = pm.game === "cs2", ref = pm.n_same >= 2 ? pm.avg_same : pm.avg_all, refN = pm.n_same >= 2 ? pm.n_same : pm.n_all;
+  const refLabel = pm.n_same >= 2 ? `média em ${esc(pm.title)} (${refN})` : refN ? `média geral (${refN})` : "";
+  const fmt = (k, v) => v == null ? "-" : k === "dur" ? fmtTime(v) : Number.isInteger(v) ? v : v.toFixed(1);
+  const rows = (pm.game === "cs2" ? ["k", "d", "a", "hs_pct", "adr", "mvp"] : ["k", "d", "a", "gpm", "xpm", "lh", "dur"]).filter((k) => d[k] != null).map((k) => {
+    const v = d[k], a = ref?.[k], better = a == null || k === "dur" ? null : k === "d" ? v < a : v > a;
+    const diff = a == null || k === "dur" ? "" : `${v - a >= 0 ? "+" : ""}${fmt(k, Math.round((v - a) * 10) / 10)}`;
+    return `<span>${CMP_LABEL[k]}</span><b>${fmt(k, v)}</b><span class="${better == null ? "" : better ? "up" : "dn"}">${diff}</span>`;
+  }).join("");
+  const res = pm.win === true ? "VITÓRIA" : pm.win === false ? "DERROTA" : "FIM";
+  const extra = [pm.streak >= 2 ? `${pm.streak} ${pm.win ? "vitórias" : "derrotas"} seguidas` : "", pm.winrate_same != null && pm.n_same >= 2 ? `${pm.winrate_same}% de vitórias em ${esc(pm.title)}` : "", cs && d.rounds ? `${d.rounds} rounds` : ""].filter(Boolean).join(" · ");
+  const html = `<h3><span>Fim de partida · ${cs ? "CS2" : "Dota 2"}</span><span>${humanAgo(Date.now() / 1000 - pm.t)}</span></h3>
+    <div class="res${pm.win === false ? " l" : ""}">${res}</div><div class="sub">${esc(pm.title)}${extra ? " · " + extra : ""}</div>
+    ${rows ? `<div class="cmp"><span class="h"></span><span class="h">agora</span><span class="h">${refLabel ? "vs " + refLabel : ""}</span>${rows}</div>` : ""}
+    ${!refN ? '<div class="sub">Primeira partida salva: a comparação aparece a partir da próxima.</div>' : ""}`;
+  setBox("g-post", html); setBox("pl-post", html);
+}
+setInterval(() => { if (state.post) renderPost(); }, 60000);
+
+// ---------------------------------------------------------------- Reunião automática
+let meetSoon = null;
+function onMeetSoon(e) {
+  if (PREVIEW) return;
+  meetSoon = e;
+  $("ms-title").textContent = `Reunião em 1 min`;
+  $("ms-sub").textContent = [e.title, e.profile ? `perfil de áudio: ${e.profile}` : "", e.opened ? "aberta no PC" : ""].filter(Boolean).join(" · ");
+  $("ms-join").classList.toggle("hidden", !!e.opened || !e.link);
+  $("meetsoon").classList.remove("hidden");
+  alarm(`Reunião em 1 min: ${e.title}`);
+  setTimeout(() => $("meetsoon").classList.add("hidden"), 3 * 60000);
+}
+$("ms-close").onclick = () => $("meetsoon").classList.add("hidden");
+$("ms-join").onclick = () => { $("meetsoon").classList.add("hidden"); if (meetSoon?.link) act("daily.open", { link: meetSoon.link }, "Abrindo a reunião no PC"); };
+
+// ---------------------------------------------------------------- Seu dia
+let dayT = 0;
+async function loadDay(force) {
+  if (!ws || ws.readyState !== 1 || (!force && Date.now() - dayT < 60000)) return;
+  dayT = Date.now();
+  let r; try { r = await send("day.summary"); } catch { return; }
+  state.day = r; renderDay();
+}
+function renderDay() {
+  const r = state.day; if (!r) return;
+  const m = r.matches, mt = r.meetings;
+  const box = (v, l) => `<div><b>${v}</b><small>${l}</small></div>`;
+  const vsAvg = r.prev_avg ? ` (${r.screen > r.prev_avg ? "+" : "-"}${humanDur(Math.abs(r.screen - r.prev_avg))} da média)` : "";
+  $("day-when").textContent = new Date().toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
+  $("day-body").innerHTML = `<div class="dayg">
+    ${box(humanDur(r.screen || 0), "tela" + vsAvg)}
+    ${box(humanDur((r.focus_min || 0) * 60), "foco")}
+    ${box(humanDur(r.game_s || 0), r.games?.[0] ? "jogando · " + esc(r.games[0].name) : "jogando")}
+    ${box(m.n ? `${m.w}V ${m.l}D` : "-", m.n ? `${m.n} partida${m.n > 1 ? "s" : ""}` : "nenhuma partida")}
+    ${box(mt.n ? humanDur(mt.min * 60) : "-", mt.n ? `${mt.n} reuni${mt.n > 1 ? "ões" : "ão"}` : "sem reuniões")}
+    ${box(r.apps?.[0] ? esc(r.apps[0].name) : "-", "app mais usado")}</div>`;
+  const h = new Date().getHours();
+  $("dk-day").textContent = h >= 21 || h < 4 ? `Hoje: tela ${humanDur(r.screen || 0)} · foco ${humanDur((r.focus_min || 0) * 60)} · jogo ${humanDur(r.game_s || 0)}${m.n ? ` · ${m.w}V ${m.l}D` : ""}` : "";
+}
+setInterval(() => { if (vis("today") || (new Date().getHours() >= 21 && !$("dock").classList.contains("hidden"))) loadDay(); }, 30000);
+
 // ---------------------------------------------------------------- Alertas
-prefs.alerts = Object.assign({ net: true, download: true, gpu: false, gpuV: 85, cpu: false, cpuV: 90, ram: false, ramV: 90, bat: true, batV: 15 }, store.get("alerts", {}));
+prefs.alerts = Object.assign({ steam: true, net: true, download: true, gpu: false, gpuV: 85, cpu: false, cpuV: 90, ram: false, ramV: 90, bat: true, batV: 15 }, store.get("alerts", {}));
 const alertOn = {};
 const saveAlerts = () => store.set("alerts", prefs.alerts);
-["net", "download", "gpu", "cpu", "ram", "bat"].forEach((k) => {
+["steam", "net", "download", "gpu", "cpu", "ram", "bat"].forEach((k) => {
   const sw = $("al-" + k); sw.classList.toggle("on", !!prefs.alerts[k]);
   sw.onclick = () => { prefs.alerts[k] = !prefs.alerts[k]; saveAlerts(); sw.classList.toggle("on", prefs.alerts[k]); buzz(8); if (prefs.alerts[k]) askNotify(false); };
   const inp = $(`al-${k}-v`);

@@ -149,7 +149,17 @@ label.chk { display: inline-flex; gap: 8px; align-items: center; cursor: pointer
       <div class="row" style="margin-bottom:10px"><label style="width:140px">Cidade</label><input type="text" id="d-city" placeholder="ex.: Curitiba, Paraná" style="max-width:320px"></div>
       <div class="row" style="margin-bottom:6px"><label style="width:140px">Agenda (iCal)</label><input type="password" id="d-ics" placeholder="cole aqui o endereço secreto no formato iCal" style="max-width:520px"></div>
       <p class="hint" style="margin:0 0 10px 148px">Google Agenda no computador &gt; Configurações &gt; clique na sua agenda &gt; <b>Endereço secreto no formato iCal</b>. Deixe vazio para tirar.</p>
+      <div class="row" style="margin-bottom:6px"><label class="chk"><input type="checkbox" id="d-mauto"> Reunião com link do Meet: 1 min antes, avisar no celular e aplicar o perfil de áudio</label>
+        <select id="d-mprof" style="max-width:200px"><option value="">(sem perfil)</option></select></div>
+      <div class="row" style="margin-bottom:10px"><label class="chk"><input type="checkbox" id="d-mopen"> Abrir a reunião no PC sozinho, 1 min antes</label></div>
       <div class="row"><button class="pri" id="d-save">Salvar</button><span id="d-st" style="color:var(--dim)"></span></div>
+    </section>
+
+    <section class="box">
+      <h2>Steam</h2>
+      <p class="hint">Downloads e atualizações aparecem sozinhos na aba Jogos. Para ver os <b>amigos</b> (online e jogando o quê): entre em <b>steamcommunity.com/dev/apikey</b>, ponha qualquer domínio (ex.: localhost), copie a chave e cole aqui. Fica só no PC. No perfil da Steam, a lista de amigos precisa estar visível (pública ou só amigos).</p>
+      <div class="row" style="margin-bottom:10px"><label style="width:140px">Chave da API</label><input type="password" id="st-key" placeholder="32 letras e números" style="max-width:360px"></div>
+      <div class="row"><button class="pri" id="st-save">Salvar</button><span id="st-st" style="color:var(--dim)"></span></div>
     </section>
 
     <section class="box">
@@ -190,13 +200,13 @@ const COLS = { portrait: 2, landscape: 4 };
 const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["today", "Hoje"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
   ["mix", "Mixer"], ["mouse", "Mouse e teclado"], ["send", "Arquivos"], ["power", "Energia"], ["voz", "Voz"], ["sys", "Ajustes"]];
 const BLOCKS = {
-  play: [{ wide: 1, items: [["hero", "Jogo (capa, tempo e atalhos)"], ["perf", "Desempenho e FPS"], ["gsi", "Partida (CS2 / Dota 2)"], ["tact", "Timers do Dota / bomba e economia do CS"], ["graph", "Gráficos do Dota / rounds do CS"]] },
+  play: [{ wide: 1, items: [["hero", "Jogo (capa, tempo e atalhos)"], ["perf", "Desempenho e FPS"], ["gsi", "Partida (CS2 / Dota 2)"], ["post", "Fim de partida (comparação)"], ["tact", "Timers do Dota / bomba e economia do CS"], ["graph", "Gráficos do Dota / rounds do CS"]] },
     { title: "Atalhos do jogo", items: [["a-mic", "MIC (microfone do PC)"], ["a-dmute", "Discord mudo"], ["a-ddeaf", "Discord surdo"], ["a-shot", "Print F12"], ["a-clip", "Clipe 30 s (Game Bar)"]] }],
   meet: [{ wide: 1, items: [["head", "Título, pessoas e tempo"], ["btns", "Botões"]] },
     { title: "Botões da reunião", items: [["m-mic", "Microfone"], ["m-cam", "Câmera"], ["m-share", "Compartilhar tela"], ["m-hand", "Levantar a mão"],
       ["m-captions", "Legendas"], ["m-chat", "Chat"], ["m-focus", "Mostrar no PC"], ["m-leave", "Sair"]] }],
-  today: [{ wide: 1, items: [["weather", "Clima"], ["agenda", "Agenda"], ["focus", "Foco"]] }],
-  games: [{ wide: 1, items: [["now", "Jogo atual"], ["recent", "Jogados recentemente"], ["week", "Esta semana"], ["hist", "Partidas (CS2 / Dota 2)"], ["lib", "Biblioteca"]] }],
+  today: [{ wide: 1, items: [["weather", "Clima"], ["agenda", "Agenda"], ["day", "Seu dia (resumo)"], ["focus", "Foco"]] }],
+  games: [{ wide: 1, items: [["now", "Jogo atual"], ["recent", "Jogados recentemente"], ["week", "Esta semana"], ["post", "Fim de partida"], ["dl", "Downloads da Steam"], ["friends", "Amigos da Steam"], ["hist", "Partidas (CS2 / Dota 2)"], ["lib", "Biblioteca"]] }],
   usage: [{ items: [["range", "Hoje / Semana / Mês"]] }, { wide: 1, items: [["total", "Total, gráfico e categorias"], ["apps", "Por aplicativo"]] }],
   media: [{ items: [["art", "Capa"], ["info", "Música e artista"], ["prog", "Barra de progresso"], ["ctrls", "Anterior / tocar / próxima"], ["vol", "Volume"], ["out", "Saída de áudio"]] }],
   mix: [{ wide: 1, items: [["outs", "Saída de áudio"], ["profiles", "Perfis de áudio"], ["apps", "Volume por aplicativo"]] }],
@@ -234,7 +244,7 @@ function send(a, p) {
   return new Promise((res, rej) => {
     if (!ws || ws.readyState !== 1) return rej(new Error("desconectado"));
     const id = ++rid; pending.set(id, { res, rej }); ws.send(JSON.stringify({ t: "req", id, a, p }));
-    setTimeout(() => pending.delete(id) && rej(new Error("sem resposta")), a === "daily.set" ? 45000 : 8000);
+    setTimeout(() => pending.delete(id) && rej(new Error("sem resposta")), a === "daily.set" || a === "steam.set" ? 45000 : 8000);
   });
 }
 function connect() {
@@ -243,7 +253,7 @@ function connect() {
   ws.onopen = () => ws.send(JSON.stringify({ t: "hello", token: TOKEN, role: "editor" }));
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    if (msg.t === "welcome") { LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); loadDaily(); mountPreviews(); }
+    if (msg.t === "welcome") { LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); loadDaily(); loadSteam(); mountPreviews(); }
     else if (msg.t === "res") { const p = pending.get(msg.id); if (p) { pending.delete(msg.id); msg.ok ? p.res(msg.d) : p.rej(new Error(msg.e)); } }
     else if (msg.t === "layout" && !saveT) { LAY = msg.d || {}; renderAll(); }
     else if (msg.t === "deck" && msg.d) { DECK = msg.d.deck; renderDeck(); }
@@ -476,15 +486,35 @@ function dailyStatus(d) {
   if (d.has_ics) parts.push(d.err?.calendar ? "Agenda: " + d.err.calendar : `Agenda: ${d.events.length} compromisso(s) hoje e amanhã`);
   $("d-st").textContent = parts.join(" · ");
 }
-async function loadDaily() { try { const d = await send("daily.get"); $("d-city").value = d.city || ""; $("d-ics").placeholder = d.has_ics ? "agenda conectada (cole outro link para trocar)" : $("d-ics").placeholder; dailyStatus(d); } catch {} }
+async function loadDaily() { try {
+  const [d, profs] = await Promise.all([send("daily.get"), send("audio.profiles").catch(() => [])]);
+  $("d-mprof").innerHTML = '<option value="">(sem perfil)</option>' + (profs || []).map((p) => `<option>${esc(p.name)}</option>`).join("");
+  $("d-mprof").value = d.meet_profile || ""; $("d-mauto").checked = d.meet_auto !== false; $("d-mopen").checked = !!d.meet_open;
+  $("d-city").value = d.city || ""; $("d-ics").placeholder = d.has_ics ? "agenda conectada (cole outro link para trocar)" : $("d-ics").placeholder; dailyStatus(d); } catch {} }
 $("d-save").onclick = async () => {
-  const p = { city: $("d-city").value.trim() };
+  const p = { city: $("d-city").value.trim(), meet_auto: $("d-mauto").checked, meet_open: $("d-mopen").checked, meet_profile: $("d-mprof").value };
   if ($("d-ics").value.trim() || $("d-ics").dataset.clear) p.ics = $("d-ics").value.trim();
   status("saving", "Salvando…"); $("d-st").textContent = "Buscando…";
   try { const d = await send("daily.set", p); $("d-ics").value = ""; dailyStatus(d); status("ok", "Conectado · tudo salvo"); }
   catch (e) { $("d-st").textContent = "Erro: " + e.message; status("bad", "Erro ao salvar"); }
 };
 $("d-ics").addEventListener("input", () => { $("d-ics").dataset.clear = $("d-ics").value ? "" : "1"; });
+
+// ------------------------------------------------------------ steam
+function steamStatus(d) {
+  $("st-st").textContent = !d.has_key ? "Sem chave: só downloads" : d.err ? "Erro: " + d.err : d.friends ? `${d.friends.filter((f) => f.on).length} amigo(s) online de ${d.friends.length}` : "Buscando amigos…";
+}
+async function loadSteam() { try { const d = await send("steam.get"); if (d.has_key) $("st-key").placeholder = "chave salva (cole outra para trocar)"; steamStatus(d); } catch {} }
+$("st-save").onclick = async () => {
+  const key = $("st-key").value.trim();
+  if (!key && !confirm("Tirar a chave da Steam?")) return;
+  $("st-st").textContent = "Testando…";
+  try {
+    const r = await send("steam.set", { key }); $("st-key").value = "";
+    $("st-st").textContent = !r.has_key ? "Chave removida: só downloads" : r.err ? "Erro: " + r.err : `Funcionou: ${r.friends} amigo(s)`;
+  }
+  catch (e) { $("st-st").textContent = "Erro: " + e.message; }
+};
 
 // ------------------------------------------------------------ botões (deck)
 async function loadDeck() { try { DECK = (await send("deck.get")).deck; renderDeck(); } catch {} }
