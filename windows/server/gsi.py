@@ -20,8 +20,9 @@ GAMES = {
     "570": ("dota2", os.path.join("game", "dota", "cfg", "gamestate_integration")),
 }
 DATA = {
-    "cs2": ["provider", "map", "round", "player_id", "player_state", "player_weapons", "player_match_stats"],
-    "dota2": ["provider", "map", "player", "hero", "abilities", "items", "buildings"],
+    "cs2": ["provider", "map", "round", "player_id", "player_state", "player_weapons", "player_match_stats",
+            "phase_countdowns", "map_round_wins"],
+    "dota2": ["provider", "map", "player", "hero", "abilities", "items", "buildings", "events", "roshan", "neutralitems"],
 }
 STALE_S = 30  # sem POST há mais que isso: dados velhos (jogo fechado ou no menu)
 
@@ -116,8 +117,20 @@ def summarize_cs2(d):
         "hp": st.get("health"), "armor": st.get("armor"), "helmet": st.get("helmet"), "money": st.get("money"),
         "flashed": st.get("flashed"), "rk": st.get("round_kills"), "rhs": st.get("round_killhs"),
         "k": ms.get("kills"), "d": ms.get("deaths"), "a": ms.get("assists"), "mvp": ms.get("mvps"), "score": ms.get("score"),
-        "weapon": weapon,
+        "weapon": weapon, "equip": st.get("equip_value"), "dmg": st.get("round_totaldmg"),
+        "losses": ((mp.get("team_ct") if team == "CT" else mp.get("team_t")) or {}).get("consecutive_round_losses"),
+        "cd": _countdown(d.get("phase_countdowns")),
     }
+
+
+def _countdown(pc):
+    """Contagem da fase (bomba plantada, desarmando, compra...) em segundos."""
+    if not isinstance(pc, dict) or pc.get("phase_ends_in") is None:
+        return None
+    try:
+        return {"phase": pc.get("phase"), "ends": round(float(pc["phase_ends_in"]), 1)}
+    except (TypeError, ValueError):
+        return None
 
 
 DOTA_STATES = {
@@ -163,11 +176,19 @@ def _hero_prefix(hero):
 # Servidor HTTP mínimo (o servidor de WebSocket não aceita POST)
 # --------------------------------------------------------------------------
 class GSI:
-    def __init__(self, port, token, on_update):
+    def __init__(self, port, token, on_update, trackers=None):
         self.port, self.token, self.on_update = port, token, on_update
+        self.trackers = trackers or {}   # jogo -> objeto com feed(raw, resumo) (matches.py)
         self.state = {}       # jogo -> resumo
         self.seen = {}        # jogo -> time.time() do último POST
         self.running = False
+
+    def refresh(self, game):
+        """Recalcula o resumo depois de uma marcação manual (ex.: Roshan) e manda de novo."""
+        tr, s = self.trackers.get(game), self.state.get(game)
+        if tr and s:
+            self.state[game] = tr.decorate(dict(s))
+            self.on_update(game, self.state[game])
 
     def current(self, game=None):
         """Resumo mais recente (do jogo pedido, ou o último a mandar algo), se não estiver velho."""
@@ -206,6 +227,12 @@ class GSI:
         if not game:
             return
         s = summarize_cs2(d) if game == "cs2" else summarize_dota(d)
+        tr = self.trackers.get(game)
+        if tr:
+            try:
+                s = tr.feed(d, s)
+            except Exception:  # noqa: BLE001  (o resumo básico continua chegando)
+                log.exception("GSI: falha ao acompanhar a partida de %s", game)
         changed = s != self.state.get(game)
         self.state[game], self.seen[game] = s, time.time()
         if changed:

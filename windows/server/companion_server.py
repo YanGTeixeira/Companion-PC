@@ -34,6 +34,7 @@ import devices
 import extras
 import games
 import gsi
+import matches
 import overlay
 import pc_info
 import screentime
@@ -630,6 +631,8 @@ ASYNC_ACTIONS = {
     "bat.refresh": lambda p: asyncio.to_thread(BAT.refresh),
     "meet.cmd": lambda p: meet_cmd(p),
     "layout.get": lambda p: _async(layout_get()),
+    "matches.get": lambda p: asyncio.to_thread(matches_get, p),
+    "dota.mark": lambda p: _async(dota_mark(p)),
     "layout.set": lambda p: _async(layout_set(p)),
     "usage.get": lambda p: asyncio.to_thread(SCREEN.report, p.get("range", "day"), p.get("day")),
     "usage.app": lambda p: asyncio.to_thread(SCREEN.app_report, str(p["app"]), int(p.get("days", 7))),
@@ -969,7 +972,7 @@ async def meet_cmd(p):
         raise ValueError("não consegui trazer o Meet para a frente")
     await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"layout.get", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"layout.get", "matches.get", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -1214,7 +1217,21 @@ def gsi_update(game, summary):
     asyncio.get_running_loop().create_task(broadcast({"t": "gsi", "d": summary}))
 
 
-GSI = gsi.GSI(int(CFG.get("gsi_port", 8772)), gsi_token(), gsi_update)
+MATCHES = matches.Store(BASE / "matches.db")
+GSI = gsi.GSI(int(CFG.get("gsi_port", 8772)), gsi_token(), gsi_update,
+              trackers={"cs2": matches.CsTracker(MATCHES), "dota2": matches.DotaTracker(MATCHES)})
+
+
+def matches_get(p):
+    game = p.get("game")
+    if game not in ("cs2", "dota2"):
+        raise ValueError("jogo inválido")
+    return MATCHES.report(game)
+
+
+def dota_mark(p):
+    GSI.trackers["dota2"].mark(str(p.get("what")), bool(p.get("clear")))
+    GSI.refresh("dota2")
 
 
 async def games_loop():

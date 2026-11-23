@@ -646,6 +646,51 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 /* jogando */
 .play { display: grid; gap: 10px; }
 .play .pgsi { order: 1; } .play .pperf { order: 2; }
+/* partida rolando (CS2/Dota 2): capa e desempenho viram uma faixa e a partida ganha três colunas */
+.play.match .phero { min-height: 0; flex-direction: row; align-items: center; flex-wrap: wrap; padding: 8px 10px; }
+.play.match .phero .pcont { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.play.match .phero .gname { font-size: 22px; margin: 0; } .play.match .phero .gtime { font-size: 22px; margin: 0; }
+.play.match .phero .mrow, .play.match .phero #pl-extra { display: none; }
+.play.match .phero .pacts { margin-left: auto; }
+.play.match .pperf { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; padding: 8px 10px; }
+.play.match .pperf > h3, .play.match .pperf .spark { display: none; }
+.play.match .pperf .pfps b { font-size: 30px; } .play.match .pperf .pfps span { font-size: 16px; }
+.play.match .pperf .row { gap: 6px; padding: 0; font-size: 13px; }
+.play.match .pperf .row span:first-child { color: var(--p3); }
+.ttrow { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 3px 0; font-size: 14px; }
+.ttrow .bell { color: var(--p4); font-size: 13px; text-align: center; } .ttrow .bell.on { color: var(--p); }
+.ttrow .tt { font: 20px/1 var(--display); text-align: right; min-width: 4ch; }
+.ttrow .bar { grid-column: 2 / -1; margin: 0; height: 4px; }
+.ttrow.soon { color: var(--hl); } .ttrow.soon .tt { animation: blink 1s steps(1) infinite; }
+.ttrow.past { color: var(--p3); }
+.tbtns { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; } .tbtns .btn { flex: 1 1 auto; }
+.chart { display: block; width: 100%; height: 70px; margin: 4px 0 2px; overflow: visible; }
+.chart .ax { stroke: var(--p4); stroke-width: 1; }
+.chart .l1 { stroke: var(--p); stroke-width: 2; fill: none; vector-effect: non-scaling-stroke; }
+.chart .l2 { stroke: var(--p3); stroke-width: 1.5; fill: none; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+.chart .l3 { stroke: var(--hl); stroke-width: 1.5; fill: none; vector-effect: non-scaling-stroke; }
+.clg { display: flex; gap: 12px; font-size: 12px; color: var(--p3); flex-wrap: wrap; }
+.clg i { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--p); vertical-align: middle; margin-right: 4px; }
+.clg i.d { border-top: 2px dashed var(--p3); } .clg i.h { border-top-color: var(--hl); }
+.bomb { text-align: center; padding: 6px 0; }
+.bomb b { display: block; font: 76px/1 var(--display); font-weight: 400; color: var(--alert); }
+.bomb .sub { white-space: normal; }
+.bomb.ok b { color: var(--p); }
+.rnds { display: flex; flex-wrap: wrap; gap: 3px; margin: 6px 0; }
+.rnds span { width: 24px; height: 24px; display: grid; place-items: center; font-size: 12px; border: 1px solid var(--p4); color: var(--p3); border-radius: var(--r); }
+.rnds span.w { background: var(--on); color: var(--onfg); border-color: var(--on); text-shadow: none; }
+.rnds span.l { border-color: var(--alert); color: var(--alert); }
+.rnds span.half { margin-left: 8px; }
+.buy { font: 26px/1.1 var(--display); margin: 4px 0; }
+.buy.eco { color: var(--alert); }
+.pgsi .kda.k5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.hist .hrow { display: grid; grid-template-columns: 1.4ch minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px dashed var(--p4); font-size: 14px; }
+.hist .hrow:last-child { border: 0; }
+.hist .hrow small { color: var(--p3); font-size: 12px; }
+.hist .wl { font: 18px/1 var(--display); } .hist .wl.l { color: var(--alert); }
+.hist table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hist td, .hist th { padding: 3px 4px; text-align: right; } .hist td:first-child, .hist th:first-child { text-align: left; }
+.hist th { color: var(--p3); font-weight: 400; font-size: 12px; }
 .phero { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 6px; min-height: 170px; }
 .pbg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: .28; filter: saturate(.2) contrast(1.1); }
 .pcont { position: relative; flex: 1; }
@@ -671,6 +716,10 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .pgsi .hpbar { height: 12px; margin: 6px 0 2px; }
 .pgsi .dead { color: var(--alert); font: 26px/1.1 var(--display); }
 @container (min-width: 640px) {
+  .play.match { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; grid-template-rows: auto minmax(0, 1fr); }
+  .play.match .phero { grid-column: span 2; }
+  .play.match .pgsi { order: 3; overflow-y: auto; }
+  .play.match .pperf { order: 0; }
   .play { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: stretch; }
   .play.has-gsi { grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) minmax(0, 1.2fr); }
   .play .pgsi, .play .pperf { order: 0; }
@@ -873,6 +922,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
       </div>
         <div class="card" data-b="recent"><h3><span>Jogados recentemente</span></h3><div id="g-recent"></div></div>
         <div class="card" data-b="week"><h3><span>Esta semana</span><span id="gh-total"></span></h3><div class="week" id="gh-days"></div><div id="gh-top" style="margin-top:10px"></div></div>
+      <div class="card hist" data-b="hist"><h3><span>Partidas</span><span class="chips" id="hist-g" style="flex:none"><button class="chip2 on" data-hg="cs2">CS2</button><button class="chip2" data-hg="dota2">Dota 2</button></span></h3><div id="hist"><div class="empty">Carregando…</div></div></div>
       <div class="glib" data-b="lib"><h2>Biblioteca</h2><div class="lib" id="g-lib"><div class="empty">Carregando…</div></div></div>
     </div>
   </section>
@@ -889,7 +939,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <div class="sub" id="pl-extra"></div>
         </div>
         <div class="pacts">
-          <button class="btn sm" data-pa="mic" data-b="a-mic">MIC</button><button class="btn sm" data-pa="dmute" data-b="a-dmute">DC mudo</button><button class="btn sm" data-pa="ddeaf" data-b="a-ddeaf">DC surdo</button><button class="btn sm" data-pa="shot" data-b="a-shot">Print F12</button>
+          <button class="btn sm" data-pa="mic" data-b="a-mic">MIC</button><button class="btn sm" data-pa="dmute" data-b="a-dmute">DC mudo</button><button class="btn sm" data-pa="ddeaf" data-b="a-ddeaf">DC surdo</button><button class="btn sm" data-pa="shot" data-b="a-shot">Print F12</button><button class="btn sm" data-pa="clip" data-b="a-clip">Clipe 30s</button>
         </div>
       </div>
       <div class="card pperf" data-b="perf">
@@ -903,6 +953,8 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
         <div class="fps-hint hidden" id="pl-fps-hint"></div>
       </div>
       <div class="card pgsi hidden" id="pl-gsi" data-b="gsi"></div>
+      <div class="card pgsi ptact hidden" id="pl-tact" data-b="tact"></div>
+      <div class="card pgsi pgraph hidden" id="pl-graph" data-b="graph"></div>
     </div>
   </section>
 
@@ -1274,7 +1326,7 @@ const setBar = (id, pct) => { const b = $(id); pct = Math.max(0, Math.min(100, +
 function buzz(ms = 12) { if (PREVIEW) return; snd(ms <= 8 ? "tab" : "tap"); if (prefs.vib && navigator.vibrate) try { navigator.vibrate(ms); } catch {} }
 // sons de terminal: bipes de onda quadrada gerados na hora (sem arquivos)
 let actx = null;
-const SOUNDS = { tap: [[1900, 0.022]], tab: [[1300, 0.025], [1900, 0.025]], ok: [[1400, 0.045], [2100, 0.06]],
+const SOUNDS = { alarm: [[880, 0.08], [1320, 0.08], [880, 0.08], [1320, 0.14]], tap: [[1900, 0.022]], tab: [[1300, 0.025], [1900, 0.025]], ok: [[1400, 0.045], [2100, 0.06]],
   err: [[320, 0.11], [220, 0.14]], on: [[800, 0.045], [1200, 0.045], [1800, 0.07]], off: [[1200, 0.06], [600, 0.1]], note: [[1700, 0.05], [1700, 0.05]] };
 function snd(kind) {
   if (!prefs.snd) return;
@@ -1545,6 +1597,7 @@ function showView(name, temp) {
   if (!temp) { store.set("tab", name); lastView[sec] = name; store.set("views", lastView); }
   if (!vis("mouse")) $("kbd").blur();
   if (vis("dash")) requestAnimationFrame(drawSparks);
+  if (vis("games") && welcome) loadHist();
   if (vis("screen")) requestAnimationFrame(() => { layoutScreen(); screenLoop(); });
   if (vis("media") || vis("mix")) { mixT = 0; renderMixer(); pollMixer(); }
   if (vis("games")) loadGamesExtra();
@@ -1810,45 +1863,237 @@ function renderPlayPerf(s) {
   document.querySelector('[data-pa="mic"]').textContent = m?.muted ? "MIC mudo" : "MIC";
 }
 const clock = (s) => { if (s == null) return "–"; const neg = s < 0; s = Math.abs(Math.floor(s)); return (neg ? "-" : "") + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
-function renderGsi() {
-  const box = $("pl-gsi"), g = state.games?.game, d = state.gsi;
-  const name = (g?.name || "").toLowerCase();
+// ---------------------------------------------------------------- partida (Game State Integration de CS2 e Dota 2)
+const GSI_BOX = ["pl-gsi", "pl-tact", "pl-graph"];
+function gsiFresh() {
+  const g = state.games?.game, d = state.gsi, name = (g?.name || "").toLowerCase();
   const isCs = /counter-strike/.test(name), isDota = /dota 2/.test(name);
   const fresh = d && Date.now() - state.gsiT < 30000 && ((d.g === "cs2" && isCs) || (d.g === "dota2" && isDota));
-  let h = "";
-  if (fresh && d.g === "cs2") h = gsiCs(d);
-  else if (fresh && d.g === "dota2") h = gsiDota(d);
-  else if (isDota) h = `<h3><span>Partida</span></h3><div class="sub" style="white-space:normal">Para ver a partida aqui: na Steam, clique com o botão direito em Dota 2 > Propriedades > Opções de inicialização e escreva <b>-gamestateintegration</b>. Depois reabra o jogo.</div>`;
-  else if (isCs) h = `<h3><span>Partida</span></h3><div class="sub" style="white-space:normal">Entre numa partida para ver placar, vida e munição aqui.</div>`;
-  box.classList.toggle("hidden", !h);
-  box.parentElement.classList.toggle("has-gsi", !!h);
+  return { d: fresh ? d : null, isCs, isDota };
+}
+function setBox(id, h) {
+  const box = $(id); box.classList.toggle("hidden", !h);
   if (box.innerHTML !== h) box.innerHTML = h;
 }
+function renderGsi() {
+  const { d, isCs, isDota } = gsiFresh();
+  let h = ["", "", ""];
+  if (d && d.g === "cs2") h = d.menu ? [`<h3><span>CS2</span><span>menu</span></h3><div class="sub">Esperando uma partida…</div>`, "", ""] : [gsiCs(d), csTact(d), csRounds(d)];
+  else if (d && d.g === "dota2") h = d.menu || !d.hero ? [`<h3><span>Dota 2</span><span>${esc(d.state || "menu")}</span></h3><div class="sub">Esperando uma partida…</div>`, "", ""] : [gsiDota(d), dotaTimers(d), dotaGraph(d)];
+  else if (isDota) h[0] = `<h3><span>Partida</span></h3><div class="sub" style="white-space:normal">Para ver a partida aqui: na Steam, clique com o botão direito em Dota 2 > Propriedades > Opções de inicialização e escreva <b>-gamestateintegration</b>. Depois reabra o jogo.</div>`;
+  else if (isCs) h[0] = `<h3><span>Partida</span></h3><div class="sub" style="white-space:normal">Entre numa partida para ver placar, economia e rounds aqui.</div>`;
+  GSI_BOX.forEach((id, i) => setBox(id, h[i]));
+  const play = $("pl-gsi").parentElement;
+  play.classList.toggle("has-gsi", !!h[0]);
+  play.classList.toggle("match", !!(h[1] || h[2]));
+  if (d && d.g === "dota2" && !d.menu) dotaAlerts(d);
+}
+
+// ---- histórico (aba Jogos)
+let histGame = store.get("histGame", "cs2");
+async function loadHist() {
+  document.querySelectorAll("#hist-g [data-hg]").forEach((b) => b.classList.toggle("on", b.dataset.hg === histGame));
+  let r; try { r = await send("matches.get", { game: histGame }); } catch { return; }
+  if (!r || r.game !== histGame) return;
+  const cs = histGame === "cs2";
+  if (!r.total) { $("hist").innerHTML = `<div class="empty">Nenhuma partida de ${cs ? "CS2" : "Dota 2"} salva ainda. Elas entram aqui sozinhas quando terminam.</div>`; return; }
+  const when = (t) => { const d = new Date(t * 1000); return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
+  $("hist").innerHTML = `<div class="row"><span>${r.total} partida${r.total > 1 ? "s" : ""}</span><span>${r.winrate ?? "–"}% de vitórias</span></div>
+    <table><tr><th>${cs ? "Mapa" : "Herói"}</th><th>jogos</th><th>vit.</th><th>K/D/A</th><th>${cs ? "HS%" : "GPM"}</th><th>${cs ? "ADR" : "XPM"}</th></tr>
+    ${r.groups.map((g) => `<tr><td>${esc(g.name)}</td><td>${g.n}</td><td>${g.winrate}%</td><td>${g.k}/${g.d}/${g.a}</td><td>${g.x ?? "–"}</td><td>${g.y ?? "–"}</td></tr>`).join("")}</table>
+    <div style="margin-top:8px">${r.recent.map((m) => `<div class="hrow"><span class="wl ${m.win === false ? "l" : ""}">${m.win === true ? "V" : m.win === false ? "D" : "E"}</span>
+      <span>${esc(m.title)}${cs ? ` <small>${m.mine}x${m.theirs}</small>` : ` <small>nível ${m.lvl ?? "–"} · ${clock(m.dur)}</small>`}<br><small>${when(m.ended)}</small></span>
+      <span>${m.k ?? 0}/${m.d ?? 0}/${m.a ?? 0}<br><small>${cs ? `HS ${m.hs_pct ?? "–"}% · ADR ${m.adr ?? "–"}` : `${m.gpm ?? "–"} GPM · ${m.lh ?? 0} LH`}</small></span></div>`).join("")}</div>`;
+}
+$("hist-g").addEventListener("click", (e) => { const b = e.target.closest("[data-hg]"); if (!b) return; buzz(8); histGame = b.dataset.hg; store.set("histGame", histGame); loadHist(); });
+
+// ---- CS2
+const CS_FULL = { CT: 5000, T: 4300 }, CS_WIN = 3250;
 function gsiCs(d) {
-  if (d.menu) return `<h3><span>CS2</span><span>menu</span></h3><div class="sub">Esperando uma partida…</div>`;
   const mine = d.team === "CT" ? d.ct : d.t, theirs = d.team === "CT" ? d.t : d.ct;
   const w = d.weapon, phase = { live: "ao vivo", freezetime: "compra", over: "fim do round" }[d.rphase] || d.rphase || "";
-  const bomb = d.bomb === "planted" ? '<span class="chip" style="background:var(--alert)">BOMBA</span>' : "";
-  return `<h3><span>${esc(d.map || "CS2")} · round ${d.round || "–"}</span><span>${esc(phase)} ${bomb}</span></h3>
+  return `<h3><span>${esc(d.map || "CS2")} · round ${d.round || "–"}</span><span>${esc(phase)}</span></h3>
     <div class="gsc"><div><b>${mine ?? "–"}</b> <span class="vs">${esc(d.team || "")}</span></div><span class="vs">x</span><div><span class="vs">${d.team === "CT" ? "T" : "CT"}</span> <b>${theirs ?? "–"}</b></div></div>
     ${d.spectating ? '<div class="dead">Morto · assistindo</div>' : `<div class="row"><span>Vida</span><span>${d.hp ?? "–"}</span></div><div class="bar hpbar ${d.hp <= 30 ? "bad" : ""}"><i style="width:${d.hp || 0}%"></i></div>
     <div class="row"><span>Colete</span><span>${d.armor ?? "–"}${d.helmet ? " + capacete" : ""}</span></div>
-    <div class="row"><span>Dinheiro</span><span>$${d.money ?? "–"}</span></div>
     ${w ? `<div class="row"><span>${esc(w.name)}</span><span class="big2">${w.clip ?? "–"}<small style="font-size:14px;color:var(--p3)"> / ${w.reserve ?? "–"}</small></span></div>` : ""}`}
-    <div class="kda"><div><b>${d.k ?? 0}</b><small>abates</small></div><div><b>${d.d ?? 0}</b><small>mortes</small></div><div><b>${d.a ?? 0}</b><small>assist.</small></div><div><b>${d.mvp ?? 0}</b><small>MVP</small></div></div>`;
+    <div class="kda k5"><div><b>${d.k ?? 0}</b><small>abates</small></div><div><b>${d.d ?? 0}</b><small>mortes</small></div><div><b>${d.a ?? 0}</b><small>assist.</small></div>
+      <div><b>${d.hs_pct ?? "–"}</b><small>HS %</small></div><div><b>${d.adr ?? "–"}</b><small>ADR</small></div></div>
+    <div class="row"><span>Neste round</span><span>${d.rk ?? 0} abates${d.rhs ? ` (${d.rhs} HS)` : ""} · ${d.dmg ?? 0} de dano</span></div>`;
+}
+function bombLeft(d) { return d.cd ? d.cd.ends - (Date.now() - state.gsiT) / 1000 : null; }
+function csTact(d) {
+  const ph = d.cd?.phase;
+  if (ph === "bomb" || ph === "defuse" || d.bomb === "planted") {
+    const left = Math.max(0, bombLeft(d) ?? 0), defusing = ph === "defuse";
+    const ct = d.team === "CT";
+    const hint = defusing ? "Desarmando" : !d.cd ? "Bomba plantada" : left > 10 ? "Dá para desarmar sem kit (10 s)" : left > 5 ? "Só com kit (5 s)" : "Não dá mais para desarmar";
+    return `<h3><span>${defusing ? "Desarmando" : "Bomba plantada"}</span><span>${ct ? "defenda / desarme" : "segure o bomb"}</span></h3>
+      <div class="bomb${defusing ? " ok" : ""}"><b id="cs-bomb">${d.cd ? left.toFixed(1) : "!"}</b><div class="sub" id="cs-bomb-h">${hint}</div></div>
+      <div class="bar ${left <= 10 ? "bad" : ""}"><i id="cs-bomb-bar" style="width:${Math.min(100, (left / 40) * 100)}%"></i></div>`;
+  }
+  const side = d.team === "T" ? "T" : "CT", money = d.money ?? 0, full = CS_FULL[side];
+  const losses = Math.max(0, Math.min(4, d.losses ?? 0)), bonus = 1400 + 500 * losses;
+  let buy, cls = "";
+  if (money >= full) buy = "Compra completa";
+  else if (money + bonus >= full) { buy = "Eco: guarde, compra completa no próximo"; cls = "eco"; }
+  else if (money >= 2000) buy = "Force: SMG ou pistola + colete";
+  else { buy = "Eco: só pistola"; cls = "eco"; }
+  return `<h3><span>Economia</span><span>${side} · ${losses ? losses + " derrota" + (losses > 1 ? "s" : "") + " seguida" + (losses > 1 ? "s" : "") : "sem sequência"}</span></h3>
+    <div class="row"><span>Dinheiro</span><span class="big2">$${money}</span></div>
+    <div class="row"><span>Equipamento</span><span>$${d.equip ?? 0}</span></div>
+    <div class="buy ${cls}">${buy}</div>
+    <div class="row"><span>Compra completa (${side})</span><span>~$${full}</span></div>
+    <div class="row"><span>Se perder o round</span><span>+$${bonus} → $${money + bonus}</span></div>
+    <div class="row"><span>Se ganhar</span><span>+$${CS_WIN}+ → $${money + CS_WIN}</span></div>`;
+}
+const CS_RN = { E: "eliminação", B: "bomba", D: "desarme", T: "tempo", R: "refém", S: "desistência" };
+function csRounds(d) {
+  const rs = d.rounds || [];
+  if (!rs.length) return `<h3><span>Rounds</span></h3><div class="sub">O primeiro round ainda não acabou.</div>`;
+  const wins = rs.filter((r) => r.win === true).length, losses = rs.filter((r) => r.win === false).length;
+  const last = rs[rs.length - 1];
+  return `<h3><span>Rounds</span><span>${wins} ganhos · ${losses} perdidos</span></h3>
+    <div class="rnds">${rs.map((r) => `<span class="${r.win === true ? "w" : r.win === false ? "l" : ""}${r.n === 13 || (r.n > 24 && (r.n - 25) % 3 === 0) ? " half" : ""}" title="Round ${r.n}: ${r.side || ""} por ${CS_RN[r.r] || r.r}">${r.r}</span>`).join("")}</div>
+    <div class="clg"><span>E eliminação</span><span>B bomba</span><span>D desarme</span><span>T tempo</span></div>
+    <div class="row" style="margin-top:6px"><span>Último (${last.n})</span><span>${last.win === true ? "ganhou" : last.win === false ? "perdeu" : esc(last.side || "")} por ${CS_RN[last.r] || "?"}</span></div>
+    ${last.k != null ? `<div class="row"><span>Você</span><span>${last.k} abates${last.hs ? ` (${last.hs} HS)` : ""} · ${last.dmg} de dano</span></div>` : ""}
+    ${rs.slice(-6, -1).filter((r) => r.k != null).reverse().map((r) => `<div class="row"><span>Round ${r.n}</span><span>${r.win ? "G" : "P"} · ${r.k} abates · ${r.dmg} dano</span></div>`).join("")}`;
+}
+
+// ---- Dota 2
+// Tempos do patch 7.3x (relógio da partida, em segundos). Se o patch mudar, é só ajustar aqui.
+const DOTA_TIMERS = [
+  { id: "bounty", name: "Runa de recompensa", first: 0, every: 180 },
+  { id: "power", name: "Runa de poder", first: 360, every: 120 },
+  { id: "water", name: "Runa de água", at: [120, 240] },
+  { id: "wisdom", name: "Runa de sabedoria", first: 420, every: 420 },
+  { id: "lotus", name: "Lótus", first: 180, every: 180 },
+  { id: "neutral", name: "Itens neutros", at: [420, 1020, 1620, 2220, 3600], tier: true },
+  { id: "stack", name: "Stack (puxe agora)", every: 60, offset: 53, lead: 3 },
+];
+const DOTA_BELL_DEFAULT = ["power", "wisdom", "neutral", "rosh", "torm", "aegis"];
+prefs.dotaBell = new Set(store.get("dotaBell", DOTA_BELL_DEFAULT));
+prefs.dotaAlerts = store.get("dotaAlerts", true);
+function dotaClock(d) { return d.clock == null ? null : d.clock + (d.paused ? 0 : Math.floor((Date.now() - state.gsiT) / 1000)); }
+function nextOf(t, c) {
+  if (t.at) { const i = t.at.findIndex((x) => x > c); return i < 0 ? null : { at: t.at[i], label: t.tier ? `tier ${i + 1}` : "" }; }
+  if (t.offset != null) { let n = Math.floor(c / 60) * 60 + t.offset; if (n <= c) n += 60; return c < 60 ? null : { at: n }; }
+  if (c < t.first) return { at: t.first };
+  return { at: t.first + Math.ceil((c - t.first + 0.001) / t.every) * t.every };
+}
+function dotaRows(d) {
+  const c = dotaClock(d); if (c == null) return [];
+  const rows = [];
+  for (const t of DOTA_TIMERS) { const n = nextOf(t, c); if (n) rows.push({ id: t.id, name: t.name + (n.label ? " " + n.label : ""), at: n.at, left: n.at - c, span: t.every || 180, lead: t.lead || 15 }); }
+  rows.push({ id: "day", name: d.day === false ? "Dia" : "Noite", at: Math.ceil((c + 0.001) / 300) * 300, left: Math.ceil((c + 0.001) / 300) * 300 - c, span: 300, lead: 0 });
+  const m = d.marks || {};
+  if (m.aegis != null && m.aegis + 300 > c) rows.push({ id: "aegis", name: "Aegis acaba", left: m.aegis + 300 - c, span: 300, lead: 20 });
+  if (m.rosh != null) {
+    if (c < m.rosh + 480) rows.push({ id: "rosh", name: "Roshan pode voltar", left: m.rosh + 480 - c, span: 480, lead: 30 });
+    else if (c < m.rosh + 660) rows.push({ id: "rosh2", name: "Roshan com certeza vivo", left: m.rosh + 660 - c, span: 180, lead: 0, soon: true });
+  }
+  const tormAt = m.torm != null ? m.torm + 600 : 1200;
+  if (tormAt > c) rows.push({ id: "torm", name: "Tormentor" + (m.torm != null ? " volta" : " aparece"), left: tormAt - c, span: m.torm != null ? 600 : 1200, lead: 20 });
+  return rows.sort((a, b) => a.left - b.left);
+}
+function dotaTimers(d) {
+  const rows = dotaRows(d).slice(0, 8);
+  return `<h3><span>Timers · ${clock(dotaClock(d))}</span><button class="btn sm" data-dt="alerts" style="padding:0 8px">${prefs.dotaAlerts ? "avisos: sim" : "avisos: não"}</button></h3>
+    <div id="dt-rows">${rows.map((r) => ttRow(r)).join("")}</div>
+    <div class="tbtns"><button class="btn sm" data-dt="rosh">Roshan morreu</button><button class="btn sm" data-dt="torm">Tormentor morreu</button>${d.marks?.rosh != null || d.marks?.torm != null ? '<button class="btn sm" data-dt="clear">Limpar</button>' : ""}</div>`;
+}
+function ttRow(r) {
+  const on = prefs.dotaBell.has(r.id.replace(/2$/, ""));
+  return `<div class="ttrow${r.soon || (r.lead && r.left <= r.lead) ? " soon" : ""}"><button class="bell${on ? " on" : ""}" data-bell="${r.id}" aria-label="aviso">${on ? "●" : "○"}</button><span>${esc(r.name)}</span><span class="tt">${clock(r.left)}</span>
+    <div class="bar"><i style="width:${Math.max(0, Math.min(100, 100 - (r.left / r.span) * 100))}%"></i></div></div>`;
+}
+function svgChart(lines, xmax, ymax) {
+  const W = 300, H = 70, x = (v) => ((v / Math.max(1, xmax)) * W).toFixed(1), y = (v) => (H - (v / Math.max(1, ymax)) * H).toFixed(1);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><line class="ax" x1="0" y1="${H}" x2="${W}" y2="${H}"/>${lines.map(([pts, cls]) =>
+    pts.length ? `<polyline class="${cls}" points="${pts.map(([a, b]) => x(a) + "," + y(b)).join(" ")}"/>` : "").join("")}</svg>`;
+}
+const LH_GOAL = 7;
+function dotaGraph(d) {
+  const s = d.series || [], c = dotaClock(d) || 0, m = Math.max(1, c / 60);
+  if (s.length < 2) return `<h3><span>Ritmo</span></h3><div class="sub" style="white-space:normal">Os gráficos aparecem depois de alguns minutos de partida.</div>`;
+  const xmax = Math.max(10, s[s.length - 1].m + 1);
+  const lh = s.map((p) => [p.m, p.lh || 0]), goal = [[0, 0], [xmax, LH_GOAL * xmax]];
+  const gp = s.map((p) => [p.m, p.gpm || 0]), xp = s.map((p) => [p.m, p.xpm || 0]);
+  const rate = (d.lh || 0) / m, gmax = Math.max(600, ...gp.map((p) => p[1]), ...xp.map((p) => p[1]));
+  const prev = s.length > 5 ? s[s.length - 6] : s[0], last = s[s.length - 1];
+  const recent = last.m > prev.m ? ((last.lh - prev.lh) / (last.m - prev.m)).toFixed(1) : "–";
+  return `<h3><span>Last hits</span><span>${rate.toFixed(1)}/min · últ. 5 min ${recent}</span></h3>
+    ${svgChart([[goal, "l2"], [lh, "l1"]], xmax, Math.max(LH_GOAL * xmax, ...lh.map((p) => p[1])))}
+    <div class="clg"><span><i></i>seus last hits (${d.lh ?? 0})</span><span><i class="d"></i>meta ${LH_GOAL}/min (${Math.round(LH_GOAL * m)})</span></div>
+    <h3 style="margin-top:10px"><span>GPM e XPM</span><span>${d.gpm ?? "–"} / ${d.xpm ?? "–"}</span></h3>
+    ${svgChart([[gp, "l1"], [xp, "l3"]], xmax, gmax)}
+    <div class="clg"><span><i></i>GPM</span><span><i class="h"></i>XPM</span><span>ouro agora: ${d.gold ?? "–"}</span></div>`;
 }
 function gsiDota(d) {
-  if (d.menu || !d.hero) return `<h3><span>Dota 2</span><span>${esc(d.state || "menu")}</span></h3><div class="sub">Esperando uma partida…</div>`;
   const hp = d.hpmax ? Math.round((d.hp / d.hpmax) * 100) : 0, mp = d.manamax ? Math.round((d.mana / d.manamax) * 100) : 0;
-  return `<h3><span>${esc(d.hero)} · nível ${d.level ?? "–"}</span><span>${clock(d.clock)} ${d.day === false ? "noite" : "dia"}${d.paused ? " · pausado" : ""}</span></h3>
+  const ult = (d.abilities || []).find((a) => a.ult);
+  return `<h3><span>${esc(d.hero)} · nível ${d.level ?? "–"}</span><span>${clock(dotaClock(d))} ${d.day === false ? "noite" : "dia"}${d.paused ? " · pausado" : ""}</span></h3>
     <div class="gsc"><div><b>${d.rad ?? "–"}</b> <span class="vs">Radiant</span></div><span class="vs">${esc(d.state || "")}</span><div><span class="vs">Dire</span> <b>${d.dire ?? "–"}</b></div></div>
-    ${d.alive === false ? `<div class="dead">Morto · volta em ${d.respawn ?? "?"} s</div><div class="sub">Buyback: ${d.buyback ?? "–"} de ouro${d.bbcd ? ` · recarga ${d.bbcd}s` : ""}</div>`
+    ${d.alive === false ? `<div class="dead">Morto · volta em ${d.respawn ?? "?"} s</div><div class="sub">Buyback: ${d.buyback ?? "–"} de ouro${d.bbcd ? ` · recarga ${d.bbcd}s` : (d.gold ?? 0) >= (d.buyback ?? 1e9) ? " · disponível" : " · falta ouro"}</div>`
       : `<div class="row"><span>Vida</span><span>${d.hp ?? "–"} / ${d.hpmax ?? "–"}</span></div><div class="bar hpbar ${hp <= 30 ? "bad" : ""}"><i style="width:${hp}%"></i></div>
     <div class="row"><span>Mana</span><span>${d.mana ?? "–"} / ${d.manamax ?? "–"}</span></div><div class="bar hpbar"><i style="width:${mp}%"></i></div>`}
-    <div class="kda"><div><b>${d.k ?? 0}</b><small>abates</small></div><div><b>${d.d ?? 0}</b><small>mortes</small></div><div><b>${d.a ?? 0}</b><small>assist.</small></div><div><b>${d.lh ?? 0}</b><small>last hits</small></div></div>
+    <div class="kda"><div><b>${d.k ?? 0}</b><small>abates</small></div><div><b>${d.d ?? 0}</b><small>mortes</small></div><div><b>${d.a ?? 0}</b><small>assist.</small></div><div><b>${d.lh ?? 0}<small style="font-size:14px">/${d.dn ?? 0}</small></b><small>LH / DN</small></div></div>
     <div class="row"><span>Ouro</span><span>${d.gold ?? "–"} · ${d.gpm ?? "–"} GPM · ${d.xpm ?? "–"} XPM</span></div>
+    ${ult ? `<div class="row"><span>Ultimate</span><span>${!ult.lvl ? "não aprendida" : ult.cd ? ult.cd + " s" : "pronta"}</span></div>` : ""}
+    ${d.alive !== false && d.buyback ? `<div class="row"><span>Buyback</span><span>${d.bbcd ? "recarga " + clock(d.bbcd) : (d.gold ?? 0) >= d.buyback ? "tem ouro (" + d.buyback + ")" : "falta " + (d.buyback - (d.gold ?? 0))}</span></div>` : ""}
     ${d.items?.length ? `<div class="items">${d.items.map((it) => `<div class="${it.cd ? "cd" : ""}">${esc(it.name)}${it.cd ? ` ${it.cd}s` : it.charges ? ` x${it.charges}` : ""}</div>`).join("")}</div>` : ""}`;
 }
+// avisos: bipe + vibração + aviso na tela, uma vez por acontecimento
+let dotaPrev = null; const dotaFired = new Set();
+function alarm(msg) { toast(msg, "warn"); snd("alarm"); if (prefs.vib && navigator.vibrate && !PREVIEW) try { navigator.vibrate([120, 60, 120]); } catch {} }
+function dotaAlerts(d) {
+  if (!prefs.dotaAlerts || PREVIEW) { dotaPrev = d; return; }
+  const p = dotaPrev; dotaPrev = d;
+  for (const r of dotaRows(d)) {
+    const base = r.id.replace(/2$/, "");
+    if (!prefs.dotaBell.has(base) || !r.lead || r.left > r.lead || r.left < 0) continue;
+    const key = r.id + ":" + Math.round((dotaClock(d) + r.left) / 5);
+    if (dotaFired.has(key)) continue;
+    dotaFired.add(key); alarm(`${r.name} em ${r.left} s`);
+  }
+  if (!p || p.hero !== d.hero) return;
+  const ult = (d.abilities || []).find((a) => a.ult), pu = (p.abilities || []).find((a) => a.ult);
+  if (ult && pu && pu.cd > 0 && !ult.cd && ult.lvl) alarm("Ultimate pronta");
+  const bkb = (d.items || []).find((i) => /black king bar/i.test(i.name)), pb = (p.items || []).find((i) => /black king bar/i.test(i.name));
+  if (bkb && pb && pb.cd > 0 && !bkb.cd) alarm("BKB pronta");
+  const canBB = (x) => x.alive === false && !x.bbcd && x.buyback && (x.gold ?? 0) >= x.buyback;
+  if (canBB(d) && !canBB(p)) alarm("Buyback disponível");
+  const low = (x) => x.alive !== false && x.hpmax && x.hp / x.hpmax < 0.25;
+  if (low(d) && !low(p)) alarm("Vida baixa");
+}
+document.querySelector(".play").addEventListener("click", (e) => {
+  const bell = e.target.closest("[data-bell]");
+  if (bell) {
+    const id = bell.dataset.bell.replace(/2$/, "");
+    prefs.dotaBell.has(id) ? prefs.dotaBell.delete(id) : prefs.dotaBell.add(id);
+    store.set("dotaBell", [...prefs.dotaBell]); buzz(8); renderGsi(); return;
+  }
+  const b = e.target.closest("[data-dt]"); if (!b) return;
+  const k = b.dataset.dt;
+  if (k === "alerts") { prefs.dotaAlerts = !prefs.dotaAlerts; store.set("dotaAlerts", prefs.dotaAlerts); buzz(8); renderGsi(); }
+  else if (k === "clear") { act("dota.mark", { what: "rosh", clear: true }); act("dota.mark", { what: "torm", clear: true }); act("dota.mark", { what: "aegis", clear: true }); }
+  else act("dota.mark", { what: k }, k === "rosh" ? "Roshan: marcado" : "Tormentor: marcado");
+});
+// relógio da partida e contagem da bomba andam no celular entre um dado e outro
+setInterval(() => {
+  if (!vis("play")) return;
+  const { d } = gsiFresh(); if (!d) return;
+  if (d.g === "dota2" && !d.menu) { const rows = dotaRows(d).slice(0, 8), el = $("dt-rows"); if (el) el.innerHTML = rows.map(ttRow).join(""); dotaAlerts(d); }
+}, 1000);
+setInterval(() => {
+  if (!vis("play")) return;
+  const { d } = gsiFresh(); const n = $("cs-bomb");
+  if (!d || d.g !== "cs2" || !n || !d.cd) return;
+  const left = Math.max(0, bombLeft(d)); n.textContent = left.toFixed(1);
+  $("cs-bomb-bar").style.width = Math.min(100, (left / 40) * 100) + "%";
+  if (d.cd.phase === "bomb") $("cs-bomb-h").textContent = left > 10 ? "Dá para desarmar sem kit (10 s)" : left > 5 ? "Só com kit (5 s)" : "Não dá mais para desarmar";
+}, 100);
 document.querySelector(".pacts").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-pa]"); if (!b) return;
   const k = b.dataset.pa;
@@ -1856,6 +2101,7 @@ document.querySelector(".pacts").addEventListener("click", async (e) => {
   else if (k === "dmute") act("discord.mute", null, "Discord: mudo");
   else if (k === "ddeaf") act("discord.deafen", null, "Discord: surdo");
   else if (k === "shot") act("key.press", { keys: "f12" }, "Print (F12 da Steam)");
+  else if (k === "clip") act("key.press", { keys: "win+alt+g" }, "Clipe: últimos 30 s (Game Bar)");
 });
 setInterval(() => { if (vis("play") && state.games?.game) { $("pl-time").textContent = humanClock(state.games.game.elapsed + (performance.now() - state.gamesT) / 1000); } }, 1000);
 
