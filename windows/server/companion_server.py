@@ -35,13 +35,14 @@ import extras
 import games
 import gsi
 import matches
+import daily
 import overlay
 import pc_info
 import screentime
 import voice
 import watchers
 
-VERSION = "1.8"
+VERSION = "1.9"
 BASE = Path(__file__).resolve().parent
 CFG_PATH = BASE / "config.json"
 LOG_PATH = BASE / "companion-server.log"
@@ -465,7 +466,7 @@ DOWNLOADS = extras.DownloadWatcher(CFG.get("downloads_dir") or DEFAULT_CFG["down
 
 
 LAYOUT_PATH = BASE / "layout.json"
-LAYOUT_VIEWS = {"dash", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"}
+LAYOUT_VIEWS = {"dash", "today", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"}
 LAYOUT_CARDS = {"cpu", "ram", "gpu", "net", "procs", "disks", "bat", "sys"}
 SKINS = {"fallout", "synth", "minimal", "hud", "lcd", "paper"}
 
@@ -632,6 +633,15 @@ ASYNC_ACTIONS = {
     "meet.cmd": lambda p: meet_cmd(p),
     "layout.get": lambda p: _async(layout_get()),
     "matches.get": lambda p: asyncio.to_thread(matches_get, p),
+    "daily.get": lambda p: _async(daily_public()),
+    "daily.set": lambda p: daily_set(p),
+    "daily.open": lambda p: _async(daily_open(p)),
+    "focus.start": lambda p: focus_start(p),
+    "focus.stop": lambda p: focus_stop(p),
+    "audio.profiles": lambda p: _async(audio_profiles()),
+    "audio.profile_save": lambda p: audio_profile_save(p),
+    "audio.profile_apply": lambda p: audio_profile_apply(p),
+    "audio.profile_del": lambda p: _async(audio_profile_del(p)),
     "dota.mark": lambda p: _async(dota_mark(p)),
     "layout.set": lambda p: _async(layout_set(p)),
     "usage.get": lambda p: asyncio.to_thread(SCREEN.report, p.get("range", "day"), p.get("day")),
@@ -763,6 +773,8 @@ def notif_sub(p):
 
 
 async def push_notif(n):
+    if FOCUS["state"]:
+        return  # modo foco: as notificações do PC não vão para o celular
     msg = json.dumps({"t": "event", "kind": "notif", **n}, ensure_ascii=False)
     for ws in list(notif_subs):
         try:
@@ -840,6 +852,8 @@ async def session(ws, peer, kind):
         await ws.send(json.dumps({"t": "meet", "d": MEET["state"]}, ensure_ascii=False))
     if GSI.current():
         await ws.send(json.dumps({"t": "gsi", "d": GSI.current()}, ensure_ascii=False))
+    await ws.send(json.dumps({"t": "daily", "d": daily_public()}, ensure_ascii=False))
+    await ws.send(json.dumps({"t": "focus", "d": focus_state()}, ensure_ascii=False))
     await push_now(only=ws)
     if kind == "celular":
         log.info("conectado: %s (%s) tela %s", kind, peer, str(hello.get("screen", "?"))[:120])
@@ -972,7 +986,7 @@ async def meet_cmd(p):
         raise ValueError("não consegui trazer o Meet para a frente")
     await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"layout.get", "matches.get", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"layout.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -1222,6 +1236,190 @@ GSI = gsi.GSI(int(CFG.get("gsi_port", 8772)), gsi_token(), gsi_update,
               trackers={"cs2": matches.CsTracker(MATCHES), "dota2": matches.DotaTracker(MATCHES)})
 
 
+# --------------------------------------------------------------------------
+# Hoje: clima e agenda
+# --------------------------------------------------------------------------
+DAILY = {"weather": None, "events": [], "err": {}, "wT": 0.0, "cT": 0.0}
+
+
+def daily_cfg():
+    return CFG.setdefault("daily", {"city": "", "ics": ""})
+
+
+def daily_public():
+    c = daily_cfg()
+    return {"weather": DAILY["weather"] if c.get("city") else None, "events": DAILY["events"] if c.get("ics") else [],
+            "city": c.get("city", ""), "has_ics": bool(c.get("ics")), "err": DAILY["err"]}
+
+
+async def daily_refresh(force=False):
+    c, now, changed = daily_cfg(), time.monotonic(), False
+    if c.get("city") and (force or now - DAILY["wT"] > 1800):
+        DAILY["wT"] = now
+        try:
+            DAILY["weather"] = await asyncio.to_thread(daily.weather, c["city"])
+            DAILY["err"].pop("weather", None)
+        except Exception as e:  # noqa: BLE001
+            DAILY["err"]["weather"] = str(e)[:120]
+            DAILY["wT"] = now - 1500  # tenta de novo em 5 min
+            log.warning("clima: %s", e)
+        changed = True
+    if c.get("ics") and (force or now - DAILY["cT"] > 600):
+        DAILY["cT"] = now
+        try:
+            DAILY["events"] = await asyncio.to_thread(daily.calendar, c["ics"])
+            DAILY["err"].pop("calendar", None)
+        except Exception as e:  # noqa: BLE001
+            DAILY["err"]["calendar"] = str(e)[:120]
+            DAILY["cT"] = now - 480
+            log.warning("agenda: %s", e)
+        changed = True
+    if changed:
+        await broadcast({"t": "daily", "d": daily_public()})
+
+
+async def daily_loop():
+    while True:
+        try:
+            await daily_refresh()
+        except Exception:  # noqa: BLE001
+            log.exception("hoje")
+        await asyncio.sleep(30)
+
+
+async def daily_set(p):
+    c = dict(daily_cfg())
+    if "city" in p:
+        c["city"] = str(p["city"] or "").strip()[:80]
+        DAILY["weather"] = None
+    if "ics" in p:
+        ics = str(p["ics"] or "").strip()
+        if ics and not ics.startswith(("https://", "webcal://")):
+            raise ValueError("cole o endereço secreto no formato iCal (começa com https://)")
+        c["ics"] = ics[:600]
+        DAILY["events"] = []
+    save_cfg_key("daily", c)
+    DAILY["err"] = {}
+    await daily_refresh(force=True)
+    return daily_public()
+
+
+def daily_open(p):
+    link = str(p.get("link") or "")
+    if not daily.MEET_RE.fullmatch(link) or link not in {e.get("link") for e in DAILY["events"]}:
+        raise ValueError("link de reunião desconhecido")
+    subprocess.Popen(["cmd", "/c", "start", "", "msedge", link], creationflags=0x08000000)
+    return True
+
+
+# --------------------------------------------------------------------------
+# Modo foco (cronômetro tipo Pomodoro; segura as notificações do PC no celular)
+# --------------------------------------------------------------------------
+FOCUS = {"state": None}
+FOCUS_LOG = BASE / "focus.json"
+
+
+def focus_today():
+    try:
+        return json.loads(FOCUS_LOG.read_text(encoding="utf-8")).get(time.strftime("%Y-%m-%d"), 0)
+    except (OSError, ValueError):
+        return 0
+
+
+def _focus_add(minutes):
+    try:
+        data = json.loads(FOCUS_LOG.read_text(encoding="utf-8")) if FOCUS_LOG.exists() else {}
+    except ValueError:
+        data = {}
+    day = time.strftime("%Y-%m-%d")
+    data[day] = data.get(day, 0) + minutes
+    data = dict(sorted(data.items())[-60:])
+    FOCUS_LOG.write_text(json.dumps(data), encoding="utf-8")
+
+
+def focus_state():
+    f = FOCUS["state"]
+    return {"on": bool(f), "end": f["end"] if f else None, "min": f["min"] if f else None,
+            "left": max(0, round(f["end"] - time.time())) if f else None, "today": focus_today()}
+
+
+async def focus_start(p):
+    minutes = int(p.get("minutes") or 25)
+    if not 1 <= minutes <= 240:
+        raise ValueError("tempo de foco inválido")
+    FOCUS["state"] = {"start": time.time(), "end": time.time() + minutes * 60, "min": minutes}
+    await broadcast({"t": "focus", "d": focus_state()})
+    return focus_state()
+
+
+async def focus_stop(p=None, done=False):
+    f = FOCUS["state"]
+    if f:
+        FOCUS["state"] = None
+        _focus_add(round((min(time.time(), f["end"]) - f["start"]) / 60))
+    st = focus_state()
+    await broadcast({"t": "focus", "d": {**st, "done": done}})
+    return st
+
+
+async def focus_loop():
+    while True:
+        await asyncio.sleep(2)
+        f = FOCUS["state"]
+        if f and time.time() >= f["end"]:
+            await focus_stop(done=True)
+
+
+# --------------------------------------------------------------------------
+# Perfis de áudio (saída + volume + microfone + volume dos apps)
+# --------------------------------------------------------------------------
+def audio_profiles():
+    return CFG.setdefault("audio_profiles", [])
+
+
+async def audio_profile_save(p):
+    name = str(p.get("name") or "").strip()[:24]
+    if not name:
+        raise ValueError("dê um nome ao perfil")
+    mx = await pc_info.mixer_get()
+    mic = await pc_info.mic_get()
+    out = next((o for o in mx.get("outputs") or [] if o.get("default")), None)
+    prof = {"name": name, "out_id": out and out["id"], "out_name": out and out["name"],
+            "level": (mx.get("master") or {}).get("level"), "mic_muted": (mic or {}).get("muted"),
+            "apps": {a["key"]: a["level"] for a in mx.get("apps") or [] if a["key"] != "_system"}}
+    profs = [x for x in audio_profiles() if x["name"].lower() != name.lower()] + [prof]
+    save_cfg_key("audio_profiles", profs[-8:])
+    return audio_profiles()
+
+
+async def audio_profile_apply(p):
+    prof = next((x for x in audio_profiles() if x["name"] == p.get("name")), None)
+    if not prof:
+        raise ValueError("perfil não existe")
+    msgs = []
+    if prof.get("out_id"):
+        try:
+            await pc_info.set_output(prof["out_id"])
+        except Exception:  # noqa: BLE001
+            msgs.append(f"{prof.get('out_name')} não está conectado")
+    if prof.get("level") is not None:
+        await pc_info.volume_set(level=float(prof["level"]))
+    if prof.get("mic_muted") is not None:
+        await pc_info.mic_set(bool(prof["mic_muted"]))
+    for key, level in (prof.get("apps") or {}).items():
+        try:
+            await pc_info.mixer_set(key, level)
+        except ValueError:
+            pass  # app fechado agora
+    await push_now()
+    return {"name": prof["name"], "warn": msgs}
+
+
+def audio_profile_del(p):
+    save_cfg_key("audio_profiles", [x for x in audio_profiles() if x["name"] != p.get("name")])
+    return audio_profiles()
+
+
 def matches_get(p):
     game = p.get("game")
     if game not in ("cs2", "dota2"):
@@ -1239,7 +1437,7 @@ async def games_loop():
     while True:
         try:
             state = await asyncio.to_thread(MON.poll)
-            if time.monotonic() > gsi_next and MON.catalog.roots:
+            if time.monotonic() > gsi_next and MON.catalog.roots and CFG.get("gsi_install", True):
                 gsi_next = time.monotonic() + 600
                 await asyncio.to_thread(gsi.install, list(MON.catalog.roots), GSI.port, GSI.token)
             for ws in list(clients):
@@ -1460,6 +1658,8 @@ async def main():
     asyncio.create_task(games_loop())
     asyncio.create_task(battery_loop())
     asyncio.create_task(screentime_loop())
+    asyncio.create_task(daily_loop())
+    asyncio.create_task(focus_loop())
     asyncio.create_task(GSI.serve())
     asyncio.create_task(adb_loop())
     asyncio.create_task(downloads_loop())

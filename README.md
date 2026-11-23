@@ -41,6 +41,28 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
 | **Botões** | Páginas de botões estilo Stream Deck. **Editar** cria/edita botões (atalho de teclado, texto, ação pronta ou programa do config.json), com ícone, cor e confirmação. Ficam salvos em `deck.json` no PC. |
 | **PC** | *Arquivos*: texto/link para a área de transferência do PC (ou já colar), fotos e arquivos para `Downloads\Companion PC`, e "Pegar o que está copiado no PC". *Energia*: bloquear, monitor, suspender, reiniciar, desligar. *Ajustes*: alertas (download concluído, GPU/CPU quente, memória cheia), cor do terminal e ajustes do aparelho. |
 
+**Novidades da 1.9**
+
+- **Dota 2 (aba Jogando):** timers pelo relógio da partida (runas de recompensa, poder, água e sabedoria, lótus,
+  itens neutros, stack em x:53, dia/noite, Tormentor), Roshan e Aegis com um toque em *Roshan morreu* ou sozinhos
+  quando o jogo manda o evento. Avisos com bipe e vibração (escolha quais pelo círculo de cada linha): timers 15 s antes,
+  ultimate e BKB prontas, buyback disponível, vida baixa. Gráficos de last hits (com meta de 7/min) e GPM/XPM.
+  Os tempos são do patch 7.3x e ficam em `DOTA_TIMERS` no `index.html`.
+- **CS2 (aba Jogando):** contagem da bomba plantada (e se dá para desarmar com ou sem kit), economia (dinheiro,
+  equipamento, bônus de derrota, quanto terá se perder ou ganhar e sugestão de compra), rounds ganhos e perdidos
+  com o motivo, seus abates/HS/dano por round, HS% e ADR. Depois de morrer continua mostrando os seus números.
+- **Histórico:** cada partida de CS2 e Dota 2 que termina fica em `matches.db`; em **Status › Jogos › Partidas**
+  aparecem vitórias e médias por mapa/herói e as últimas partidas.
+- **Clipe 30 s:** botão em Jogando que aperta Win+Alt+G (Xbox Game Bar). Ative em Configurações do Windows ›
+  Jogos › Capturas › *Gravar o que aconteceu*.
+- **Hoje (Status › Hoje):** clima (Open-Meteo) e agenda do Google (endereço secreto iCal; reuniões recorrentes
+  também) com botão *Entrar* que abre o Meet no Edge do PC e lembrete 5 min antes. Configure em
+  Personalizar › *Hoje*. Também aparecem no card Sistema e no modo base.
+- **Foco:** cronômetro de 25/50/90 min; as notificações do PC não chegam no celular enquanto dura. Fica no topo
+  (FOCO) e conta o tempo de foco do dia.
+- **Perfis de áudio (Rádio › Mixer):** salva saída, volume, microfone e volume dos apps; um toque aplica.
+- **Bateria fraca:** aviso quando mouse, teclado, fone ou controle ficam abaixo de 15% (ajuste em PC › Ajustes).
+
 **Novidades da 1.8**
 
 - **Personalizar pelo PC:** ícone da bandeja › *Personalizar* abre `http://localhost:8770/editor`.
@@ -121,6 +143,8 @@ os arquivos do celular) e `"downloads_dir"` (a pasta vigiada para o alerta de do
 | `windows/server/devices.py` | Bateria: Attack Shark X11, AULA F75, Bluetooth, XInput |
 | `windows/server/screentime.py` | Tempo de tela por app (SQLite) |
 | `windows/server/gsi.py` | Game State Integration de CS2 e Dota 2 |
+| `windows/server/matches.py` | Acompanha rounds/minutos das partidas e guarda o histórico |
+| `windows/server/daily.py` | Clima (Open-Meteo) e agenda (iCal) |
 | `windows/server/web/editor.html` | Editor de tema e layout (abra pela bandeja) |
 | `windows/edge-extension/` | Extensão do Edge para o Google Meet |
 | `windows/install-server.ps1` | Instala dependências e inicia o servidor com o Windows |

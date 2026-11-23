@@ -760,6 +760,31 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   .mtitle2 { font-size: 24px; }
 }
 
+/* hoje */
+.wxnow { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.wxnow b { font: 64px/1 var(--display); font-weight: 400; color: var(--p); }
+.wxnow span { color: var(--p2); }
+.wxh { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 10px 0 6px; text-align: center; font-size: 12px; color: var(--p3); }
+.wxh b { display: block; font: 22px/1.1 var(--display); color: var(--p); font-weight: 400; }
+.agev { display: grid; grid-template-columns: 6ch minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--p4); }
+.agev:last-child { border: 0; }
+.agev .at { font: 22px/1 var(--display); color: var(--p2); }
+.agev .ti { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agev small { display: block; color: var(--p3); font-size: 12px; }
+.agev.now .at, .agev.now .ti { color: var(--hl); }
+.agev.past { opacity: .45; }
+.agday { color: var(--p3); font-size: 12px; margin: 10px 0 2px; text-transform: uppercase; letter-spacing: .08em; }
+#dk-join { margin-top: 2vh; font-size: min(3.6vw, 4.6vh); }
+#td-focus .sub { white-space: normal; }
+@container (min-width: 760px) { #t-today .cols { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, .8fr); align-items: start; } }
+@media (orientation: landscape) and (max-height: 560px) {
+  .dk-line { margin-top: .8vh; } #dk-stats { display: none; } #dock .dk-hint { display: none; } #dk-join { margin-top: 1.2vh; padding: 4px 14px; }
+  .wxnow b { font-size: 48px; } .wxh { margin: 6px 0 4px; } .agev { padding: 4px 0; }
+}
+.approw { display: flex; gap: 6px; align-items: center; padding: 4px 0; }
+.approw .btn:first-child { flex: 1; text-align: left; }
+.approw small { color: var(--p3); }
+
 /* tempo de tela */
 .ubar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .ubar .chips { display: flex; gap: 6px; }
@@ -887,6 +912,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   <span class="via" id="via"></span>
   <span class="hchip hidden" id="fps-chip"></span>
   <button class="hchip hidden" id="tmr-chip" aria-label="Timer de energia"></button>
+  <button class="hchip hidden" id="fo-chip" aria-label="Modo foco"></button>
   <button class="hchip hidden meetchip" id="meet-chip" aria-label="Reunião">REUNIÃO</button>
   <button class="hchip hidden" id="voz-chip" aria-label="Comandos de voz">VOZ</button>
   <button class="hchip hidden" id="mic-chip" aria-label="Microfone do PC">MIC</button>
@@ -905,7 +931,22 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
       <div class="card c-bat" id="bat-card"><h3><span>Bateria</span><span id="bat-sum"></span></h3><div id="bats"><div class="empty">Procurando aparelhos…</div></div></div>
       <div class="card c-procs"><h3><span>Processos</span><span>CPU / memória</span></h3><div id="procs"></div></div>
       <div class="card c-disks"><h3><span>Discos</span></h3><div id="disks"></div></div>
-      <div class="card c-sys"><h3><span>Sistema</span></h3><div class="row"><span>Janela</span><span id="window" class="ell">–</span></div><div class="row"><span>Ligado há</span><span id="uptime">–</span></div><div class="row" id="bat-row"><span>Bateria</span><span id="bat">–</span></div><div class="row"><span>Windows</span><span id="os">–</span></div><div class="row hidden" id="voz-row"><span>Voz</span><span id="voz-dash" class="ell">–</span></div><div class="row hidden" id="voz-row2"><span>Último</span><span id="voz-dash-last" class="ell">–</span></div><div id="fans"></div></div>
+      <div class="card c-sys"><h3><span>Sistema</span></h3><div class="row hidden" id="sys-wx"><span>Clima</span><span id="sys-wx-v" class="ell"></span></div><div class="row hidden" id="sys-ag"><span>Agenda</span><span id="sys-ag-v" class="ell"></span></div><div class="row"><span>Janela</span><span id="window" class="ell">–</span></div><div class="row"><span>Ligado há</span><span id="uptime">–</span></div><div class="row" id="bat-row"><span>Bateria</span><span id="bat">–</span></div><div class="row"><span>Windows</span><span id="os">–</span></div><div class="row hidden" id="voz-row"><span>Voz</span><span id="voz-dash" class="ell">–</span></div><div class="row hidden" id="voz-row2"><span>Último</span><span id="voz-dash-last" class="ell">–</span></div><div id="fans"></div></div>
+    </div>
+  </section>
+
+  <!-- STATUS > Hoje: clima, agenda e foco -->
+  <section class="tab" id="t-today">
+    <div class="cols tday">
+      <div class="card" data-b="weather" id="td-weather"><h3><span>Clima</span></h3><div class="empty">Carregando…</div></div>
+      <div class="card" data-b="agenda" id="td-agenda"><h3><span>Agenda</span></h3><div class="empty">Carregando…</div></div>
+      <div class="card" data-b="focus" id="td-focus">
+        <h3><span>Foco</span><span id="fo-today"></span></h3>
+        <div id="fo-on" class="hidden"><div class="big" id="fo-left" style="font-size:64px">0:00</div><div class="sub">As notificações do PC não chegam no celular até acabar.</div>
+          <div class="brow"><button class="btn danger" id="fo-stop">Parar</button></div></div>
+        <div id="fo-off"><div class="sub" style="white-space:normal;margin-bottom:8px">Um cronômetro para trabalhar sem interrupção. Segura as notificações do PC no celular e bipa no fim.</div>
+          <div class="tiles tmr-tiles"><button class="tile" data-fmin="25">25 min</button><button class="tile" data-fmin="50">50 min</button><button class="tile" data-fmin="90">90 min</button></div></div>
+      </div>
     </div>
   </section>
 
@@ -1022,6 +1063,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   <section class="tab" id="t-mix">
     <div class="mixer" id="mixer">
       <div class="card" data-b="outs"><h3><span>Saída de áudio</span><span>toque para trocar</span></h3><div id="outs"><div class="empty">Carregando…</div></div></div>
+      <div class="card" data-b="profiles"><h3><span>Perfis de áudio</span><button class="btn sm" id="ap-save" style="padding:0 8px">Salvar o atual</button></h3><div id="ap-list"><div class="empty">Carregando…</div></div></div>
       <div class="card" data-b="apps"><h3><span>Volume por aplicativo</span><span id="mx-master"></span></h3><div id="mx-list"></div></div>
     </div>
   </section>
@@ -1192,6 +1234,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <div class="set"><label>CPU quente<small>Acima de <input class="num" id="al-cpu-v" type="number" inputmode="numeric"> °C <span id="al-cpu-note">(precisa do LibreHardwareMonitor no PC)</span></small></label><button class="switch" id="al-cpu" aria-label="CPU quente"></button></div>
           <div class="set"><label>Internet caiu<small>O PC ficou sem conexão (e quando volta)</small></label><button class="switch" id="al-net" aria-label="Internet caiu"></button></div>
           <div class="set"><label>Notificações do PC<small id="pcn-note">WhatsApp, Discord, e-mail e outros avisos do Windows</small></label><button class="switch" id="sw-pcnotif" aria-label="Notificações do PC"></button></div>
+          <div class="set"><label>Bateria fraca<small>Mouse, teclado, fone ou controle abaixo de <input class="num" id="al-bat-v" type="number" inputmode="numeric"> %</small></label><button class="switch" id="al-bat" aria-label="Bateria fraca"></button></div>
           <div class="set"><label>Memória cheia<small>Acima de <input class="num" id="al-ram-v" type="number" inputmode="numeric"> %</small></label><button class="switch" id="al-ram" aria-label="Memória cheia"></button></div>
           <div class="set"><label>Notificações do Android<small>Avisa com o app em segundo plano</small></label><button class="btn sm" id="al-notif">Ativar</button></div>
         </div>
@@ -1223,7 +1266,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 </main>
 
 <nav id="nav">
-  <div class="rail-top"><span id="dot2" class="dot"></span><span id="clock2"></span><button class="hchip hidden meetchip" id="meet-chip2" aria-label="Reunião">REU</button><button class="hchip hidden" id="voz-chip2" aria-label="Comandos de voz">VOZ</button><button class="hchip hidden" id="mic-chip2" aria-label="Microfone do PC">MIC</button></div>
+  <div class="rail-top"><span id="dot2" class="dot"></span><span id="clock2"></span><button class="hchip hidden meetchip" id="meet-chip2" aria-label="Reunião">REU</button><button class="hchip hidden" id="fo-chip2" aria-label="Modo foco">FOCO</button><button class="hchip hidden" id="voz-chip2" aria-label="Comandos de voz">VOZ</button><button class="hchip hidden" id="mic-chip2" aria-label="Microfone do PC">MIC</button></div>
 </nav>
 
 <div class="overlay hidden" id="login">
@@ -1272,6 +1315,9 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   <div class="dk-line" id="dk-stats"></div>
   <div class="dk-line hi" id="dk-media"></div>
   <div class="dk-line" id="dk-extra"></div>
+  <div class="dk-line" id="dk-wx"></div>
+  <div class="dk-line hi" id="dk-ag"></div>
+  <button class="btn primary hidden" id="dk-join">Entrar na reunião</button>
 </div><div class="dk-hint">Toque para voltar</div></div>
 <div id="idle-catch" class="hidden"><div class="dk-hint">Toque para voltar</div></div>
 <div class="toast hidden" id="toast"></div>
@@ -1427,6 +1473,8 @@ function onMsg(m) {
     case "layout": applyLayout(m.d, true); break;
     case "deck": if (m.d && !deckEdit) { deckData = m.d; renderDeck(); } break;
     case "gsi": state.gsi = m.d; state.gsiT = Date.now(); renderGsi(); break;
+    case "daily": state.daily = m.d; renderToday(); break;
+    case "focus": onFocus(m.d); break;
     case "games": state.games = m.d; state.gamesT = performance.now(); renderGames(); onGameState(); break;
     case "gameart": state.gameart = { [m.id]: "data:image/jpeg;base64," + m.jpg }; renderGames(); renderPlay(); break;
     case "event":
@@ -1464,12 +1512,12 @@ $("b-logout").onclick = () => { store.set("token", ""); if (ws) { const s = ws; 
 // ---------------------------------------------------------------- layout (menu e cartões), um em pé e um deitado
 // O layout fica no PC (layout.json) e é editado na página /editor; vale para todos os aparelhos.
 const VIEW_LABEL = { dash: "Sistema", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
-  screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes", play: "Jogando", meet: "Reunião" };
+  screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes", play: "Jogando", meet: "Reunião", today: "Hoje" };
 const DEFAULT_NAV = [
-  { id: "status", label: "Status", views: ["dash", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
+  { id: "status", label: "Status", views: ["dash", "today", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
   { id: "ctrl", label: "Controle", views: ["mouse", "screen"] }, { id: "deck", label: "Botões", views: ["deck"] },
   { id: "pc", label: "PC", views: ["send", "power", "voz", "sys"] }];
-const SPLIT_DEFAULT = { status: "minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
+const SPLIT_DEFAULT = { status: "minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
   ctrl: "minmax(0,1fr) minmax(0,1.7fr)", pc: "minmax(0,1.1fr) minmax(0,.7fr) minmax(0,1.3fr) minmax(0,1.1fr)" };
 const BASE_VIEWS = Object.keys(VIEW_LABEL).filter((v) => v !== "play" && v !== "meet");
 let LAYOUT = store.get("layout", null) || {};
@@ -1598,6 +1646,8 @@ function showView(name, temp) {
   if (!vis("mouse")) $("kbd").blur();
   if (vis("dash")) requestAnimationFrame(drawSparks);
   if (vis("games") && welcome) loadHist();
+  if (vis("mix") && welcome) loadProfiles();
+  if (vis("today")) renderToday();
   if (vis("screen")) requestAnimationFrame(() => { layoutScreen(); screenLoop(); });
   if (vis("media") || vis("mix")) { mixT = 0; renderMixer(); pollMixer(); }
   if (vis("games")) loadGamesExtra();
@@ -1618,7 +1668,7 @@ function bootLine(t, dim) {
   const d = document.createElement("div"); d.className = "l cur" + (dim ? " dim" : ""); d.textContent = t; box.appendChild(d);
 }
 function bootDone(now) { setTimeout(() => $("boot").classList.add("done"), now || REDUCED ? 0 : 500); }
-bootLine("PC COMPANION 1.8");
+bootLine("PC COMPANION 1.9");
 bootLine("Terminal de bolso para o seu PC", true);
 bootLine(`Conectando pelo ${["localhost", "127.0.0.1"].includes(location.hostname) ? "cabo USB" : "Wi-Fi"}…`);
 setTimeout(() => bootDone(true), 5000);   // sem PC: mostra o app com o aviso de conexão
@@ -2742,7 +2792,7 @@ let idleT = Date.now(), idleOn = false, docked = false, dockMoveT = 0, idleI = 0
 function idleList() {
   if (prefs.idleMode === "clock") return ["clock"];
   const playing = state.now?.media;
-  const list = wideMQ.matches ? ["dash", playing ? "media" : null] : ["dash", "games", playing ? "media" : null];
+  const list = wideMQ.matches ? ["dash", playing ? "media" : null] : ["dash", state.daily?.weather || state.daily?.events?.length ? "today" : null, "games", playing ? "media" : null];
   return [...list.filter(Boolean), "clock"];
 }
 function idleStart() {
@@ -2775,7 +2825,9 @@ function renderDock() {
   const md = state.now?.media, g = state.games?.game;
   $("dk-media").textContent = md && md.status === "playing" ? `> ${md.title}${md.artist ? " / " + md.artist : ""}`
     : g ? `Jogando ${g.name}, ${humanDur(g.elapsed + (performance.now() - state.gamesT) / 1000)}${s.fps?.fps != null ? `, ${s.fps.fps} FPS` : ""}` : "";
-  $("dk-extra").textContent = [s.mic?.muted ? "Microfone do PC no mudo" : "", s.timer ? `${s.timer.label} em ${fmtTime(s.timer.left)}` : ""].filter(Boolean).join("   ");
+  $("dk-extra").textContent = [s.mic?.muted ? "Microfone do PC no mudo" : "", s.timer ? `${s.timer.label} em ${fmtTime(s.timer.left)}` : "",
+    focusEnd ? `Foco: ${fmtTime(Math.max(0, (focusEnd - Date.now()) / 1000))}` : ""].filter(Boolean).join("   ");
+  renderDockDaily();
   if (Date.now() - dockMoveT > 60000) {   // desloca um pouco a cada minuto para não marcar a tela
     dockMoveT = Date.now();
     $("dk").style.transform = `translate(${(Math.random() * 4 - 2).toFixed(1)}vw, ${(Math.random() * 4 - 2).toFixed(1)}vh)`;
@@ -3033,11 +3085,117 @@ async function handleShared() {
 }
 const waitConnected = () => new Promise((res) => { const chk = () => (welcome.host && ws && ws.readyState === 1 ? res() : setTimeout(chk, 300)); chk(); });
 
+// ---------------------------------------------------------------- Hoje: clima, agenda e foco
+const hm = (iso) => iso.slice(11, 16);
+const evDate = (iso) => new Date(iso.length === 16 ? iso + ":00" : iso);
+function upcoming() {
+  const now = Date.now();
+  return (state.daily?.events || []).filter((e) => !e.all_day && evDate(e.end) > now);
+}
+function renderToday() {
+  const d = state.daily || {}, w = d.weather;
+  // card Sistema e modo base
+  $("sys-wx").classList.toggle("hidden", !w);
+  if (w) $("sys-wx-v").textContent = `${w.temp}° ${w.desc} · ${w.max}°/${w.min}°${w.rain ? ` · chuva às ${w.rain.at}` : ""}`;
+  const next = upcoming()[0];
+  $("sys-ag").classList.toggle("hidden", !next);
+  if (next) $("sys-ag-v").textContent = `${hm(next.start)} ${next.title}`;
+  // aba Hoje
+  const wx = $("td-weather");
+  if (!d.city) wx.innerHTML = `<h3><span>Clima</span></h3><div class="sub" style="white-space:normal">Escolha a cidade no editor do PC (ícone da bandeja &gt; Personalizar &gt; Hoje).</div>`;
+  else if (!w) wx.innerHTML = `<h3><span>Clima</span><span>${esc(d.city)}</span></h3><div class="sub" style="white-space:normal">${d.err?.weather ? "Erro: " + esc(d.err.weather) : "Carregando…"}</div>`;
+  else wx.innerHTML = `<h3><span>Clima</span><span>${esc(w.city)}${w.region ? ", " + esc(w.region) : ""}</span></h3>
+    <div class="wxnow"><b>${w.temp}°</b><span>${esc(w.desc)} · sensação ${w.feels}°</span></div>
+    <div class="row"><span>Hoje</span><span>máx ${w.max}° · mín ${w.min}° · chuva ${w.rain_pct ?? 0}%</span></div>
+    ${w.rain ? `<div class="row"><span>Chuva</span><span>${w.rain.pct}% às ${w.rain.at}</span></div>` : ""}
+    <div class="wxh">${(w.hours || []).map((h) => `<div><b>${h.t}°</b>${h.h}h${h.p >= 30 ? `<br>${h.p}%` : ""}</div>`).join("")}</div>
+    ${w.tomorrow ? `<div class="row"><span>Amanhã</span><span>${esc(w.tomorrow.desc)} · ${w.tomorrow.max}°/${w.tomorrow.min}° · chuva ${w.tomorrow.rain_pct ?? 0}%</span></div>` : ""}`;
+  const ag = $("td-agenda");
+  if (!d.has_ics) ag.innerHTML = `<h3><span>Agenda</span></h3><div class="sub" style="white-space:normal">Cole o endereço secreto iCal do Google Agenda no editor do PC (Personalizar &gt; Hoje).</div>`;
+  else {
+    const now = Date.now(), today = new Date().toISOString().slice(0, 10), evs = d.events || [];
+    const dayStr = (e) => { const x = evDate(e.start); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+    const localToday = (() => { const x = new Date(); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; })();
+    const row = (e) => {
+      const st = evDate(e.start), en = evDate(e.end), on = st <= now && en > now, soon = !on && st - now < 15 * 60000 && st > now;
+      const rel = e.all_day ? "o dia todo" : on ? "agora" : st > now ? (st - now < 3600000 ? `em ${Math.round((st - now) / 60000)} min` : "") : "";
+      return `<div class="agev${on || soon ? " now" : ""}${!e.all_day && en <= now ? " past" : ""}"><span class="at">${e.all_day ? "dia" : hm(e.start)}</span>
+        <span class="ti">${esc(e.title)}<small>${[rel, e.all_day ? "" : `até ${hm(e.end)}`, e.where ? esc(e.where) : ""].filter(Boolean).join(" · ")}</small></span>
+        ${e.link && !e.all_day && en > now ? `<button class="btn sm${on || soon ? " primary" : ""}" data-join="${esc(e.link)}">Entrar</button>` : "<span></span>"}</div>`;
+    };
+    const tday = evs.filter((e) => dayStr(e) === localToday), tom = evs.filter((e) => dayStr(e) > localToday);
+    ag.innerHTML = `<h3><span>Agenda</span><span>${d.err?.calendar ? "erro ao atualizar" : tday.filter((e) => !e.all_day).length + " hoje"}</span></h3>
+      ${tday.length ? tday.map(row).join("") : '<div class="empty">Nada hoje</div>'}
+      ${tom.length ? `<div class="agday">Amanhã</div>${tom.slice(0, 5).map(row).join("")}` : ""}`;
+  }
+  renderDockDaily();
+}
+function renderDockDaily() {
+  const w = state.daily?.weather, next = upcoming()[0], now = Date.now();
+  $("dk-wx").textContent = w ? `${w.temp}° ${w.desc} · ${w.max}°/${w.min}°${w.rain ? ` · chuva ${w.rain.pct}% às ${w.rain.at}` : ""}` : "";
+  if (next) {
+    const st = evDate(next.start), on = st <= now, mins = Math.round((st - now) / 60000);
+    $("dk-ag").textContent = `${hm(next.start)} ${next.title}${on ? " · agora" : mins < 120 ? ` · em ${mins} min` : ""}`;
+    const join = !!next.link && (on || mins <= 15);
+    $("dk-join").classList.toggle("hidden", !join); $("dk-join").dataset.join = next.link || "";
+  } else { $("dk-ag").textContent = ""; $("dk-join").classList.add("hidden"); }
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-join]"); if (!b || !b.dataset.join) return;
+  e.stopPropagation(); act("daily.open", { link: b.dataset.join }, "Abrindo a reunião no PC");
+}, true);
+// lembrete 5 min antes de reunião (com link do Meet)
+const remindDone = new Set();
+setInterval(() => {
+  if (PREVIEW) return;
+  const now = Date.now();
+  for (const e of upcoming()) {
+    const st = evDate(e.start), key = e.start + e.title;
+    if (e.link && st - now <= 5 * 60000 && st - now > 0 && !remindDone.has(key)) { remindDone.add(key); alarm(`Reunião em ${Math.max(1, Math.round((st - now) / 60000))} min: ${e.title}`); }
+  }
+  if (vis("today") && state.daily) renderToday();
+}, 20000);
+// foco
+let focusEnd = null;
+function onFocus(f) {
+  state.focus = f;
+  focusEnd = f?.on ? Date.now() + f.left * 1000 : null;
+  if (f?.done) { alarm("Foco concluído"); }
+  renderFocus();
+}
+function renderFocus() {
+  const f = state.focus, on = !!(f && f.on && focusEnd);
+  const left = on ? Math.max(0, (focusEnd - Date.now()) / 1000) : 0;
+  $("fo-on").classList.toggle("hidden", !on); $("fo-off").classList.toggle("hidden", on);
+  if (on) $("fo-left").textContent = fmtTime(left);
+  $("fo-today").textContent = f?.today ? `hoje: ${humanDur(f.today * 60)}` : "";
+  for (const id of ["fo-chip", "fo-chip2"]) { const c = $(id); c.classList.toggle("hidden", !on); c.classList.toggle("on", on); c.textContent = id === "fo-chip" ? "FOCO " + fmtTime(left) : "FOCO"; }
+}
+setInterval(() => { if (focusEnd) renderFocus(); }, 1000);
+document.querySelectorAll("[data-fmin]").forEach((b) => (b.onclick = () => act("focus.start", { minutes: +b.dataset.fmin }, `Foco: ${b.dataset.fmin} min`)));
+$("fo-stop").onclick = () => act("focus.stop", {}, "Foco parado");
+$("fo-chip").onclick = $("fo-chip2").onclick = () => { buzz(8); showView("today"); };
+// perfis de áudio
+function renderProfiles(list) {
+  $("ap-list").innerHTML = list?.length ? list.map((p) => `<div class="approw"><button class="btn" data-ap="${esc(p.name)}">${esc(p.name)} <small>${esc(p.out_name || "")}${p.level != null ? " · " + Math.round(p.level) + "%" : ""}${p.mic_muted ? " · mic mudo" : ""}</small></button><button class="btn sm" data-apdel="${esc(p.name)}" aria-label="apagar">x</button></div>`).join("")
+    : '<div class="empty">Deixe o som do jeito que quer (saída, volume, apps, microfone) e toque em Salvar o atual.</div>';
+}
+function loadProfiles() { send("audio.profiles").then(renderProfiles).catch(() => {}); }
+$("ap-save").onclick = async () => {
+  const name = prompt("Nome do perfil (ex.: Fone + Discord):"); if (!name) return;
+  const r = await act("audio.profile_save", { name }, "Perfil salvo"); if (r) renderProfiles(r);
+};
+$("ap-list").addEventListener("click", async (e) => {
+  const a = e.target.closest("[data-ap]"), del = e.target.closest("[data-apdel]");
+  if (del) { if (!confirm(`Apagar o perfil ${del.dataset.apdel}?`)) return; const r = await act("audio.profile_del", { name: del.dataset.apdel }); if (r) renderProfiles(r); return; }
+  if (a) { const r = await act("audio.profile_apply", { name: a.dataset.ap }, `Perfil: ${a.dataset.ap}`); if (r?.warn?.length) toast(r.warn.join(" · "), "warn"); pollMixer?.(); }
+});
+
 // ---------------------------------------------------------------- Alertas
-prefs.alerts = Object.assign({ net: true, download: true, gpu: false, gpuV: 85, cpu: false, cpuV: 90, ram: false, ramV: 90 }, store.get("alerts", {}));
+prefs.alerts = Object.assign({ net: true, download: true, gpu: false, gpuV: 85, cpu: false, cpuV: 90, ram: false, ramV: 90, bat: true, batV: 15 }, store.get("alerts", {}));
 const alertOn = {};
 const saveAlerts = () => store.set("alerts", prefs.alerts);
-["net", "download", "gpu", "cpu", "ram"].forEach((k) => {
+["net", "download", "gpu", "cpu", "ram", "bat"].forEach((k) => {
   const sw = $("al-" + k); sw.classList.toggle("on", !!prefs.alerts[k]);
   sw.onclick = () => { prefs.alerts[k] = !prefs.alerts[k]; saveAlerts(); sw.classList.toggle("on", prefs.alerts[k]); buzz(8); if (prefs.alerts[k]) askNotify(false); };
   const inp = $(`al-${k}-v`);
@@ -3051,6 +3209,12 @@ function checkAlerts(s) {
     else if (val < thr - 5) alertOn[k] = false;   // só avisa de novo depois de baixar 5
   };
   chk("gpu", s.gpu?.temp, "GPU", "°C"); chk("cpu", s.sensors?.cpu_temp, "CPU", "°C"); chk("ram", s.ram_pct, "Memória", "%");
+  if (prefs.alerts.bat) for (const b of s.bat || []) {
+    if (b.pct == null || b.status === "off") continue;
+    const k = "bat:" + b.id, thr = prefs.alerts.batV;
+    if (b.pct <= thr && !b.charging && !alertOn[k]) { alertOn[k] = true; notify(`Bateria fraca: ${b.name} ${b.pct}%`, b.approx ? "nível aproximado" : "hora de carregar", "bat"); }
+    else if (b.pct > thr + 5 || b.charging) alertOn[k] = false;
+  }
 }
 let netDown = false;
 function netAlert(p) {

@@ -24,7 +24,7 @@ button { cursor: pointer; border: 1px solid var(--line); background: var(--panel
 button:hover { border-color: var(--faint); }
 button.pri { background: var(--acc); border-color: var(--acc); color: #fff; }
 button.on { background: var(--acc); border-color: var(--acc); color: #fff; }
-input[type=text] { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; width: 100%; }
+input[type=text], input[type=password] { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; width: 100%; }
 header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 14px; padding: 12px 24px; background: #0e1014ee; border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
 header h1 { margin: 0; font-size: 17px; font-weight: 700; }
 header h1 span { color: var(--dim); font-weight: 400; }
@@ -144,6 +144,15 @@ label.chk { display: inline-flex; gap: 8px; align-items: center; cursor: pointer
     </section>
 
     <section class="box">
+      <h2>Hoje: clima e agenda</h2>
+      <p class="hint">Aparecem na aba Status &gt; Hoje, no card Sistema e no modo base. O link da agenda fica só no PC.</p>
+      <div class="row" style="margin-bottom:10px"><label style="width:140px">Cidade</label><input type="text" id="d-city" placeholder="ex.: Curitiba, Paraná" style="max-width:320px"></div>
+      <div class="row" style="margin-bottom:6px"><label style="width:140px">Agenda (iCal)</label><input type="password" id="d-ics" placeholder="cole aqui o endereço secreto no formato iCal" style="max-width:520px"></div>
+      <p class="hint" style="margin:0 0 10px 148px">Google Agenda no computador &gt; Configurações &gt; clique na sua agenda &gt; <b>Endereço secreto no formato iCal</b>. Deixe vazio para tirar.</p>
+      <div class="row"><button class="pri" id="d-save">Salvar</button><span id="d-st" style="color:var(--dim)"></span></div>
+    </section>
+
+    <section class="box">
       <h2>Botões</h2>
       <p class="hint">Arraste para reordenar. Solte um botão em cima de outra página para mover. Para criar ou editar o que cada botão faz, use o app (Botões &gt; Editar).</p>
       <div class="pages" id="pages"></div>
@@ -164,11 +173,11 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 // mesmos nomes do app (index.html)
-const VIEW_LABEL = { dash: "Sistema", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
+const VIEW_LABEL = { dash: "Sistema", today: "Hoje", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
   screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes" };
 const BASE_VIEWS = Object.keys(VIEW_LABEL);
 const DEFAULT_NAV = [
-  { id: "status", label: "Status", views: ["dash", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
+  { id: "status", label: "Status", views: ["dash", "today", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
   { id: "ctrl", label: "Controle", views: ["mouse", "screen"] }, { id: "deck", label: "Botões", views: ["deck"] },
   { id: "pc", label: "PC", views: ["send", "power", "voz", "sys"] }];
 const CARD_LABEL = { cpu: "CPU", ram: "Memória", gpu: "GPU", net: "Rede", procs: "Processos", disks: "Discos", bat: "Bateria", sys: "Sistema" };
@@ -178,7 +187,7 @@ const DEFAULT_DASH = {
 };
 const COLS = { portrait: 2, landscape: 4 };
 // telas e seus blocos (data-b no index.html); cada grupo é um conjunto de irmãos que dá para reordenar
-const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
+const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["today", "Hoje"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
   ["mix", "Mixer"], ["mouse", "Mouse e teclado"], ["send", "Arquivos"], ["power", "Energia"], ["voz", "Voz"], ["sys", "Ajustes"]];
 const BLOCKS = {
   play: [{ wide: 1, items: [["hero", "Jogo (capa, tempo e atalhos)"], ["perf", "Desempenho e FPS"], ["gsi", "Partida (CS2 / Dota 2)"], ["tact", "Timers do Dota / bomba e economia do CS"], ["graph", "Gráficos do Dota / rounds do CS"]] },
@@ -186,10 +195,11 @@ const BLOCKS = {
   meet: [{ wide: 1, items: [["head", "Título, pessoas e tempo"], ["btns", "Botões"]] },
     { title: "Botões da reunião", items: [["m-mic", "Microfone"], ["m-cam", "Câmera"], ["m-share", "Compartilhar tela"], ["m-hand", "Levantar a mão"],
       ["m-captions", "Legendas"], ["m-chat", "Chat"], ["m-focus", "Mostrar no PC"], ["m-leave", "Sair"]] }],
+  today: [{ wide: 1, items: [["weather", "Clima"], ["agenda", "Agenda"], ["focus", "Foco"]] }],
   games: [{ wide: 1, items: [["now", "Jogo atual"], ["recent", "Jogados recentemente"], ["week", "Esta semana"], ["hist", "Partidas (CS2 / Dota 2)"], ["lib", "Biblioteca"]] }],
   usage: [{ items: [["range", "Hoje / Semana / Mês"]] }, { wide: 1, items: [["total", "Total, gráfico e categorias"], ["apps", "Por aplicativo"]] }],
   media: [{ items: [["art", "Capa"], ["info", "Música e artista"], ["prog", "Barra de progresso"], ["ctrls", "Anterior / tocar / próxima"], ["vol", "Volume"], ["out", "Saída de áudio"]] }],
-  mix: [{ wide: 1, items: [["outs", "Saída de áudio"], ["apps", "Volume por aplicativo"]] }],
+  mix: [{ wide: 1, items: [["outs", "Saída de áudio"], ["profiles", "Perfis de áudio"], ["apps", "Volume por aplicativo"]] }],
   mouse: [{ items: [["pad", "Touchpad"], ["mbtns", "Botões do mouse"], ["keys1", "Teclas: teclado, Ctrl, Alt, Enter…"], ["keys2", "Teclas: setas, copiar, colar…"]] }],
   send: [{ wide: 1, items: [["text", "Texto para o PC"], ["files", "Arquivos para o PC"], ["get", "PC para o celular"]] }],
   power: [{ wide: 1, items: [["power", "Desligar, suspender, reiniciar…"], ["timer", "Timer"]] }],
@@ -224,7 +234,7 @@ function send(a, p) {
   return new Promise((res, rej) => {
     if (!ws || ws.readyState !== 1) return rej(new Error("desconectado"));
     const id = ++rid; pending.set(id, { res, rej }); ws.send(JSON.stringify({ t: "req", id, a, p }));
-    setTimeout(() => pending.delete(id) && rej(new Error("sem resposta")), 8000);
+    setTimeout(() => pending.delete(id) && rej(new Error("sem resposta")), a === "daily.set" ? 45000 : 8000);
   });
 }
 function connect() {
@@ -233,7 +243,7 @@ function connect() {
   ws.onopen = () => ws.send(JSON.stringify({ t: "hello", token: TOKEN, role: "editor" }));
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    if (msg.t === "welcome") { LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); mountPreviews(); }
+    if (msg.t === "welcome") { LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); loadDaily(); mountPreviews(); }
     else if (msg.t === "res") { const p = pending.get(msg.id); if (p) { pending.delete(msg.id); msg.ok ? p.res(msg.d) : p.rej(new Error(msg.e)); } }
     else if (msg.t === "layout" && !saveT) { LAY = msg.d || {}; renderAll(); }
     else if (msg.t === "deck" && msg.d) { DECK = msg.d.deck; renderDeck(); }
@@ -446,6 +456,23 @@ $("cards").addEventListener("change", (e) => {
   const id = e.target.dataset.show; if (!id) return;
   const dash = dashOf(O); dash.find((d) => d.id === id).hidden = !e.target.checked; setDash(dash); preview("dash");
 });
+
+// ------------------------------------------------------------ hoje
+function dailyStatus(d) {
+  const parts = [];
+  if (d.city) parts.push(d.weather ? `Clima: ${d.weather.city}, ${d.weather.temp}° ${d.weather.desc}` : d.err?.weather ? "Clima: " + d.err.weather : "Clima: carregando…");
+  if (d.has_ics) parts.push(d.err?.calendar ? "Agenda: " + d.err.calendar : `Agenda: ${d.events.length} compromisso(s) hoje e amanhã`);
+  $("d-st").textContent = parts.join(" · ");
+}
+async function loadDaily() { try { const d = await send("daily.get"); $("d-city").value = d.city || ""; $("d-ics").placeholder = d.has_ics ? "agenda conectada (cole outro link para trocar)" : $("d-ics").placeholder; dailyStatus(d); } catch {} }
+$("d-save").onclick = async () => {
+  const p = { city: $("d-city").value.trim() };
+  if ($("d-ics").value.trim() || $("d-ics").dataset.clear) p.ics = $("d-ics").value.trim();
+  status("saving", "Salvando…"); $("d-st").textContent = "Buscando…";
+  try { const d = await send("daily.set", p); $("d-ics").value = ""; dailyStatus(d); status("ok", "Conectado · tudo salvo"); }
+  catch (e) { $("d-st").textContent = "Erro: " + e.message; status("bad", "Erro ao salvar"); }
+};
+$("d-ics").addEventListener("input", () => { $("d-ics").dataset.clear = $("d-ics").value ? "" : "1"; });
 
 // ------------------------------------------------------------ botões (deck)
 async function loadDeck() { try { DECK = (await send("deck.get")).deck; renderDeck(); } catch {} }
