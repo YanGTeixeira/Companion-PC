@@ -32,6 +32,7 @@ from websockets.exceptions import ConnectionClosed
 import devices
 import extras
 import games
+import gsi
 import overlay
 import pc_info
 import screentime
@@ -747,6 +748,8 @@ async def session(ws, peer, kind):
     await send_games(ws, MON.state)
     if MEET["state"]:
         await ws.send(json.dumps({"t": "meet", "d": MEET["state"]}, ensure_ascii=False))
+    if GSI.current():
+        await ws.send(json.dumps({"t": "gsi", "d": GSI.current()}, ensure_ascii=False))
     await push_now(only=ws)
     log.info("conectado: %s (%s) tela %s", kind, peer, str(hello.get("screen", "?"))[:120])
     try:
@@ -1108,10 +1111,27 @@ async def battery_loop():
         await asyncio.sleep(5)
 
 
+def gsi_token():
+    if not CFG.get("gsi_token"):
+        save_cfg_key("gsi_token", secrets.token_urlsafe(16))
+    return CFG["gsi_token"]
+
+
+def gsi_update(game, summary):
+    asyncio.get_running_loop().create_task(broadcast({"t": "gsi", "d": summary}))
+
+
+GSI = gsi.GSI(int(CFG.get("gsi_port", 8772)), gsi_token(), gsi_update)
+
+
 async def games_loop():
+    gsi_next = 0.0
     while True:
         try:
             state = await asyncio.to_thread(MON.poll)
+            if time.monotonic() > gsi_next and MON.catalog.roots:
+                gsi_next = time.monotonic() + 600
+                await asyncio.to_thread(gsi.install, list(MON.catalog.roots), GSI.port, GSI.token)
             for ws in list(clients):
                 await send_games(ws, state)
         except Exception:  # noqa: BLE001
@@ -1330,6 +1350,7 @@ async def main():
     asyncio.create_task(games_loop())
     asyncio.create_task(battery_loop())
     asyncio.create_task(screentime_loop())
+    asyncio.create_task(GSI.serve())
     asyncio.create_task(adb_loop())
     asyncio.create_task(downloads_loop())
     asyncio.create_task(web_watch())

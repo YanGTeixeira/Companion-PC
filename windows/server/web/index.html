@@ -503,6 +503,46 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .tmr-tiles .tile { min-height: 48px; }
 #tmr-left { font-size: 64px; }
 
+/* jogando */
+.play { display: grid; gap: 10px; }
+.play .pgsi { order: 1; } .play .pperf { order: 2; }
+.phero { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 6px; min-height: 170px; }
+.pbg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: .28; filter: saturate(.2) contrast(1.1); }
+.pcont { position: relative; flex: 1; }
+.phero .mrow { display: flex; gap: 8px; align-items: center; }
+.pacts { position: relative; display: flex; gap: 6px; flex-wrap: wrap; }
+.pacts .btn { flex: 1 1 auto; }
+.pacts .btn.on { background: var(--alert); border-color: var(--alert); color: var(--bg); text-shadow: none; }
+.pfps { display: flex; align-items: baseline; gap: 8px; }
+.pfps b { font: 64px/1 var(--display); font-weight: 400; }
+.pfps span { color: var(--p2); font: 22px/1 var(--display); }
+.pperf .spark { height: 48px; margin: 4px 0 6px; }
+.pgsi .gsc { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.pgsi .gsc b { font: 44px/1 var(--display); font-weight: 400; }
+.pgsi .gsc .vs { color: var(--p3); font-size: 14px; }
+.pgsi .big2 { font: 34px/1 var(--display); }
+.pgsi .kda { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; text-align: center; margin: 8px 0; }
+.pgsi .kda div { border: 1px solid var(--p4); padding: 6px 2px; }
+.pgsi .kda b { display: block; font: 30px/1 var(--display); font-weight: 400; }
+.pgsi .kda small { font-size: 11px; color: var(--p3); }
+.pgsi .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 4px; margin-top: 6px; }
+.pgsi .items div { border: 1px solid var(--p4); padding: 3px 6px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pgsi .items .cd { color: var(--p3); border-style: dashed; }
+.pgsi .hpbar { height: 12px; margin: 6px 0 2px; }
+.pgsi .dead { color: var(--alert); font: 26px/1.1 var(--display); }
+@container (min-width: 640px) {
+  .play { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: stretch; }
+  .play.has-gsi { grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) minmax(0, 1.2fr); }
+  .play .pgsi, .play .pperf { order: 0; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .play { height: 100%; }
+  .phero { min-height: 0; }
+  .pfps b { font-size: 48px; }
+  .pperf .row { padding: 1px 0; }
+  .pgsi .gsc b { font-size: 34px; } .pgsi .kda b { font-size: 24px; } .pgsi .kda div { padding: 3px 2px; }
+}
+
 /* reunião */
 .meet { display: grid; gap: 10px; }
 .mhead .mrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--p2); font-size: 14px; }
@@ -698,6 +738,35 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
     </div>
     <h2>Biblioteca</h2>
     <div class="lib" id="g-lib"><div class="empty">Carregando…</div></div>
+  </section>
+
+  <!-- STATUS > Jogando (só aparece com um jogo aberto) -->
+  <section class="tab" id="t-play">
+    <div class="play">
+      <div class="card phero">
+        <div class="pbg" id="pl-art"></div>
+        <div class="pcont">
+          <div class="mrow"><span class="chip" id="pl-store"></span><span class="playing">jogando</span></div>
+          <div class="gname" id="pl-name">–</div>
+          <div class="gtime" id="pl-time"></div>
+          <div class="sub" id="pl-extra"></div>
+        </div>
+        <div class="pacts">
+          <button class="btn sm" data-pa="mic">MIC</button><button class="btn sm" data-pa="dmute">DC mudo</button><button class="btn sm" data-pa="ddeaf">DC surdo</button><button class="btn sm" data-pa="shot">Print F12</button>
+        </div>
+      </div>
+      <div class="card pperf">
+        <h3><span>Desempenho</span><span id="pl-low"></span></h3>
+        <div class="pfps"><b id="pl-fps">–</b><span>FPS</span></div>
+        <canvas class="spark" id="sp-fps"></canvas>
+        <div class="row"><span>GPU</span><span id="pl-gpu">–</span></div>
+        <div class="row"><span>CPU</span><span id="pl-cpu">–</span></div>
+        <div class="row"><span>Memória</span><span id="pl-ram">–</span></div>
+        <div class="row"><span>Ping</span><span id="pl-ping">–</span></div>
+        <div class="fps-hint hidden" id="pl-fps-hint"></div>
+      </div>
+      <div class="card pgsi hidden" id="pl-gsi"></div>
+    </div>
   </section>
 
   <!-- STATUS > Reunião (só aparece durante uma chamada do Meet) -->
@@ -1153,8 +1222,9 @@ function onMsg(m) {
     case "now": state.now = m.d; state.nowT = performance.now(); renderNow(); break;
     case "art": state.art = { [m.id]: "data:image/jpeg;base64," + m.jpg }; renderNow(); break;
     case "meet": onMeet(m.d); break;
-    case "games": state.games = m.d; state.gamesT = performance.now(); renderGames(); break;
-    case "gameart": state.gameart = { [m.id]: "data:image/jpeg;base64," + m.jpg }; renderGames(); break;
+    case "gsi": state.gsi = m.d; state.gsiT = Date.now(); renderGsi(); break;
+    case "games": state.games = m.d; state.gamesT = performance.now(); renderGames(); onGameState(); break;
+    case "gameart": state.gameart = { [m.id]: "data:image/jpeg;base64," + m.jpg }; renderGames(); renderPlay(); break;
     case "event":
       if (m.kind === "notif") { snd("note"); notify(`${m.app}: ${m.title}`, m.body, "pcn-" + m.app); break; }
       if (m.kind === "voice") { voiceEvent(m); break; }
@@ -1235,6 +1305,7 @@ function showView(name, temp) {
   if (vis("usage")) setTimeout(loadUsage);
   if (vis("voz")) setTimeout(loadVoiceHelp);  // no início, as funções da voz ainda nem foram declaradas
   if (state.meet !== undefined) setTimeout(renderMeet);
+  if (vis("play")) setTimeout(() => { renderPlay(); state.stats && renderPlayPerf(state.stats); });
 }
 $("subtabs").onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) { buzz(8); showView(b.dataset.view); } };
 document.querySelectorAll("nav button").forEach((b) => (b.onclick = () => { buzz(8); showView(lastView[b.dataset.sec] || SECTIONS[b.dataset.sec][0][0]); }));
@@ -1254,7 +1325,7 @@ bootLine(`Conectando pelo ${["localhost", "127.0.0.1"].includes(location.hostnam
 setTimeout(() => bootDone(true), 5000);   // sem PC: mostra o app com o aviso de conexão
 
 // ---------------------------------------------------------------- Painel
-const hist = { cpu: [], ram: [], gpu: [], down: [], up: [] };
+const hist = { cpu: [], ram: [], gpu: [], down: [], up: [], fps: [] };
 const HIST_N = 60;
 function pushHist(k, v) { const a = hist[k]; a.push(+v || 0); if (a.length > HIST_N) a.shift(); }
 function drawSpark(id, series, max) {
@@ -1277,6 +1348,7 @@ function renderStats() {
   const s = state.stats; if (!s) return;
   pushHist("cpu", s.cpu); pushHist("ram", s.ram_pct); pushHist("gpu", s.gpu?.util); pushHist("down", s.net_down); pushHist("up", s.net_up);
   if (vis("dash")) drawSparks();
+  pushHist("fps", s.fps?.fps); renderPlayPerf(s);
   $("clock").textContent = $("clock2").textContent = s.time.slice(0, 5);
   $("cpu").textContent = Math.round(s.cpu) + "%"; setBar("cpu-bar", s.cpu);
   const sen = s.sensors;
@@ -1450,6 +1522,97 @@ function renderWeek(h) {
   $("gh-top").innerHTML = h.top.length ? h.top.map((g) => `<div class="toprow"><div class="row"><span>${esc(g.name)}</span><span>${humanDur(g.s)}</span></div>
     <div class="bar"><i style="width:${(g.s / top) * 100}%"></i></div></div>`).join("") : '<div class="empty">Nenhum jogo nos últimos 7 dias</div>';
 }
+// ---------------------------------------------------------------- Jogando (aba que aparece com um jogo aberto)
+let playSeen = null;
+function onGameState() {
+  const g = state.games?.game, key = g ? g.name : null;
+  setLive("play", "Jogando", !!g);
+  if (g && playSeen !== key) {
+    playSeen = key;
+    // o jogo vira a tela principal (a não ser que esteja numa reunião agora)
+    if (!vis("play") && !(state.meet?.inCall)) showView("play", true);
+  }
+  if (!g) playSeen = null;
+  renderPlay();
+}
+function renderPlay() {
+  const g = state.games?.game; if (!g) return;
+  const since = (performance.now() - state.gamesT) / 1000, art = g.art && state.gameart[g.art];
+  $("pl-art").style.backgroundImage = art ? `url(${art})` : "";
+  $("pl-store").textContent = g.store; $("pl-name").textContent = g.name;
+  $("pl-time").textContent = humanClock(g.elapsed + since);
+  $("pl-extra").textContent = [`Hoje: ${humanDur(g.today_s + since)}`, g.total_h ? `Total: ${Math.round(g.total_h)} h` : ""].filter(Boolean).join(" · ");
+  const dc = state.games?.discord || {};
+  document.querySelector('[data-pa="dmute"]').classList.toggle("hidden", !dc.running);
+  document.querySelector('[data-pa="ddeaf"]').classList.toggle("hidden", !dc.running);
+  renderGsi();
+}
+function renderPlayPerf(s) {
+  if (!vis("play")) return;
+  const f = s.fps?.fps != null ? s.fps : null, g = s.gpu, sen = s.sensors;
+  $("pl-fps").textContent = f ? f.fps : "–";
+  $("pl-low").textContent = f?.low ? `1% baixo: ${f.low}` : "";
+  $("pl-gpu").textContent = g ? `${Math.round(g.util)}% · ${Math.round(g.temp)}°C · ${fmtBytes(g.mem_used)}` : "–";
+  $("pl-cpu").textContent = `${Math.round(s.cpu)}%${sen?.cpu_temp != null ? " · " + Math.round(sen.cpu_temp) + "°C" : ""}`;
+  $("pl-ram").textContent = `${Math.round(s.ram_pct)}% · ${fmtBytes(s.ram_used)}`;
+  $("pl-ping").textContent = !s.ping ? "–" : s.ping.ok ? s.ping.ms + " ms" : "sem internet";
+  const ferr = s.fps?.error;
+  $("pl-fps-hint").classList.toggle("hidden", !ferr);
+  if (ferr) $("pl-fps-hint").textContent = ferr === "perm" ? "FPS: o PC precisa liberar o PresentMon uma vez (veja o README)." : "FPS: instale o PresentMon Console no PC.";
+  drawSpark("sp-fps", [{ data: hist.fps, color: "--p", fill: true }]);
+  const m = s.mic; document.querySelector('[data-pa="mic"]').classList.toggle("on", !!m?.muted);
+  document.querySelector('[data-pa="mic"]').textContent = m?.muted ? "MIC mudo" : "MIC";
+}
+const clock = (s) => { if (s == null) return "–"; const neg = s < 0; s = Math.abs(Math.floor(s)); return (neg ? "-" : "") + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+function renderGsi() {
+  const box = $("pl-gsi"), g = state.games?.game, d = state.gsi;
+  const name = (g?.name || "").toLowerCase();
+  const isCs = /counter-strike/.test(name), isDota = /dota 2/.test(name);
+  const fresh = d && Date.now() - state.gsiT < 30000 && ((d.g === "cs2" && isCs) || (d.g === "dota2" && isDota));
+  let h = "";
+  if (fresh && d.g === "cs2") h = gsiCs(d);
+  else if (fresh && d.g === "dota2") h = gsiDota(d);
+  else if (isDota) h = `<h3><span>Partida</span></h3><div class="sub" style="white-space:normal">Para ver a partida aqui: na Steam, clique com o botão direito em Dota 2 > Propriedades > Opções de inicialização e escreva <b>-gamestateintegration</b>. Depois reabra o jogo.</div>`;
+  else if (isCs) h = `<h3><span>Partida</span></h3><div class="sub" style="white-space:normal">Entre numa partida para ver placar, vida e munição aqui.</div>`;
+  box.classList.toggle("hidden", !h);
+  box.parentElement.classList.toggle("has-gsi", !!h);
+  if (box.innerHTML !== h) box.innerHTML = h;
+}
+function gsiCs(d) {
+  if (d.menu) return `<h3><span>CS2</span><span>menu</span></h3><div class="sub">Esperando uma partida…</div>`;
+  const mine = d.team === "CT" ? d.ct : d.t, theirs = d.team === "CT" ? d.t : d.ct;
+  const w = d.weapon, phase = { live: "ao vivo", freezetime: "compra", over: "fim do round" }[d.rphase] || d.rphase || "";
+  const bomb = d.bomb === "planted" ? '<span class="chip" style="background:var(--alert)">BOMBA</span>' : "";
+  return `<h3><span>${esc(d.map || "CS2")} · round ${d.round || "–"}</span><span>${esc(phase)} ${bomb}</span></h3>
+    <div class="gsc"><div><b>${mine ?? "–"}</b> <span class="vs">${esc(d.team || "")}</span></div><span class="vs">x</span><div><span class="vs">${d.team === "CT" ? "T" : "CT"}</span> <b>${theirs ?? "–"}</b></div></div>
+    ${d.spectating ? '<div class="dead">Morto · assistindo</div>' : `<div class="row"><span>Vida</span><span>${d.hp ?? "–"}</span></div><div class="bar hpbar ${d.hp <= 30 ? "bad" : ""}"><i style="width:${d.hp || 0}%"></i></div>
+    <div class="row"><span>Colete</span><span>${d.armor ?? "–"}${d.helmet ? " + capacete" : ""}</span></div>
+    <div class="row"><span>Dinheiro</span><span>$${d.money ?? "–"}</span></div>
+    ${w ? `<div class="row"><span>${esc(w.name)}</span><span class="big2">${w.clip ?? "–"}<small style="font-size:14px;color:var(--p3)"> / ${w.reserve ?? "–"}</small></span></div>` : ""}`}
+    <div class="kda"><div><b>${d.k ?? 0}</b><small>abates</small></div><div><b>${d.d ?? 0}</b><small>mortes</small></div><div><b>${d.a ?? 0}</b><small>assist.</small></div><div><b>${d.mvp ?? 0}</b><small>MVP</small></div></div>`;
+}
+function gsiDota(d) {
+  if (d.menu || !d.hero) return `<h3><span>Dota 2</span><span>${esc(d.state || "menu")}</span></h3><div class="sub">Esperando uma partida…</div>`;
+  const hp = d.hpmax ? Math.round((d.hp / d.hpmax) * 100) : 0, mp = d.manamax ? Math.round((d.mana / d.manamax) * 100) : 0;
+  return `<h3><span>${esc(d.hero)} · nível ${d.level ?? "–"}</span><span>${clock(d.clock)} ${d.day === false ? "noite" : "dia"}${d.paused ? " · pausado" : ""}</span></h3>
+    <div class="gsc"><div><b>${d.rad ?? "–"}</b> <span class="vs">Radiant</span></div><span class="vs">${esc(d.state || "")}</span><div><span class="vs">Dire</span> <b>${d.dire ?? "–"}</b></div></div>
+    ${d.alive === false ? `<div class="dead">Morto · volta em ${d.respawn ?? "?"} s</div><div class="sub">Buyback: ${d.buyback ?? "–"} de ouro${d.bbcd ? ` · recarga ${d.bbcd}s` : ""}</div>`
+      : `<div class="row"><span>Vida</span><span>${d.hp ?? "–"} / ${d.hpmax ?? "–"}</span></div><div class="bar hpbar ${hp <= 30 ? "bad" : ""}"><i style="width:${hp}%"></i></div>
+    <div class="row"><span>Mana</span><span>${d.mana ?? "–"} / ${d.manamax ?? "–"}</span></div><div class="bar hpbar"><i style="width:${mp}%"></i></div>`}
+    <div class="kda"><div><b>${d.k ?? 0}</b><small>abates</small></div><div><b>${d.d ?? 0}</b><small>mortes</small></div><div><b>${d.a ?? 0}</b><small>assist.</small></div><div><b>${d.lh ?? 0}</b><small>last hits</small></div></div>
+    <div class="row"><span>Ouro</span><span>${d.gold ?? "–"} · ${d.gpm ?? "–"} GPM · ${d.xpm ?? "–"} XPM</span></div>
+    ${d.items?.length ? `<div class="items">${d.items.map((it) => `<div class="${it.cd ? "cd" : ""}">${esc(it.name)}${it.cd ? ` ${it.cd}s` : it.charges ? ` x${it.charges}` : ""}</div>`).join("")}</div>` : ""}`;
+}
+document.querySelector(".pacts").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-pa]"); if (!b) return;
+  const k = b.dataset.pa;
+  if (k === "mic") act("mic.set", { muted: "toggle" });
+  else if (k === "dmute") act("discord.mute", null, "Discord: mudo");
+  else if (k === "ddeaf") act("discord.deafen", null, "Discord: surdo");
+  else if (k === "shot") act("key.press", { keys: "f12" }, "Print (F12 da Steam)");
+});
+setInterval(() => { if (vis("play") && state.games?.game) { $("pl-time").textContent = humanClock(state.games.game.elapsed + (performance.now() - state.gamesT) / 1000); } }, 1000);
+
 // ---------------------------------------------------------------- Reunião (Meet no Edge, pela extensão)
 let meetSeen = null;   // reunião para a qual o app já mudou de aba sozinho
 function onMeet(d) {
