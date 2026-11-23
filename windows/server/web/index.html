@@ -1338,7 +1338,7 @@ const store = {
   if (m) store.set("token", decodeURIComponent(m[1]));
   const tab = location.hash.match(/[#&]tab=(\w+)/);   // link direto para uma aba: #tab=mouse
   if (tab) store.set("tab", tab[1]);
-  if (m || tab) history.replaceState(null, "", location.pathname);
+  if (m || tab) history.replaceState(null, "", location.pathname + location.search);
 })();
 // prévia dentro do editor do PC (/editor): sem som, sem vibrar, e o editor escolhe a aba
 const PREVIEW = new URLSearchParams(location.search).has("preview");
