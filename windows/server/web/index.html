@@ -163,13 +163,26 @@ input[type=range]:disabled { opacity: .35; }
 /* ------------------------------------------------------------------ Status */
 .grid.dash { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid.dash > .card { display: flex; flex-direction: column; }
-.c-win, .c-procs, .c-disks, .c-sys { grid-column: 1 / -1; }
-.c-win .sub { color: var(--p); }
+.c-bat, .c-procs, .c-disks, .c-sys { grid-column: 1 / -1; }
+.batrow { display: grid; grid-template-columns: 4ch minmax(0, 1fr) 5ch; align-items: center; gap: 4px 8px; padding: 3px 0; font-size: 14px; }
+.batrow .bi { color: var(--p3); font-size: 12px; letter-spacing: .5px; }
+.batrow .bn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.batrow .bp { text-align: right; color: var(--p2); }
+.batrow .bar { grid-column: 2 / -1; margin: 0; height: 5px; }
+.batrow .bs { color: var(--p3); font-size: 12px; }
+.batrow.off { opacity: .45; }
+.batrow.low .bp { color: var(--alert); }
+@media (orientation: landscape) and (max-height: 560px) {
+  .batrow { grid-template-columns: 3.4ch minmax(0, 1.1fr) minmax(0, 1fr) 4.5ch; gap: 0 6px; padding: 2px 0; font-size: 13px; }
+  .batrow .bar { grid-column: 3; grid-row: 1; height: 4px; }
+  .batrow .bp { grid-column: 4; grid-row: 1; }
+  .batrow .bs { display: none; }
+}
 @container (min-width: 640px) {
   .grid.dash { grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-template-areas: "cpu ram gpu net" "procs procs disks win" "procs procs disks sys"; }
+    grid-template-areas: "cpu ram gpu net" "procs procs disks bat" "procs procs disks sys"; }
   .c-cpu { grid-area: cpu; } .c-ram { grid-area: ram; } .c-gpu { grid-area: gpu; } .c-net { grid-area: net; }
-  .c-procs { grid-area: procs; } .c-disks { grid-area: disks; } .c-win { grid-area: win; } .c-sys { grid-area: sys; }
+  .c-procs { grid-area: procs; } .c-disks { grid-area: disks; } .c-bat { grid-area: bat; } .c-sys { grid-area: sys; }
   .spark { height: 64px; }
 }
 /* tela alta (tablet): o painel ocupa a altura toda e os gráficos crescem */
@@ -435,8 +448,8 @@ input[type=range]:disabled { opacity: .35; }
   @container (min-width: 720px) {
     /* Status: 4 + 4 cards do mesmo tamanho */
     .grid.dash { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr);
-      grid-template-areas: "cpu ram gpu net" "procs disks win sys"; }
-    .c-sys, .c-win { overflow: hidden; }
+      grid-template-areas: "cpu ram gpu net" "procs disks bat sys"; }
+    .c-sys, .c-bat { overflow: hidden; }
   }
   @container (min-width: 760px) {
     #t-sys .cols { columns: 3; }
@@ -593,10 +606,10 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
       <div class="card c-ram"><h3><span>Memória</span><span id="ram-txt"></span></h3><div class="big" id="ram">–</div><div class="bar" id="ram-bar"><i></i></div><canvas class="spark" id="sp-ram"></canvas></div>
       <div class="card c-gpu" id="gpu-card"><h3><span>GPU</span><span id="gpu-temp"></span></h3><div class="big" id="gpu">–</div><div class="bar" id="gpu-bar"><i></i></div><div class="sub" id="gpu-sub"></div><canvas class="spark" id="sp-gpu"></canvas></div>
       <div class="card c-net"><h3><span>Rede</span></h3><div class="row"><span>Baixando</span><span id="net-down">–</span></div><div class="row"><span>Enviando</span><span id="net-up">–</span></div><div class="row"><span>Ping</span><span id="net-ping">–</span></div><canvas class="spark" id="sp-net"></canvas></div>
-      <div class="card c-win"><h3><span>Janela ativa</span></h3><div id="window" class="sub">–</div></div>
+      <div class="card c-bat" id="bat-card"><h3><span>Bateria</span><span id="bat-sum"></span></h3><div id="bats"><div class="empty">Procurando aparelhos…</div></div></div>
       <div class="card c-procs"><h3><span>Processos</span><span>CPU / memória</span></h3><div id="procs"></div></div>
       <div class="card c-disks"><h3><span>Discos</span></h3><div id="disks"></div></div>
-      <div class="card c-sys"><h3><span>Sistema</span></h3><div class="row"><span>Ligado há</span><span id="uptime">–</span></div><div class="row" id="bat-row"><span>Bateria</span><span id="bat">–</span></div><div class="row"><span>Windows</span><span id="os">–</span></div><div class="row hidden" id="voz-row"><span>Voz</span><span id="voz-dash" class="ell">–</span></div><div class="row hidden" id="voz-row2"><span>Último</span><span id="voz-dash-last" class="ell">–</span></div><div id="fans"></div></div>
+      <div class="card c-sys"><h3><span>Sistema</span></h3><div class="row"><span>Janela</span><span id="window" class="ell">–</span></div><div class="row"><span>Ligado há</span><span id="uptime">–</span></div><div class="row" id="bat-row"><span>Bateria</span><span id="bat">–</span></div><div class="row"><span>Windows</span><span id="os">–</span></div><div class="row hidden" id="voz-row"><span>Voz</span><span id="voz-dash" class="ell">–</span></div><div class="row hidden" id="voz-row2"><span>Último</span><span id="voz-dash-last" class="ell">–</span></div><div id="fans"></div></div>
     </div>
   </section>
 
@@ -1172,6 +1185,7 @@ function renderStats() {
   $("g-fps-hint").classList.toggle("hidden", !ferr || !s.app_game);
   if (ferr) $("g-fps-hint").textContent = ferr === "perm" ? "Para ver o FPS, o PC precisa liberar o PresentMon uma vez (veja o README)." : "Para ver o FPS, instale o PresentMon Console no PC.";
   $("window").textContent = s.window || "Área de trabalho";
+  renderBats(s.bat);
   $("procs").innerHTML = (s.procs || []).map((p) => `<div class="row"><span>${esc(p.name)}</span><span>${p.cpu.toFixed(1)}% · ${fmtBytes(p.mem)}</span></div>`).join("");
   $("disks").innerHTML = (s.disks || []).map((d) => `<div class="row"><span>${esc(d.name)}</span><span>${fmtBytes(d.used)} / ${fmtBytes(d.total)}</span></div>
     <div class="bar ${d.pct >= 90 ? "bad" : d.pct >= 75 ? "warn" : ""}" style="margin:0 0 8px"><i style="width:${d.pct}%"></i></div>`).join("");
@@ -1180,6 +1194,27 @@ function renderStats() {
   $("bat-row").classList.toggle("hidden", !s.battery);
   if (s.battery) $("bat").textContent = `${Math.round(s.battery.pct)}%${s.battery.plugged ? " · na tomada" : ""}`;
 }
+
+const BAT_ICON = { mouse: "MOU", keyboard: "TEC", headset: "FON", gamepad: "CTL", phone: "CEL" };
+function renderBats(list) {
+  const card = $("bat-card");
+  if (!welcome.features?.battery && !list?.length) { $("bats").innerHTML = '<div class="empty">Instale o pacote hidapi no PC (rode o install-server.ps1).</div>'; return; }
+  if (!list?.length) { $("bats").innerHTML = '<div class="empty">Nenhum aparelho sem fio encontrado</div>'; $("bat-sum").textContent = ""; return; }
+  const live = list.filter((d) => d.status === "ok" && d.pct != null && !d.wired);
+  const low = live.filter((d) => d.pct <= 20);
+  $("bat-sum").textContent = low.length ? `${low.length} fraca${low.length > 1 ? "s" : ""}` : "";
+  $("bat-sum").style.color = low.length ? "var(--alert)" : "";
+  card.title = "Toque para atualizar";
+  const html = list.map((d) => {
+    const st = d.wired ? "no cabo" : d.charging ? "carregando" : d.full ? "carregada" : d.status === "sleep" ? "dormindo" : d.status === "off" ? "desligado" : "";
+    const pct = d.pct == null ? "–" : (d.approx ? "~" : "") + d.pct + "%";
+    const cls = ["batrow", d.status !== "ok" ? "off" : "", d.status === "ok" && d.pct != null && d.pct <= 20 && !d.charging ? "low" : ""].join(" ");
+    return `<div class="${cls}"><span class="bi">${BAT_ICON[d.kind] || "BT"}</span><span class="bn">${esc(d.name)}${st ? ` <span class="bs">${st}</span>` : ""}</span><span class="bp">${pct}</span>`
+      + (d.pct != null && d.status !== "off" ? `<div class="bar ${d.pct <= 20 ? "bad" : d.pct <= 40 ? "warn" : ""}"><i style="width:${d.pct}%"></i></div>` : "") + "</div>";
+  }).join("");
+  if ($("bats").innerHTML !== html) $("bats").innerHTML = html;
+}
+$("bat-card").onclick = () => { buzz(8); act("bat.refresh"); };
 
 function drawSparks() {
   drawSpark("sp-cpu", [{ data: hist.cpu, color: "--p", fill: true }], 100);

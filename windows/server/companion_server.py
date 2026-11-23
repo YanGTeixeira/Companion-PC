@@ -29,6 +29,7 @@ from websockets.datastructures import Headers
 from websockets.http11 import Response
 from websockets.exceptions import ConnectionClosed
 
+import devices
 import extras
 import games
 import overlay
@@ -506,6 +507,7 @@ ASYNC_ACTIONS = {
     "voice.devices": lambda p: asyncio.to_thread(VOICE.devices),
     "voice.help": lambda p: voice_help(),
     "voice.try": lambda p: voice_try(p),
+    "bat.refresh": lambda p: asyncio.to_thread(BAT.refresh),
 }
 
 
@@ -686,7 +688,8 @@ async def session(ws, peer, kind):
         "features": {"media": pc_info.HAS_MEDIA, "volume": pc_info.HAS_VOLUME, "mixer": pc_info.HAS_VOLUME,
                      "screen": True, "clipboard": True, "files": True, "deck": True,
                      "mic": pc_info.HAS_VOLUME, "timer": True, "deck_auto": True, "macro": True,
-                     "library": True, "ping": True, "notif": True, "fps": True, "voice": VOICE.available},
+                     "library": True, "ping": True, "notif": True, "fps": True, "voice": VOICE.available,
+                     "battery": devices.hid is not None},
     }))
     clients.add(ws)
     client_kind[ws] = kind
@@ -737,7 +740,7 @@ async def session(ws, peer, kind):
 
 sent_art: dict = {}
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"bat.refresh", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -779,6 +782,7 @@ async def stats_loop(stats: Stats):
                 data["ping"] = PING.state()
                 data["fps"] = FPS.state(getattr(stats, "fg_pid", 0))
                 data["voice"] = VOICE.state()
+                data["bat"] = BAT.state()
                 msg = json.dumps({"t": "stats", "d": data}, ensure_ascii=False)
                 for ws in list(clients):
                     try:
@@ -930,6 +934,18 @@ async def downloads_loop():
         except Exception:  # noqa: BLE001
             log.exception("downloads_loop")
         await asyncio.sleep(3)
+
+
+BAT = devices.Batteries(CFG.get("batteries"))
+
+
+async def battery_loop():
+    while True:
+        try:
+            await asyncio.to_thread(BAT.poll)
+        except Exception:  # noqa: BLE001
+            log.exception("battery_loop")
+        await asyncio.sleep(5)
 
 
 async def games_loop():
@@ -1152,6 +1168,7 @@ async def main():
     asyncio.create_task(FPS.loop(fps_wanted))
     asyncio.create_task(now_loop())
     asyncio.create_task(games_loop())
+    asyncio.create_task(battery_loop())
     asyncio.create_task(adb_loop())
     asyncio.create_task(downloads_loop())
     asyncio.create_task(web_watch())

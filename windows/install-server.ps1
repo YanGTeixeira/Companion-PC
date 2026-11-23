@@ -18,7 +18,7 @@ Copy-Item (Join-Path $Source "server\web\*") (Join-Path $Dest "web") -Recurse -F
 
 Write-Host "Instalando dependências..."
 py -3 -m pip install --user --disable-pip-version-check -q --no-warn-script-location `
-    websockets psutil pillow pycaw comtypes pystray qrcode `
+    websockets psutil pillow pycaw comtypes pystray qrcode hidapi `
     winrt-runtime winrt-Windows.Media.Control winrt-Windows.Foundation `
     winrt-Windows.Foundation.Collections winrt-Windows.Storage.Streams `
     winrt-Windows.UI.Notifications winrt-Windows.UI.Notifications.Management winrt-Windows.ApplicationModel `
