@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import platform
+import re
 import secrets
 import socket
 import subprocess
@@ -498,6 +499,21 @@ def _clean_orient(o):
                 dash.append({"id": d["id"], "span": max(1, min(4, int(d.get("span") or 1))), "hidden": bool(d.get("hidden"))})
         if dash:
             out["dash"] = dash
+    if isinstance(o.get("blocks"), dict):
+        blocks = {}
+        for view, lst in o["blocks"].items():
+            if view not in LAYOUT_VIEWS | {"play", "meet"} or not isinstance(lst, list):
+                continue
+            items, seen = [], set()
+            for d in lst[:40]:
+                bid = d.get("id") if isinstance(d, dict) else None
+                if isinstance(bid, str) and re.fullmatch(r"[a-z0-9-]{1,20}", bid) and bid not in seen:
+                    seen.add(bid)
+                    items.append({"id": bid, "hidden": bool(d.get("hidden")), "wide": bool(d.get("wide"))})
+            if items:
+                blocks[view] = items
+        if blocks:
+            out["blocks"] = blocks
     return out or None
 
 

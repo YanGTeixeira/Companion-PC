@@ -162,7 +162,7 @@ a { color: var(--p); }
 [data-skin="lcd"] body { background: repeating-linear-gradient(0deg, #0000000a 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, #0000000a 0 1px, transparent 1px 3px), var(--bg); font-size: 15px; }
 [data-skin="lcd"] .card { border: 2px solid var(--p); box-shadow: 4px 4px 0 var(--p3); }
 [data-skin="lcd"] .big { font-size: 30px; line-height: 1.2; } [data-skin="lcd"] .gtime { font-size: 28px; }
-[data-skin="lcd"] .utot b, [data-skin="lcd"] .pfps b { font-size: 32px; } [data-skin="lcd"] .mbtns .mbig .di { font-size: 24px; }
+[data-skin="lcd"] .utot b, [data-skin="lcd"] .pfps b { font-size: 32px; } [data-skin="lcd"] .mtbtns .mbig .di { font-size: 24px; }
 [data-skin="lcd"] header .host, [data-skin="lcd"] header .clock { font-size: 14px; }
 [data-skin="lcd"] nav button { font-size: 10px; } [data-skin="lcd"] .subtabs button { font-size: 11px; }
 [data-skin="lcd"] h2 { font-size: 13px; } [data-skin="lcd"] h2::before { content: "\25B6  "; }
@@ -340,8 +340,16 @@ input[type=range]:disabled { opacity: .35; }
   .big { font-size: 60px; }
 }
 
-.game { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
-@container (min-width: 600px) { .game { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); } }
+.game { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); grid-auto-flow: dense; align-items: start; }
+.glib > h2:first-child { margin-top: 4px; }
+@container (min-width: 600px) {
+  .game { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+  .game > [data-b="now"] { grid-row: span 2; }
+  .game > .glib { grid-column: 1 / -1; }
+}
+/* blocos de cada tela (editor do PC): ordem pelo JS, escondidos somem; um grupo todo escondido some junto */
+.lhide, .bhide { display: none !important; }
+.cols > [data-b] > h2:first-child { margin-top: 4px; }
 /* capas tingidas na cor do tema */
 .gart, .art { background: var(--p4) center/cover; background-blend-mode: luminosity; border: 1px solid var(--p3); }
 .gart[style*="url("], .art[style*="url("] { background-color: var(--p); }
@@ -378,10 +386,9 @@ input[type=range]:disabled { opacity: .35; }
 .outchip::before { content: "Saída:"; color: var(--p3); }
 @container (min-width: 560px) {
   .media { max-width: none; height: 100%; grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: 1fr repeat(5, auto) 1fr; column-gap: 24px; row-gap: 12px; align-items: center; }
-  .media .art { grid-row: 1 / -1; width: min(30cqw, calc(100cqh - 30px), 240px); }
-  .media > :nth-child(2) { grid-row: 2; } .media > :nth-child(3) { grid-row: 3; } .media > .ctrls { grid-row: 4; }
-  .media > .vol { grid-row: 5; } .media > .outchip { grid-row: 6; justify-self: start; }
+    align-content: center; column-gap: 24px; row-gap: 12px; align-items: center; }
+  .media .art { grid-column: 1; grid-row: 1 / span 5; width: min(30cqw, calc(100cqh - 30px), 240px); }
+  .media > :not(.art) { grid-column: 2; } .media > .outchip { justify-self: start; }
   .mtitle, .martist, .mapp { text-align: left; }
   .ctrls { justify-content: flex-start; }
 }
@@ -553,11 +560,12 @@ input[type=range]:disabled { opacity: .35; }
   .rail-top .hchip { font-size: 15px; padding: 2px 5px 1px; }
   @container (min-width: 600px) {
     /* Jogos: capa menor e três colunas (jogo | recentes | semana) */
-    .game { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
-    .game > div:last-child { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+    .game { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr); }
+    .game > [data-b="now"], .game > [data-b="week"] { grid-row: span 2; }
+    .game > .glib { grid-column: auto; }
     .game .gart { height: 15cqh; width: auto; max-width: 100%; margin: 0 auto; }
     #g-head { margin-top: 6px; }
-    #t-games > h2 { margin: 10px 0 6px; }
+    .glib > h2:first-child { margin: 0 0 6px; }
     #t-games .lib { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
     .lib::-webkit-scrollbar { display: none; }
     #t-games .lib { scroll-snap-type: x mandatory; }
@@ -577,15 +585,10 @@ input[type=range]:disabled { opacity: .35; }
     #mx-list { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 18px; }
     #mx-list .mxrow:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
     /* Arquivos: três colunas estreitas, botões empilhados */
-    #t-send .cols { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
-    #t-send .cols > div:first-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-content: start; }
-    #t-send .cols > div:first-child > h2 { grid-column: 1 / -1; margin-bottom: -2px; }
-    #t-send .cols > div:first-child > .card { margin-top: 0 !important; }
+    #t-send .cols { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
     #t-send .brow { flex-direction: column; }
     /* Ajustes: três colunas (Alertas | Visual | Este aparelho) */
-    #t-sys .cols { display: block; columns: 2; column-gap: 14px; }
-    #t-sys .cols .card { break-inside: avoid; }
-    #t-sys .cols h2 { break-after: avoid; }
+    #t-sys .cols { align-items: start; }
     #t-sys .cols > div > h2:first-child { margin-top: 4px; }
     /* Arquivos */
     .cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -600,7 +603,7 @@ input[type=range]:disabled { opacity: .35; }
     .c-sys, .c-bat { overflow: hidden; }
   }
   @container (min-width: 760px) {
-    #t-sys .cols { columns: 3; }
+    #t-sys .cols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
 }
 /* celular deitado e baixo (Chrome com barra de endereço, ~340px): Tocando, teclas e Arquivos compactos */
@@ -620,23 +623,12 @@ input[type=range]:disabled { opacity: .35; }
 }
 /* Energia: botões à esquerda, timer à direita (a aba é o próprio container, então vai por media query) */
 @media (orientation: landscape) and (max-height: 560px) and (min-width: 700px) {
-  #t-power.on { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: 14px; align-content: start; }
-  #t-power > h2:first-child { grid-column: 1; grid-row: 1; }
-  #t-power > .tiles { grid-column: 1; grid-row: 2; align-self: start; }
-  #t-power > #tmr-sec { grid-column: 2; grid-row: 1 / span 2; }
   #tmr-sec > h2 { margin-top: 4px; }
   .tmr-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   /* Jogos: jogo | recentes + biblioteca | semana, tudo numa tela */
-  #t-games.on { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr;
-    gap: 10px; align-content: start; overflow: hidden; }
-  #t-games .game, #t-games .game > div:last-child { display: contents !important; }
-  #t-games .game > .card { grid-column: 1; grid-row: 1 / -1; }
-  #t-games .game > div:last-child > .card:first-child { grid-column: 2; grid-row: 1; }
-  #t-games .game > div:last-child > .card:last-child { grid-column: 3; grid-row: 1 / -1; }
-  #t-games > h2 { grid-column: 2; grid-row: 2; margin: 0; }
-  #t-games > .lib { grid-column: 2; grid-row: 3; align-self: start; min-width: 0; --libh: clamp(80px, calc(100cqh - 160px), 220px); }
+  #t-games .lib { min-width: 0; --libh: clamp(80px, calc(100cqh - 160px), 220px); }
   #t-games .game .gart { height: 22cqh; }
-  #t-power > .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #power { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #t-power .tile { min-height: 72px; }
 }
 /* chips do cabeçalho: microfone do PC e timer */
@@ -695,27 +687,27 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .meet { display: grid; gap: 10px; }
 .mhead .mrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--p2); font-size: 14px; }
 .mtitle2 { font: 30px/1.1 var(--display); margin: 8px 0 2px; overflow-wrap: anywhere; }
-.mbtns { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.mbtns .dbtn { min-height: 84px; }
-.mbtns .mbig { min-height: 120px; }
-.mbtns .mbig .di { font-size: 44px; }
-.mbtns .dbtn.on { background: var(--on); color: var(--onfg); text-shadow: none; }
-.mbtns .dbtn.off { border-color: var(--alert); color: var(--alert); }
-.mbtns .dbtn.danger { border-color: var(--alert); color: var(--alert); }
-.mbtns .dbtn.danger.hold { background: var(--alert); color: var(--bg); }
-.mbtns .dbtn:disabled { opacity: .3; }
+.mtbtns { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mtbtns .dbtn { min-height: 84px; }
+.mtbtns .mbig { min-height: 120px; }
+.mtbtns .mbig .di { font-size: 44px; }
+.mtbtns .dbtn.on { background: var(--on); color: var(--onfg); text-shadow: none; }
+.mtbtns .dbtn.off { border-color: var(--alert); color: var(--alert); }
+.mtbtns .dbtn.danger { border-color: var(--alert); color: var(--alert); }
+.mtbtns .dbtn.danger.hold { background: var(--alert); color: var(--bg); }
+.mtbtns .dbtn:disabled { opacity: .3; }
 .meetchip { border-color: var(--alert) !important; color: var(--alert) !important; }
 .meetchip.muted { animation: blink 1.2s steps(1) infinite; }
 @container (min-width: 640px) {
   .meet { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; }
-  .mbtns { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .mbtns .mbig { grid-column: span 2; }
+  .mtbtns { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mtbtns .mbig { grid-column: span 2; }
 }
 @media (orientation: landscape) and (max-height: 560px) {
   .meet { height: 100%; }
-  .mbtns { height: 100%; grid-template-rows: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
-  .mbtns .dbtn, .mbtns .mbig { min-height: 0; padding: 4px; gap: 4px; }
-  .mbtns .dbtn .di { font-size: 26px; } .mbtns .mbig .di { font-size: 34px; }
+  .mtbtns { height: 100%; grid-template-rows: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .mtbtns .dbtn, .mtbtns .mbig { min-height: 0; padding: 4px; gap: 4px; }
+  .mtbtns .dbtn .di { font-size: 26px; } .mtbtns .mbig .di { font-size: 34px; }
   .mtitle2 { font-size: 24px; }
 }
 
@@ -871,7 +863,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   <!-- STATUS > Jogos -->
   <section class="tab" id="t-games">
     <div class="game">
-      <div class="card">
+      <div class="card" data-b="now">
         <div class="gart" id="g-art"></div>
         <div id="g-head"></div>
         <div class="gtime" id="g-time"></div>
@@ -879,19 +871,16 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
         <div class="fps hidden" id="g-fps"><b id="g-fps-n">0</b>FPS <span id="g-fps-low"></span></div>
         <div class="fps-hint hidden" id="g-fps-hint"></div>
       </div>
-      <div style="display:grid; gap:10px; align-content:start">
-        <div class="card"><h3><span>Jogados recentemente</span></h3><div id="g-recent"></div></div>
-        <div class="card"><h3><span>Esta semana</span><span id="gh-total"></span></h3><div class="week" id="gh-days"></div><div id="gh-top" style="margin-top:10px"></div></div>
-      </div>
+        <div class="card" data-b="recent"><h3><span>Jogados recentemente</span></h3><div id="g-recent"></div></div>
+        <div class="card" data-b="week"><h3><span>Esta semana</span><span id="gh-total"></span></h3><div class="week" id="gh-days"></div><div id="gh-top" style="margin-top:10px"></div></div>
+      <div class="glib" data-b="lib"><h2>Biblioteca</h2><div class="lib" id="g-lib"><div class="empty">Carregando…</div></div></div>
     </div>
-    <h2>Biblioteca</h2>
-    <div class="lib" id="g-lib"><div class="empty">Carregando…</div></div>
   </section>
 
   <!-- STATUS > Jogando (só aparece com um jogo aberto) -->
   <section class="tab" id="t-play">
     <div class="play">
-      <div class="card phero">
+      <div class="card phero" data-b="hero">
         <div class="pbg" id="pl-art"></div>
         <div class="pcont">
           <div class="mrow"><span class="chip" id="pl-store"></span><span class="playing">jogando</span></div>
@@ -900,10 +889,10 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <div class="sub" id="pl-extra"></div>
         </div>
         <div class="pacts">
-          <button class="btn sm" data-pa="mic">MIC</button><button class="btn sm" data-pa="dmute">DC mudo</button><button class="btn sm" data-pa="ddeaf">DC surdo</button><button class="btn sm" data-pa="shot">Print F12</button>
+          <button class="btn sm" data-pa="mic" data-b="a-mic">MIC</button><button class="btn sm" data-pa="dmute" data-b="a-dmute">DC mudo</button><button class="btn sm" data-pa="ddeaf" data-b="a-ddeaf">DC surdo</button><button class="btn sm" data-pa="shot" data-b="a-shot">Print F12</button>
         </div>
       </div>
-      <div class="card pperf">
+      <div class="card pperf" data-b="perf">
         <h3><span>Desempenho</span><span id="pl-low"></span></h3>
         <div class="pfps"><b id="pl-fps">–</b><span>FPS</span></div>
         <canvas class="spark" id="sp-fps"></canvas>
@@ -913,28 +902,28 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
         <div class="row"><span>Ping</span><span id="pl-ping">–</span></div>
         <div class="fps-hint hidden" id="pl-fps-hint"></div>
       </div>
-      <div class="card pgsi hidden" id="pl-gsi"></div>
+      <div class="card pgsi hidden" id="pl-gsi" data-b="gsi"></div>
     </div>
   </section>
 
   <!-- STATUS > Reunião (só aparece durante uma chamada do Meet) -->
   <section class="tab" id="t-meet">
     <div class="meet">
-      <div class="card mhead">
+      <div class="card mhead" data-b="head">
         <div class="mrow"><span class="chip" id="mt-app">MEET</span><span id="mt-ppl"></span></div>
         <div class="mtitle2" id="mt-title">–</div>
         <div class="gtime" id="mt-time"></div>
         <div class="sub" id="mt-hint"></div>
       </div>
-      <div class="mbtns" id="mt-btns">
-        <button class="dbtn mbig" data-m="mic"><span class="di">MIC</span><span class="dl">Microfone</span></button>
-        <button class="dbtn mbig" data-m="cam"><span class="di">CAM</span><span class="dl">Câmera</span></button>
-        <button class="dbtn" data-m="share"><span class="di">TELA</span><span class="dl">Compartilhar tela</span></button>
-        <button class="dbtn" data-m="hand"><span class="di">MÃO</span><span class="dl">Levantar a mão</span></button>
-        <button class="dbtn" data-m="captions"><span class="di">CC</span><span class="dl">Legendas</span></button>
-        <button class="dbtn" data-m="chat"><span class="di">MSG</span><span class="dl">Chat</span></button>
-        <button class="dbtn" data-m="focus"><span class="di">&gt;_</span><span class="dl">Mostrar no PC</span></button>
-        <button class="dbtn danger" data-m="leave"><span class="di">SAIR</span><span class="dl">Segure para sair</span></button>
+      <div class="mtbtns" id="mt-btns" data-b="btns">
+        <button class="dbtn mbig" data-m="mic" data-b="m-mic"><span class="di">MIC</span><span class="dl">Microfone</span></button>
+        <button class="dbtn mbig" data-m="cam" data-b="m-cam"><span class="di">CAM</span><span class="dl">Câmera</span></button>
+        <button class="dbtn" data-m="share" data-b="m-share"><span class="di">TELA</span><span class="dl">Compartilhar tela</span></button>
+        <button class="dbtn" data-m="hand" data-b="m-hand"><span class="di">MÃO</span><span class="dl">Levantar a mão</span></button>
+        <button class="dbtn" data-m="captions" data-b="m-captions"><span class="di">CC</span><span class="dl">Legendas</span></button>
+        <button class="dbtn" data-m="chat" data-b="m-chat"><span class="di">MSG</span><span class="dl">Chat</span></button>
+        <button class="dbtn" data-m="focus" data-b="m-focus"><span class="di">&gt;_</span><span class="dl">Mostrar no PC</span></button>
+        <button class="dbtn danger" data-m="leave" data-b="m-leave"><span class="di">SAIR</span><span class="dl">Segure para sair</span></button>
         <button class="dbtn mbig hidden" data-m="join"><span class="di">ENTRAR</span><span class="dl">Participar agora</span></button>
       </div>
     </div>
@@ -942,64 +931,64 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 
   <!-- STATUS > Tempo de tela -->
   <section class="tab" id="t-usage">
-    <div class="ubar">
+    <div class="ubar" data-b="range">
       <div class="chips" id="u-range"><button class="chip2 on" data-r="day">Hoje</button><button class="chip2" data-r="week">Semana</button><button class="chip2" data-r="month">Mês</button></div>
       <div class="unav"><button class="btn sm" id="u-prev" aria-label="Anterior">&lt;</button><span id="u-label">–</span><button class="btn sm" id="u-next" aria-label="Próximo">&gt;</button></div>
     </div>
     <div class="ugrid">
-      <div class="card ucard">
+      <div class="card ucard" data-b="total">
         <div class="utot"><b id="u-total">–</b><span id="u-cmp"></span></div>
         <div class="uchart" id="u-chart"></div>
         <div class="ucats" id="u-catbar"></div>
         <div class="ulegend" id="u-legend"></div>
       </div>
-      <div class="card"><h3><span>Por aplicativo</span><span>toque na categoria para trocar</span></h3><div id="u-apps"><div class="empty">Carregando…</div></div></div>
+      <div class="card" data-b="apps"><h3><span>Por aplicativo</span><span>toque na categoria para trocar</span></h3><div id="u-apps"><div class="empty">Carregando…</div></div></div>
     </div>
   </section>
 
   <!-- RÁDIO > Tocando -->
   <section class="tab" id="t-media">
     <div class="media">
-      <div class="art" id="art"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg></div>
-      <div><div class="mtitle" id="m-title">Nada tocando</div><div class="martist" id="m-artist">Abra uma música ou vídeo no PC</div><div class="mapp" id="m-app"></div></div>
-      <div><div class="prog" id="prog"><div class="bar"><i id="prog-i"></i></div></div><div class="times"><span id="m-pos">0:00</span><span id="m-dur">0:00</span></div></div>
-      <div class="ctrls">
+      <div class="art" id="art" data-b="art"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg></div>
+      <div data-b="info"><div class="mtitle" id="m-title">Nada tocando</div><div class="martist" id="m-artist">Abra uma música ou vídeo no PC</div><div class="mapp" id="m-app"></div></div>
+      <div data-b="prog"><div class="prog" id="prog"><div class="bar"><i id="prog-i"></i></div></div><div class="times"><span id="m-pos">0:00</span><span id="m-dur">0:00</span></div></div>
+      <div class="ctrls" data-b="ctrls">
         <button class="cbtn" id="b-prev" aria-label="Anterior"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
         <button class="cbtn main" id="b-play" aria-label="Tocar/pausar"><svg viewBox="0 0 24 24" fill="currentColor" id="play-ico"><path d="M8 5v14l11-7z"/></svg></button>
         <button class="cbtn" id="b-next" aria-label="Próxima"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m6 18 8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
       </div>
-      <div class="vol">
+      <div class="vol" data-b="vol">
         <button id="b-mute" aria-label="Mudo"><svg viewBox="0 0 24 24" fill="currentColor" id="vol-ico"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg></button>
         <input type="range" id="vol" min="0" max="100" step="1" value="50" aria-label="Volume do PC">
         <span class="val" id="vol-val">–</span>
       </div>
-      <button class="outchip" id="out-chip" title="Trocar saída de áudio"><span id="out-name">–</span></button>
+      <button class="outchip" id="out-chip" data-b="out" title="Trocar saída de áudio"><span id="out-name">–</span></button>
     </div>
   </section>
 
   <!-- RÁDIO > Mixer -->
   <section class="tab" id="t-mix">
     <div class="mixer" id="mixer">
-      <div class="card"><h3><span>Saída de áudio</span><span>toque para trocar</span></h3><div id="outs"><div class="empty">Carregando…</div></div></div>
-      <div class="card"><h3><span>Volume por aplicativo</span><span id="mx-master"></span></h3><div id="mx-list"></div></div>
+      <div class="card" data-b="outs"><h3><span>Saída de áudio</span><span>toque para trocar</span></h3><div id="outs"><div class="empty">Carregando…</div></div></div>
+      <div class="card" data-b="apps"><h3><span>Volume por aplicativo</span><span id="mx-master"></span></h3><div id="mx-list"></div></div>
     </div>
   </section>
 
   <!-- CONTROLE > Mouse -->
   <section class="tab" id="t-mouse"><div class="mwrap">
     <div class="mcol mleft">
-      <div class="pad" id="pad">
+      <div class="pad" id="pad" data-b="pad">
         <div class="hint" id="pad-hint">Arraste para mover, toque para clicar<br>2 dedos: toque = botão direito, arrastar = rolar<br>Toque duplo e arraste = segurar</div>
         <div class="scrollbar" id="scrollbar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 4-5 6h10zm0 16 5-6H7z"/></svg></div>
       </div>
-      <div class="mbtns">
+      <div class="mbtns" data-b="mbtns">
         <button class="mbtn" id="mb-left">Esquerdo</button>
         <button class="mbtn" id="mb-mid">Meio</button>
         <button class="mbtn" id="mb-right">Direito</button>
       </div>
     </div>
     <div class="mcol mright">
-      <div class="keys" id="keys1">
+      <div class="keys" id="keys1" data-b="keys1">
         <button class="key kb" id="kb-btn">Teclado</button>
         <button class="key mod" data-mod="ctrl">Ctrl</button>
         <button class="key mod" data-mod="shift">Shift</button>
@@ -1010,7 +999,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
         <button class="key" data-key="enter">Enter</button>
         <button class="key" data-key="backspace" aria-label="Apagar">⌫</button>
       </div>
-      <div class="keys" id="keys2">
+      <div class="keys" id="keys2" data-b="keys2">
         <button class="key" data-key="left" aria-label="Esquerda">←</button>
         <button class="key" data-key="up" aria-label="Cima">↑</button>
         <button class="key" data-key="down" aria-label="Baixo">↓</button>
@@ -1056,19 +1045,22 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   <!-- PC > Arquivos -->
   <section class="tab" id="t-send">
     <div class="cols">
-      <div>
+      <div data-b="text">
         <h2>Celular para o PC</h2>
         <div class="card">
           <textarea class="ta" id="snd-text" placeholder="Texto ou link para mandar ao PC"></textarea>
           <div class="brow"><button class="btn" id="snd-copy">Copiar no PC</button><button class="btn primary" id="snd-paste">Colar no PC</button></div>
         </div>
-        <div class="card" style="margin-top:10px">
-          <h3><span>Arquivos e fotos</span><span>Downloads\Companion PC</span></h3>
+      </div>
+      <div data-b="files">
+        <h2>Arquivos para o PC</h2>
+        <div class="card">
+          <h3><span>Fotos, vídeos, documentos</span><span>Downloads\Companion PC</span></h3>
           <div class="brow"><label class="btn primary">Escolher arquivos<input type="file" id="snd-files" multiple hidden></label><button class="btn" id="snd-folder">Abrir pasta no PC</button></div>
           <div id="up-list"></div>
         </div>
       </div>
-      <div>
+      <div data-b="get">
         <h2>PC para o celular</h2>
         <div class="card">
           <button class="btn primary" id="rcv-get" style="width:100%">Pegar o que está copiado no PC</button>
@@ -1080,10 +1072,10 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   </section>
 
   <!-- PC > Energia -->
-  <section class="tab" id="t-power">
-    <h2>Energia</h2>
-    <div class="tiles" id="power"></div>
-    <div id="tmr-sec">
+  <section class="tab" id="t-power"><div class="cols">
+    <div data-b="power"><h2>Energia</h2>
+    <div class="tiles" id="power"></div></div>
+    <div id="tmr-sec" data-b="timer">
       <h2>Timer</h2>
       <div class="card">
         <div id="tmr-on" class="hidden"><div class="big" id="tmr-left">0:00</div><div class="sub" id="tmr-what"></div>
@@ -1094,12 +1086,12 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
         </div>
       </div>
     </div>
-  </section>
+  </div></section>
 
   <!-- PC > Voz: ajustes + ajuda dos comandos -->
   <section class="tab" id="t-voz">
     <div class="cols">
-      <div>
+      <div data-b="cfg" class="hidden">
           <div id="voz-sec" class="hidden">
             <h2>Comandos de voz</h2>
             <div class="card">
@@ -1111,12 +1103,16 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
             </div>
           </div>
         <div id="voz-na" class="card hidden"><div class="sub" style="white-space:normal">Os comandos de voz não estão disponíveis neste PC (faltam pacotes: rode o install-server.ps1 de novo).</div></div>
+      </div>
+      <div data-b="test">
         <h2>Testar</h2>
         <div class="card">
           <div class="sub" style="white-space:normal;margin-bottom:8px">Escreva como falaria (sem o "PC") ou toque num exemplo. Executa de verdade no PC.</div>
           <div class="vtry"><input id="voz-try" class="inp" type="text" placeholder="ex.: próxima música" autocomplete="off" enterkeyhint="go"><button class="btn primary" id="voz-try-go">Executar</button></div>
           <div class="sub" id="voz-try-out"></div>
         </div>
+      </div>
+      <div data-b="tips">
         <h2>Como falar</h2>
         <div class="card vtips">
           <p>Comece com <b>"PC"</b> e diga o comando na mesma frase: <b>"PC, próxima música"</b>.</p>
@@ -1126,7 +1122,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <p>Desligar o PC na hora não existe por voz (só com tempo: "desliga em 10 minutos"), e botões que pedem confirmação não funcionam por voz.</p>
         </div>
       </div>
-      <div>
+      <div data-b="help">
         <h2>O que dá para falar</h2>
         <div id="voz-help"></div>
       </div>
@@ -1136,7 +1132,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   <!-- PC > Ajustes -->
   <section class="tab" id="t-sys">
     <div class="cols">
-      <div>
+      <div data-b="alerts">
         <h2>Alertas</h2>
         <div class="card">
           <div class="set"><label>Download concluído<small>Arquivo novo na pasta Downloads do PC</small></label><button class="switch" id="al-download" aria-label="Download concluído"></button></div>
@@ -1148,7 +1144,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <div class="set"><label>Notificações do Android<small>Avisa com o app em segundo plano</small></label><button class="btn sm" id="al-notif">Ativar</button></div>
         </div>
       </div>
-      <div>
+      <div data-b="visual">
         <h2>Visual</h2>
         <div class="card">
           <div class="set" style="display:block"><label>Tema<small>Vale para todos os aparelhos. Para arrumar o menu e os cartões, use o editor no PC (ícone da bandeja &gt; Personalizar).</small></label><div class="themes" id="themes"></div></div>
@@ -1158,6 +1154,8 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
           <div class="set"><label>Depois de</label><select id="dock-min" class="sel" aria-label="Depois de quanto tempo parado"><option value="1">1 min</option><option value="2">2 min</option><option value="5">5 min</option><option value="10">10 min</option></select></div>
           <div class="set"><label>Botões seguem o programa<small>Troca a página de botões conforme o programa em foco no PC</small></label><button class="switch" id="sw-deckauto" aria-label="Botões seguem o programa"></button></div>
         </div>
+      </div>
+      <div data-b="device">
         <h2>Este aparelho</h2>
         <div class="card">
           <div class="set"><label>Manter a tela ligada<small>Enquanto o app estiver aberto</small></label><button class="switch" id="sw-wake" aria-label="Manter a tela ligada"></button></div>
@@ -1246,8 +1244,12 @@ const store = {
 })();
 // prévia dentro do editor do PC (/editor): sem som, sem vibrar, e o editor escolhe a aba
 const PREVIEW = new URLSearchParams(location.search).has("preview");
+const PREVIEW_LIVE = new Set(), LIVE_REAL = {};
 addEventListener("message", (e) => {
   if (e.origin !== location.origin || !e.data || e.data.pcc !== "view") return;
+  // Jogando e Reunião só existem ao vivo; na prévia aparecem quando o editor pede
+  for (const v of ["play", "meet"]) if (v !== e.data.view && PREVIEW_LIVE.has(v)) { PREVIEW_LIVE.delete(v); if (!LIVE_REAL[v]) setLive(v, "", false, false); }
+  if (["play", "meet"].includes(e.data.view) && !VIEWS.includes(e.data.view)) { PREVIEW_LIVE.add(e.data.view); setLive(e.data.view, e.data.view === "play" ? "Jogando" : "Reunião", true, false); }
   if (VIEWS.includes(e.data.view)) showView(e.data.view, true);
   if (e.data.layout) applyLayout(e.data.layout, true);
 });
@@ -1454,6 +1456,30 @@ function buildSections() {
     nav.appendChild(b);
   }
   applyDashLayout(L.dash);
+  applyBlocks(L.blocks);
+}
+// blocos das outras telas (data-b): ordem, escondido e largura inteira, por orientação
+function applyBlocks(blocks) {
+  document.querySelectorAll("main [data-b]").forEach((el) => { el.style.order = ""; el.style.removeProperty("grid-column"); el.classList.remove("lhide"); });
+  document.querySelectorAll("main .bhide").forEach((el) => el.classList.remove("bhide"));
+  if (!blocks || typeof blocks !== "object") return;
+  for (const [view, list] of Object.entries(blocks)) {
+    const tab = $("t-" + view); if (!tab || !Array.isArray(list)) continue;
+    const els = [...tab.querySelectorAll("[data-b]")], pos = new Map(list.map((b, i) => [b.id, [b, i]]));
+    for (const el of els) {
+      const hit = pos.get(el.dataset.b);
+      if (!hit) { el.style.order = 99; continue; }
+      const [b, i] = hit;
+      el.style.order = i;
+      el.classList.toggle("lhide", !!b.hidden);
+      if (b.wide) el.style.setProperty("grid-column", "1 / -1", "important");
+    }
+    for (const p of new Set(els.map((e) => e.parentElement))) {
+      if (p === tab) continue;
+      const kids = [...p.children].filter((c) => c.dataset.b);
+      p.classList.toggle("bhide", kids.every((c) => c.classList.contains("lhide")));
+    }
+  }
 }
 // cartões do Status: ordem, largura (colunas) e escondidos
 const DASH_CARDS = { cpu: "CPU", ram: "Memória", gpu: "GPU", net: "Rede", procs: "Processos", disks: "Discos", bat: "Bateria", sys: "Sistema" };
@@ -1476,7 +1502,9 @@ function applyDashLayout(dash) {
   });
   grid.style.setProperty("--rows", Math.max(1, Math.ceil(dash.filter((d) => !d.hidden).reduce((a, d) => a + Math.max(1, +d.span || 1), 0) / (orient() === "landscape" ? 4 : 2))));
 }
-function setLive(view, label, on) {
+function setLive(view, label, on, real = true) {
+  if (real) LIVE_REAL[view] = on;
+  if (!on && PREVIEW_LIVE.has(view)) return;
   if (!!LIVE[view] === on) return;
   if (on) LIVE[view] = label; else delete LIVE[view];
   buildSections();
@@ -2357,6 +2385,7 @@ function renderVoice(v) {
   const ok = !!(v && v.available);
   $("voz-sec").classList.toggle("hidden", !ok);
   $("voz-na").classList.toggle("hidden", ok || !v);
+  $("voz-sec").parentElement.classList.toggle("hidden", !ok && !v);
   $("voz-row").classList.toggle("hidden", !ok);
   for (const id of ["voz-chip", "voz-chip2"]) $(id).classList.toggle("hidden", !ok);
   if (!ok) return;

@@ -99,6 +99,10 @@ label.chk { display: inline-flex; gap: 8px; align-items: center; cursor: pointer
 .frame { position: relative; overflow: hidden; border-radius: 10px; background: #000; margin: 0 auto; }
 .frame iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; }
 #login { max-width: 520px; margin: 80px auto; }
+.vtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.vtabs button { padding: 5px 12px; border-radius: 99px; }
+#blk-ed h4 { margin: 14px 0 6px; font-size: 13px; color: var(--dim); font-weight: 600; }
+#blk-ed .hint { margin: 0 0 10px; color: var(--dim); font-size: 13px; }
 </style>
 </head>
 <body>
@@ -124,7 +128,7 @@ label.chk { display: inline-flex; gap: 8px; align-items: center; cursor: pointer
 
     <section class="box">
       <h2>Layout</h2>
-      <p class="hint">Em pé e deitado são separados. Arraste as abas entre as seções do menu, reordene as seções pelo <b>::</b> e esconda o que não usa.</p>
+      <p class="hint">Em pé e deitado são separados. No <b>Menu</b>, arraste as abas entre as seções, reordene as seções pelo <b>::</b> e esconda o que não usa. Em <b>Telas</b>, arrume o que aparece dentro de cada aba.</p>
       <div class="row" style="margin-bottom:14px">
         <div class="seg" id="orient"><button data-o="portrait" class="on">Em pé</button><button data-o="landscape">Deitado</button></div>
         <button id="copy-other">Copiar do outro</button>
@@ -132,9 +136,11 @@ label.chk { display: inline-flex; gap: 8px; align-items: center; cursor: pointer
       </div>
       <h3 style="margin:6px 0 8px;font-size:14px">Menu</h3>
       <div class="nav" id="nav"></div>
-      <h3 style="margin:18px 0 8px;font-size:14px">Cartões do Status &gt; Sistema</h3>
-      <div class="cards" id="cards"></div>
-      <div class="minigrid" id="minigrid"></div>
+      <h3 style="margin:18px 0 4px;font-size:14px">Telas</h3>
+      <p class="hint" style="margin:0 0 10px;color:var(--dim);font-size:13px">Escolha a tela e arraste para mudar a ordem. Desmarque <b>mostrar</b> para esconder. A prévia vai para a tela escolhida.</p>
+      <div class="vtabs" id="vtabs"></div>
+      <div id="dash-ed"><div class="cards" id="cards"></div><div class="minigrid" id="minigrid"></div></div>
+      <div id="blk-ed" hidden></div>
     </section>
 
     <section class="box">
@@ -171,6 +177,33 @@ const DEFAULT_DASH = {
   landscape: [["cpu", 1], ["ram", 1], ["gpu", 1], ["net", 1], ["procs", 1], ["disks", 1], ["bat", 1], ["sys", 1]],
 };
 const COLS = { portrait: 2, landscape: 4 };
+// telas e seus blocos (data-b no index.html); cada grupo é um conjunto de irmãos que dá para reordenar
+const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
+  ["mix", "Mixer"], ["mouse", "Mouse e teclado"], ["send", "Arquivos"], ["power", "Energia"], ["voz", "Voz"], ["sys", "Ajustes"]];
+const BLOCKS = {
+  play: [{ wide: 1, items: [["hero", "Jogo (capa, tempo e atalhos)"], ["perf", "Desempenho e FPS"], ["gsi", "Partida (CS2 / Dota 2)"]] },
+    { title: "Atalhos do jogo", items: [["a-mic", "MIC (microfone do PC)"], ["a-dmute", "Discord mudo"], ["a-ddeaf", "Discord surdo"], ["a-shot", "Print F12"]] }],
+  meet: [{ wide: 1, items: [["head", "Título, pessoas e tempo"], ["btns", "Botões"]] },
+    { title: "Botões da reunião", items: [["m-mic", "Microfone"], ["m-cam", "Câmera"], ["m-share", "Compartilhar tela"], ["m-hand", "Levantar a mão"],
+      ["m-captions", "Legendas"], ["m-chat", "Chat"], ["m-focus", "Mostrar no PC"], ["m-leave", "Sair"]] }],
+  games: [{ wide: 1, items: [["now", "Jogo atual"], ["recent", "Jogados recentemente"], ["week", "Esta semana"], ["lib", "Biblioteca"]] }],
+  usage: [{ items: [["range", "Hoje / Semana / Mês"]] }, { wide: 1, items: [["total", "Total, gráfico e categorias"], ["apps", "Por aplicativo"]] }],
+  media: [{ items: [["art", "Capa"], ["info", "Música e artista"], ["prog", "Barra de progresso"], ["ctrls", "Anterior / tocar / próxima"], ["vol", "Volume"], ["out", "Saída de áudio"]] }],
+  mix: [{ wide: 1, items: [["outs", "Saída de áudio"], ["apps", "Volume por aplicativo"]] }],
+  mouse: [{ items: [["pad", "Touchpad"], ["mbtns", "Botões do mouse"], ["keys1", "Teclas: teclado, Ctrl, Alt, Enter…"], ["keys2", "Teclas: setas, copiar, colar…"]] }],
+  send: [{ wide: 1, items: [["text", "Texto para o PC"], ["files", "Arquivos para o PC"], ["get", "PC para o celular"]] }],
+  power: [{ wide: 1, items: [["power", "Desligar, suspender, reiniciar…"], ["timer", "Timer"]] }],
+  voz: [{ wide: 1, items: [["cfg", "Ajustes de voz"], ["test", "Testar"], ["tips", "Como falar"], ["help", "O que dá para falar"]] }],
+  sys: [{ wide: 1, items: [["alerts", "Alertas"], ["visual", "Visual"], ["device", "Este aparelho", 1]] }],
+};
+const NOTES = {
+  play: "Só aparece com um jogo aberto. A prévia mostra a tela vazia.",
+  meet: "Só aparece numa chamada do Meet. Entrar aparece sozinho na sala de espera.",
+  media: "Deitado, a capa fica sempre à esquerda.",
+  mouse: "Deitado, touchpad e botões ficam à esquerda e as teclas à direita; a ordem vale dentro de cada lado.",
+  sys: "Este aparelho fica sempre visível: é onde troca o token.",
+};
+let SCR = "dash";
 const THEMES = [
   { id: "fallout", name: "Fallout", desc: "Terminal de fósforo", font: "VT323", crt: true, variants: [["green", "#040d07", "#5cff8a", "#1c7a3d"], ["amber", "#0c0703", "#ffbf47", "#8a5a17"], ["cyan", "#030b0d", "#7cf4ff", "#1b6f7a"]] },
   { id: "synth", name: "Synthwave", desc: "Neon rosa e ciano", font: "Orbitron", crt: true, variants: [["neon", "#0d0518", "#ff4fd8", "#3ef0ff"]] },
@@ -230,6 +263,16 @@ function navOf(o) { return clone(LAY[o]?.nav || DEFAULT_NAV); }
 function dashOf(o) { return clone(LAY[o]?.dash || DEFAULT_DASH[o].map(([id, span]) => ({ id, span, hidden: false }))); }
 function setNav(nav) { LAY[O] = { ...(LAY[O] || {}), nav }; save(); renderLayout(); }
 function setDash(dash) { LAY[O] = { ...(LAY[O] || {}), dash }; save(); renderLayout(); }
+function blocksOf(o, v) {
+  const cat = BLOCKS[v].flatMap((g) => g.items.map(([id]) => id));
+  const saved = (LAY[o]?.blocks?.[v] || []).filter((b) => cat.includes(b.id)), have = new Set(saved.map((b) => b.id));
+  return [...saved.map((b) => ({ ...b })), ...cat.filter((id) => !have.has(id)).map((id) => ({ id, hidden: false, wide: false }))];
+}
+function setBlocks(v, list) {
+  const o = { ...(LAY[O] || {}) }, blocks = { ...(o.blocks || {}) };
+  if (list) blocks[v] = list; else delete blocks[v];
+  o.blocks = blocks; LAY[O] = o; save(); renderScreens(); preview(v);
+}
 
 // ------------------------------------------------------------ arrastar e soltar
 // Itens com data-drag="tipo:id" vão para listas com data-drop="tipo"; a posição vem do mouse.
@@ -289,6 +332,11 @@ function onDrop(kind, id, list, idx) {
     const dash = dashOf(O), from = dash.findIndex((d) => d.id === id);
     const [d] = dash.splice(from, 1); dash.splice(idx > from ? idx - 1 : idx, 0, d);
     setDash(dash); preview("dash");
+  } else if (kind.startsWith("blk")) {
+    const ids = BLOCKS[SCR][+kind.slice(3)].items.map(([b]) => b), list = blocksOf(O, SCR);
+    const grp = list.filter((b) => ids.includes(b.id)), from = grp.findIndex((b) => b.id === id);
+    const [x] = grp.splice(from, 1); grp.splice(idx > from ? idx - 1 : idx, 0, x);
+    let k = 0; setBlocks(SCR, list.map((b) => (ids.includes(b.id) ? grp[k++] : b)));
   } else if (kind === "btn") {
     const btns = DECK.pages[page].buttons, from = +id;
     const [b] = btns.splice(from, 1); btns.splice(idx > from ? idx - 1 : idx, 0, b);
@@ -347,9 +395,31 @@ function renderLayout() {
     <label class="chk"><input type="checkbox" data-show="${d.id}" ${d.hidden ? "" : "checked"}> mostrar</label></div>`).join("");
   $("minigrid").style.gridTemplateColumns = `repeat(${maxSpan}, minmax(0, 1fr))`;
   $("minigrid").innerHTML = dash.filter((d) => !d.hidden).map((d) => `<div style="grid-column:span ${Math.min(d.span, maxSpan)}">${CARD_LABEL[d.id]}</div>`).join("");
+  renderScreens();
 }
-$("orient").onclick = (e) => { const b = e.target.closest("[data-o]"); if (!b) return; O = b.dataset.o; renderLayout(); };
-$("copy-other").onclick = () => { const other = O === "portrait" ? "landscape" : "portrait"; LAY[O] = { nav: navOf(other), dash: dashOf(other).map((d) => ({ ...d, span: Math.min(d.span, COLS[O]) })) }; save(); renderLayout(); };
+function renderScreens() {
+  $("vtabs").innerHTML = SCREENS.map(([v, l]) => `<button data-scr="${v}" class="${v === SCR ? "on" : ""}">${l}</button>`).join("");
+  $("dash-ed").hidden = SCR !== "dash"; $("blk-ed").hidden = SCR === "dash";
+  if (SCR === "dash") return;
+  const list = blocksOf(O, SCR), by = Object.fromEntries(list.map((b, i) => [b.id, { ...b, i }]));
+  $("blk-ed").innerHTML = (NOTES[SCR] ? `<p class="hint">${NOTES[SCR]}</p>` : "") + BLOCKS[SCR].map((g, gi) => {
+    const items = g.items.map(([id, label, lock]) => ({ label, lock, ...by[id] })).sort((a, b) => a.i - b.i);
+    return `${g.title ? `<h4>${g.title}</h4>` : ""}<div class="cards" data-drop="blk${gi}">${items.map((b) => `<div class="card${b.hidden ? " off" : ""}" draggable="true" data-drag="blk${gi}:${b.id}">
+      <span class="grip">::</span><span>${b.label}</span>
+      ${g.wide ? `<label class="chk" title="Ocupa todas as colunas quando a tela tem mais de uma"><input type="checkbox" data-wide="${b.id}" ${b.wide ? "checked" : ""}> largura inteira</label>` : "<span></span>"}
+      ${b.lock ? '<small style="color:var(--faint)">sempre visível</small>' : `<label class="chk"><input type="checkbox" data-bshow="${b.id}" ${b.hidden ? "" : "checked"}> mostrar</label>`}</div>`).join("")}</div>`;
+  }).join("") + `<div class="row" style="margin-top:12px"><button id="blk-reset">Voltar esta tela ao padrão</button></div>`;
+}
+$("vtabs").onclick = (e) => { const b = e.target.closest("[data-scr]"); if (!b) return; SCR = b.dataset.scr; renderScreens(); preview(SCR); };
+$("blk-ed").addEventListener("change", (e) => {
+  const id = e.target.dataset.bshow || e.target.dataset.wide; if (!id) return;
+  const list = blocksOf(O, SCR), b = list.find((x) => x.id === id);
+  if (e.target.dataset.bshow) b.hidden = !e.target.checked; else b.wide = e.target.checked;
+  setBlocks(SCR, list);
+});
+$("blk-ed").addEventListener("click", (e) => { if (e.target.id === "blk-reset") setBlocks(SCR, null); });
+$("orient").onclick = (e) => { const b = e.target.closest("[data-o]"); if (!b) return; O = b.dataset.o; renderLayout(); preview(SCR); };
+$("copy-other").onclick = () => { const other = O === "portrait" ? "landscape" : "portrait"; LAY[O] = { nav: navOf(other), dash: dashOf(other).map((d) => ({ ...d, span: Math.min(d.span, COLS[O]) })), blocks: clone(LAY[other]?.blocks || {}) }; save(); renderLayout(); };
 $("reset").onclick = () => { if (!confirm(`Voltar o layout ${O === "portrait" ? "em pé" : "deitado"} ao padrão?`)) return; delete LAY[O]; save(); renderLayout(); };
 $("nav").addEventListener("change", (e) => {
   const id = e.target.dataset.label; if (!id) return;

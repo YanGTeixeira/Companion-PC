@@ -45,7 +45,8 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
 
 - **Personalizar pelo PC:** ícone da bandeja › *Personalizar* abre `http://localhost:8770/editor`.
   Escolha o tema, arraste as abas entre as seções do menu (ou esconda), renomeie e reordene as seções,
-  ordene/esconda os cartões do Status e mude a largura deles, e reordene os botões e as páginas.
+  e em **Telas** arrume o que aparece dentro de cada aba (Sistema, Jogando, Reunião, Jogos, Tempo, Tocando, Mixer, Mouse,
+  Arquivos, Energia, Voz, Ajustes): ordem, mostrar/esconder e largura inteira. Também reordena os botões e as páginas.
   Em pé e deitado têm layouts separados. Fica salvo em `layout.json` e muda na hora em todos os aparelhos
   (as prévias do editor são o próprio app).
 - **Bateria:** mouse Attack Shark X11 (receptor 1d57:fa60, o mouse avisa sozinho a cada ~2 s enquanto
