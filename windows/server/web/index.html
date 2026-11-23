@@ -503,6 +503,44 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .tmr-tiles .tile { min-height: 48px; }
 #tmr-left { font-size: 64px; }
 
+/* tempo de tela */
+.ubar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.ubar .chips { display: flex; gap: 6px; }
+.chip2.on { background: var(--p); color: var(--bg); border-color: var(--p); text-shadow: none; }
+.unav { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--p2); }
+.unav span { min-width: 12ch; text-align: center; }
+.ugrid { display: grid; gap: 10px; }
+.utot { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.utot b { font: 52px/1 var(--display); font-weight: 400; color: var(--p); }
+.utot span { font-size: 13px; color: var(--p3); }
+.uchart { display: flex; align-items: flex-end; gap: 2px; height: 90px; margin: 12px 0 4px; }
+.uchart .uc { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; height: 100%; }
+.uchart .uc i { display: block; min-height: 1px; background: repeating-linear-gradient(to top, var(--p2) 0 4px, transparent 4px 6px); }
+.uchart .uc.now i { background: repeating-linear-gradient(to top, var(--p) 0 4px, transparent 4px 6px); }
+.uaxis { display: flex; justify-content: space-between; font-size: 11px; color: var(--p3); margin-bottom: 10px; }
+.ucats { display: flex; height: 12px; gap: 2px; margin: 4px 0 8px; }
+.ucats i { display: block; min-width: 2px; }
+.ulegend { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 14px; font-size: 13px; }
+.ulegend div { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ulegend div span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ulegend div span:last-child { color: var(--p2); }
+.usw { width: 10px; height: 10px; flex: none; }
+.uapp { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 2px 10px; padding: 5px 0; }
+.uapp .un { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
+.uapp .ut { color: var(--p2); font-size: 14px; text-align: right; min-width: 6ch; }
+.uapp .bar { grid-column: 1 / -1; margin: 0; height: 5px; }
+.uapp.now .un::after { content: " \25CF"; color: var(--p); font-size: 10px; vertical-align: middle; }
+.catsel { font: inherit; font-size: 12px; color: var(--p3); background: transparent; border: 1px solid var(--p4); border-radius: 2px; padding: 1px 4px; max-width: 15ch; }
+.catsel option { background: var(--bg); color: var(--p); }
+@container (min-width: 640px) {
+  .ugrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .utot b { font-size: 40px; }
+  .uchart { height: 64px; margin-top: 8px; }
+  .uapp { padding: 3px 0; }
+}
+
 /* jogos: FPS, semana e biblioteca */
 .fps { margin-top: 8px; font: 22px/1 var(--display); color: var(--p2); }
 .fps b { font: 56px/1 var(--display); color: var(--p); font-weight: 400; margin-right: 6px; }
@@ -631,6 +669,23 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
     </div>
     <h2>Biblioteca</h2>
     <div class="lib" id="g-lib"><div class="empty">Carregando…</div></div>
+  </section>
+
+  <!-- STATUS > Tempo de tela -->
+  <section class="tab" id="t-usage">
+    <div class="ubar">
+      <div class="chips" id="u-range"><button class="chip2 on" data-r="day">Hoje</button><button class="chip2" data-r="week">Semana</button><button class="chip2" data-r="month">Mês</button></div>
+      <div class="unav"><button class="btn sm" id="u-prev" aria-label="Anterior">&lt;</button><span id="u-label">–</span><button class="btn sm" id="u-next" aria-label="Próximo">&gt;</button></div>
+    </div>
+    <div class="ugrid">
+      <div class="card ucard">
+        <div class="utot"><b id="u-total">–</b><span id="u-cmp"></span></div>
+        <div class="uchart" id="u-chart"></div>
+        <div class="ucats" id="u-catbar"></div>
+        <div class="ulegend" id="u-legend"></div>
+      </div>
+      <div class="card"><h3><span>Por aplicativo</span><span>toque na categoria para trocar</span></h3><div id="u-apps"><div class="empty">Carregando…</div></div></div>
+    </div>
   </section>
 
   <!-- RÁDIO > Tocando -->
@@ -1033,6 +1088,7 @@ function onMsg(m) {
       snd("on"); wasOnline = true;
       if (m.features?.notif) subNotif();
       libT = 0; if (vis("games")) loadGamesExtra();
+      uT = 0; if (vis("usage")) setTimeout(loadUsage);
       vozHelpT = 0; vozDevs = false; if (vis("voz")) loadVoiceHelp();
       CONN = `${m.host} · servidor ${m.version} · ${location.host}`; showConn();
       break;
@@ -1079,13 +1135,13 @@ $("b-logout").onclick = () => { store.set("token", ""); if (ws) { const s = ws; 
 // 5 seções na barra; cada uma tem vistas (sub-abas). Em tablet deitado as vistas
 // da seção aparecem lado a lado.
 const SECTIONS = {
-  status: [["dash", "Sistema"], ["games", "Jogos"]],
+  status: [["dash", "Sistema"], ["games", "Jogos"], ["usage", "Tempo"]],
   radio: [["media", "Tocando"], ["mix", "Mixer"]],
   ctrl: [["mouse", "Mouse e teclado"], ["screen", "Tela do PC"]],
   deck: [["deck", "Botões"]],
   pc: [["send", "Arquivos"], ["power", "Energia"], ["voz", "Voz"], ["sys", "Ajustes"]],
 };
-const SPLIT = { status: "minmax(0,1.7fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
+const SPLIT = { status: "minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
   ctrl: "minmax(0,1fr) minmax(0,1.7fr)", pc: "minmax(0,1.1fr) minmax(0,.7fr) minmax(0,1.3fr) minmax(0,1.1fr)" };
 const VIEWS = Object.values(SECTIONS).flat().map(([n]) => n);
 const secOf = (v) => Object.keys(SECTIONS).find((s) => SECTIONS[s].some(([n]) => n === v)) || "status";
@@ -1112,6 +1168,7 @@ function showView(name, temp) {
   if (vis("screen")) requestAnimationFrame(() => { layoutScreen(); screenLoop(); });
   if (vis("media") || vis("mix")) { mixT = 0; renderMixer(); pollMixer(); }
   if (vis("games")) loadGamesExtra();
+  if (vis("usage")) setTimeout(loadUsage);
   if (vis("voz")) setTimeout(loadVoiceHelp);  // no início, as funções da voz ainda nem foram declaradas
 }
 $("subtabs").onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) { buzz(8); showView(b.dataset.view); } };
@@ -1328,6 +1385,80 @@ function renderWeek(h) {
   $("gh-top").innerHTML = h.top.length ? h.top.map((g) => `<div class="toprow"><div class="row"><span>${esc(g.name)}</span><span>${humanDur(g.s)}</span></div>
     <div class="bar"><i style="width:${(g.s / top) * 100}%"></i></div></div>`).join("") : '<div class="empty">Nenhum jogo nos últimos 7 dias</div>';
 }
+// ---------------------------------------------------------------- Tempo de tela
+// tons do tema para as categorias (sem cores fora da paleta)
+const CAT_STYLE = ["var(--p)", "var(--p2)", "var(--p3)", "repeating-linear-gradient(45deg, var(--p) 0 2px, transparent 2px 4px)",
+  "repeating-linear-gradient(45deg, var(--p2) 0 2px, transparent 2px 4px)", "repeating-linear-gradient(90deg, var(--p) 0 2px, transparent 2px 4px)",
+  "repeating-linear-gradient(90deg, var(--p3) 0 2px, transparent 2px 4px)", "var(--p4)"];
+let uRange = store.get("urange", "day"), uRef = null, uData = null, uT = 0;
+const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const WD = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"], MON_N = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+function uShift(dir) {
+  const d = uRef ? new Date(uRef + "T12:00") : new Date();
+  if (uRange === "day") d.setDate(d.getDate() + dir);
+  else if (uRange === "week") d.setDate(d.getDate() + 7 * dir);
+  else d.setMonth(d.getMonth() + dir, 1);
+  const today = isoDay(new Date());
+  uRef = isoDay(d) >= today ? null : isoDay(d);
+  loadUsage(true);
+}
+async function loadUsage(force) {
+  if (!vis("usage") || !ws || ws.readyState !== 1 || !welcome.features?.usage) return;
+  if (!force && Date.now() - uT < 15000) return;
+  uT = Date.now();
+  try { uData = await send("usage.get", { range: uRange, day: uRef }); renderUsage(); } catch { uT = 0; }
+}
+function catIdx(c) { return Math.max(0, (uData?.cat_list || []).indexOf(c)); }
+function renderUsage() {
+  const u = uData; if (!u) return;
+  document.querySelectorAll("#u-range [data-r]").forEach((b) => b.classList.toggle("on", b.dataset.r === uRange));
+  const st = new Date(u.start + "T12:00"), en = new Date(u.end + "T12:00");
+  $("u-label").textContent = u.range === "day" ? (uRef ? `${WD[st.getDay()]} ${st.getDate()} ${MON_N[st.getMonth()]}` : "Hoje")
+    : u.range === "week" ? `${st.getDate()} ${MON_N[st.getMonth()]} – ${en.getDate()} ${MON_N[en.getMonth()]}` : `${MON_N[st.getMonth()]} ${st.getFullYear()}`;
+  $("u-next").disabled = !uRef;
+  $("u-total").textContent = u.total ? humanDur(u.total) : "0m";
+  if (u.range === "day") {
+    const diff = u.prev_avg ? Math.round((u.total / u.prev_avg - 1) * 100) : null;
+    $("u-cmp").textContent = diff == null ? "" : `${Math.abs(diff)}% ${diff >= 0 ? "acima" : "abaixo"} da média de 7 dias (${humanDur(u.prev_avg)})`;
+  } else $("u-cmp").textContent = u.avg ? `média ${humanDur(u.avg)}/dia` : "";
+  // gráfico
+  let bars, labels;
+  const hr = new Date().getHours(), today = isoDay(new Date());
+  if (u.range === "day") {
+    const max = Math.max(1800, ...u.hours);
+    bars = u.hours.map((s, h) => `<div class="uc${!uRef && h === hr ? " now" : ""}" title="${h}h: ${humanDur(s)}"><i style="height:${(s / max) * 100}%"></i></div>`);
+    labels = ["0h", "6h", "12h", "18h", "23h"];
+  } else {
+    const max = Math.max(3600, ...u.days.map((d) => d.secs));
+    bars = u.days.map((d) => `<div class="uc${d.day === today ? " now" : ""}" title="${d.day}: ${humanDur(d.secs)}"><i style="height:${(d.secs / max) * 100}%"></i></div>`);
+    labels = u.range === "week" ? ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"] : ["1", "8", "15", "22", String(u.days.length)];
+  }
+  $("u-chart").innerHTML = bars.join("");
+  $("u-chart").nextElementSibling?.classList.contains("uaxis") || $("u-chart").insertAdjacentHTML("afterend", '<div class="uaxis" id="u-axis"></div>');
+  $("u-axis").innerHTML = labels.map((l) => `<span>${l}</span>`).join("");
+  // categorias
+  const tot = u.total || 1;
+  $("u-catbar").innerHTML = u.cats.map((c) => `<i style="flex:${c.secs} 1 0;background:${CAT_STYLE[catIdx(c.cat)]}" title="${esc(c.cat)}"></i>`).join("");
+  $("u-legend").innerHTML = u.cats.map((c) => `<div><span class="usw" style="background:${CAT_STYLE[catIdx(c.cat)]}"></span><span>${esc(c.cat)}</span><span>${humanDur(c.secs)} · ${Math.round((c.secs / tot) * 100)}%</span></div>`).join("")
+    || '<div class="empty">Nada registrado ainda</div>';
+  // apps
+  const top = u.apps[0]?.secs || 1;
+  const opts = (sel) => u.cat_list.map((c) => `<option${c === sel ? " selected" : ""}>${esc(c)}</option>`).join("");
+  $("u-apps").innerHTML = u.apps.length ? u.apps.map((a) => `<div class="uapp${a.app === u.current && !uRef ? " now" : ""}">
+      <span class="un">${esc(a.name)}</span><select class="catsel" data-app="${esc(a.app)}" aria-label="Categoria de ${esc(a.name)}">${opts(a.cat)}</select><span class="ut">${humanDur(a.secs)}</span>
+      <div class="bar"><i style="width:${(a.secs / top) * 100}%"></i></div></div>`).join("")
+    : '<div class="empty">Nenhum uso registrado neste período. O tempo conta enquanto você usa o PC (para depois de 2 min parado, a não ser que algo esteja passando na tela).</div>';
+}
+$("u-range").onclick = (e) => { const b = e.target.closest("[data-r]"); if (!b) return; buzz(8); uRange = b.dataset.r; store.set("urange", uRange); uRef = null; loadUsage(true); };
+$("u-prev").onclick = () => { buzz(8); uShift(-1); };
+$("u-next").onclick = () => { buzz(8); uShift(1); };
+$("u-apps").addEventListener("change", async (e) => {
+  const sel = e.target.closest(".catsel"); if (!sel) return;
+  buzz(8);
+  try { await send("usage.cat", { app: sel.dataset.app, cat: sel.value }); uT = 0; loadUsage(true); } catch (err) { toast(err.message, "bad"); }
+});
+setInterval(() => { if (vis("usage") && !document.hidden) loadUsage(); }, 30000);
+
 function renderLib() {
   $("g-lib").innerHTML = libData.length ? libData.map((g, i) => `<button class="lgame${g.running ? " run" : ""}" data-g="${i}">
     <div class="gart"${g.art ? ` style="background-image:url(data:image/jpeg;base64,${g.art})"` : ""}>${g.art ? "" : esc(g.name)}</div>

@@ -34,6 +34,7 @@ import extras
 import games
 import overlay
 import pc_info
+import screentime
 import voice
 import watchers
 
@@ -508,6 +509,9 @@ ASYNC_ACTIONS = {
     "voice.help": lambda p: voice_help(),
     "voice.try": lambda p: voice_try(p),
     "bat.refresh": lambda p: asyncio.to_thread(BAT.refresh),
+    "usage.get": lambda p: asyncio.to_thread(SCREEN.report, p.get("range", "day"), p.get("day")),
+    "usage.app": lambda p: asyncio.to_thread(SCREEN.app_report, str(p["app"]), int(p.get("days", 7))),
+    "usage.cat": lambda p: asyncio.to_thread(screen_cat, p),
 }
 
 
@@ -689,7 +693,7 @@ async def session(ws, peer, kind):
                      "screen": True, "clipboard": True, "files": True, "deck": True,
                      "mic": pc_info.HAS_VOLUME, "timer": True, "deck_auto": True, "macro": True,
                      "library": True, "ping": True, "notif": True, "fps": True, "voice": VOICE.available,
-                     "battery": devices.hid is not None},
+                     "battery": devices.hid is not None, "usage": True},
     }))
     clients.add(ws)
     client_kind[ws] = kind
@@ -740,7 +744,7 @@ async def session(ws, peer, kind):
 
 sent_art: dict = {}
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"bat.refresh", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -801,14 +805,19 @@ sent_gameart: dict = {}
 # --------------------------------------------------------------------------
 # Comandos de voz (voice.py): "PC, próxima música"
 # --------------------------------------------------------------------------
-def voice_save_cfg(vcfg):
-    CFG["voice"] = vcfg
+def save_cfg_key(key, value):
+    """Grava uma chave do config.json sem mexer no resto do arquivo."""
+    CFG[key] = value
     try:
         cur = json.loads(CFG_PATH.read_text(encoding="utf-8")) if CFG_PATH.exists() else {}
-        cur["voice"] = vcfg
+        cur[key] = value
         CFG_PATH.write_text(json.dumps(cur, indent=2, ensure_ascii=False), encoding="utf-8")
     except Exception:  # noqa: BLE001
-        log.exception("salvar config de voz")
+        log.exception("salvar config (%s)", key)
+
+
+def voice_save_cfg(vcfg):
+    save_cfg_key("voice", vcfg)
 
 
 _voice_games = [0.0, []]
@@ -937,6 +946,28 @@ async def downloads_loop():
 
 
 BAT = devices.Batteries(CFG.get("batteries"))
+_media_playing = [False]
+SCREEN = screentime.ScreenTime(BASE, CFG.setdefault("screentime", {}), match_game=lambda exe: MON.catalog.match(exe),
+                               media_playing=lambda: _media_playing[0])
+
+
+async def screentime_loop():
+    while True:
+        try:
+            if screentime.idle_seconds() > screentime.IDLE_S - 5:
+                # parado: só conta se algo estiver tocando (vídeo, música com a janela em foco)
+                m = await pc_info.MEDIA.info() if pc_info.MEDIA else None
+                _media_playing[0] = bool(m and m.get("status") == "playing")
+            await asyncio.to_thread(SCREEN.tick)
+        except Exception:  # noqa: BLE001
+            log.exception("screentime_loop")
+        await asyncio.sleep(2)
+
+
+def screen_cat(p):
+    cat = SCREEN.set_category(str(p["app"]), str(p["cat"]))
+    save_cfg_key("screentime", SCREEN.cfg)
+    return cat
 
 
 async def battery_loop():
@@ -1169,6 +1200,7 @@ async def main():
     asyncio.create_task(now_loop())
     asyncio.create_task(games_loop())
     asyncio.create_task(battery_loop())
+    asyncio.create_task(screentime_loop())
     asyncio.create_task(adb_loop())
     asyncio.create_task(downloads_loop())
     asyncio.create_task(web_watch())
@@ -1178,6 +1210,7 @@ async def main():
 
 def stop_server():
     release_modifiers()
+    SCREEN.flush()
 
 
 def run_with_tray():
