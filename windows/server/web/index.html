@@ -3351,6 +3351,7 @@ function renderToday() {
     };
     const tday = evs.filter((e) => dayStr(e) === localToday), tom = evs.filter((e) => dayStr(e) > localToday);
     ag.innerHTML = `<h3><span>Agenda</span><span>${d.err?.calendar ? "erro ao atualizar" : tday.filter((e) => !e.all_day).length + " hoje"}</span></h3>
+      ${d.busy_only ? '<div class="sub" style="white-space:normal">A agenda chega só como livre/ocupado (sem títulos nem links do Meet). No editor do PC, troque pelo endereço secreto iCal.</div>' : ""}
       ${tday.length ? tday.map(row).join("") : '<div class="empty">Nada hoje</div>'}
       ${tom.length ? `<div class="agday">Amanhã</div>${tom.slice(0, 5).map(row).join("")}` : ""}`;
   }
@@ -3370,14 +3371,14 @@ document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-join]"); if (!b || !b.dataset.join) return;
   e.stopPropagation(); act("daily.open", { link: b.dataset.join }, "Abrindo a reunião no PC");
 }, true);
-// lembrete 5 min antes de reunião (com link do Meet)
+// lembrete 5 min antes de cada compromisso com horário (o de 1 min vem do PC)
 const remindDone = new Set();
 setInterval(() => {
   if (PREVIEW) return;
   const now = Date.now();
   for (const e of upcoming()) {
     const st = evDate(e.start), key = e.start + e.title;
-    if (e.link && st - now <= 5 * 60000 && st - now > 0 && !remindDone.has(key)) { remindDone.add(key); alarm(`Reunião em ${Math.max(1, Math.round((st - now) / 60000))} min: ${e.title}`); }
+    if (!e.all_day && st - now <= 5 * 60000 && st - now > 90000 && !remindDone.has(key)) { remindDone.add(key); alarm(`${e.link ? "Reunião" : "Compromisso"} em ${Math.max(1, Math.round((st - now) / 60000))} min: ${e.title}`); }
   }
   if (vis("today") && state.daily) renderToday();
 }, 20000);
@@ -3493,11 +3494,11 @@ let meetSoon = null;
 function onMeetSoon(e) {
   if (PREVIEW) return;
   meetSoon = e;
-  $("ms-title").textContent = `Reunião em 1 min`;
+  $("ms-title").textContent = e.link ? "Reunião em 1 min" : "Compromisso em 1 min";
   $("ms-sub").textContent = [e.title, e.profile ? `perfil de áudio: ${e.profile}` : "", e.opened ? "aberta no PC" : ""].filter(Boolean).join(" · ");
   $("ms-join").classList.toggle("hidden", !!e.opened || !e.link);
   $("meetsoon").classList.remove("hidden");
-  alarm(`Reunião em 1 min: ${e.title}`);
+  alarm(`${e.link ? "Reunião" : "Compromisso"} em 1 min: ${e.title}`);
   setTimeout(() => $("meetsoon").classList.add("hidden"), 3 * 60000);
 }
 $("ms-close").onclick = () => $("meetsoon").classList.add("hidden");

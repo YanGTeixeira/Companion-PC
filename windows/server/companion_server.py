@@ -1273,6 +1273,7 @@ def daily_public():
     c = daily_cfg()
     return {"weather": DAILY["weather"] if c.get("city") else None, "events": DAILY["events"] if c.get("ics") else [],
             "city": c.get("city", ""), "has_ics": bool(c.get("ics")), "err": DAILY["err"],
+            "busy_only": bool(c.get("ics")) and bool(DAILY["events"]) and all(e["title"] == "Ocupado" for e in DAILY["events"]),
             "meet_auto": c.get("meet_auto", True), "meet_open": bool(c.get("meet_open")), "meet_profile": c.get("meet_profile", "")}
 
 
@@ -1306,14 +1307,14 @@ MEET_PREP = set()
 
 
 async def meet_prepare():
-    """1 minuto antes de uma reunião com link do Meet: aplica o perfil de áudio escolhido e avisa o celular."""
+    """1 minuto antes de um compromisso: avisa o celular; se tiver link do Meet, aplica o perfil de áudio (e abre, se pedido)."""
     import datetime as _dt
     c = daily_cfg()
     if not c.get("meet_auto", True):
         return
     now = _dt.datetime.now()
     for e in DAILY["events"]:
-        if e["all_day"] or not e.get("link"):
+        if e["all_day"]:
             continue
         key = e["start"] + e["title"]
         left = (_dt.datetime.fromisoformat(e["start"]) - now).total_seconds()
@@ -1321,19 +1322,19 @@ async def meet_prepare():
             continue
         MEET_PREP.add(key)
         applied = None
-        if c.get("meet_profile"):
+        if c.get("meet_profile") and e.get("link"):
             try:
                 await audio_profile_apply({"name": c["meet_profile"]})
                 applied = c["meet_profile"]
             except Exception as ex:  # noqa: BLE001
                 log.warning("reunião: perfil %s: %s", c["meet_profile"], ex)
-        if c.get("meet_open"):
+        if c.get("meet_open") and e.get("link"):
             try:
                 daily_open({"link": e["link"]})
             except Exception as ex:  # noqa: BLE001
                 log.warning("reunião: abrir: %s", ex)
         log.info("reunião em 1 min: %s (perfil: %s)", e["title"], applied or "nenhum")
-        await broadcast({"t": "meet_soon", "d": {**e, "profile": applied, "opened": bool(c.get("meet_open"))}})
+        await broadcast({"t": "meet_soon", "d": {**e, "profile": applied, "opened": bool(c.get("meet_open") and e.get("link"))}})
 
 
 async def daily_loop():

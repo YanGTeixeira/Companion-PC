@@ -519,6 +519,7 @@ function dailyStatus(d) {
   const parts = [];
   if (d.city) parts.push(d.weather ? `Clima: ${d.weather.city}, ${d.weather.temp}° ${d.weather.desc}` : d.err?.weather ? "Clima: " + d.err.weather : "Clima: carregando…");
   if (d.has_ics) parts.push(d.err?.calendar ? "Agenda: " + d.err.calendar : `Agenda: ${d.events.length} compromisso(s) hoje e amanhã`);
+  if (d.busy_only) parts.push("Atenção: esse link só mostra livre/ocupado, sem título nem link do Meet. Use o endereço secreto (abaixo).");
   $("d-st").textContent = parts.join(" · ");
 }
 async function loadDaily() { try {

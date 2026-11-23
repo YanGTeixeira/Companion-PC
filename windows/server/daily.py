@@ -137,7 +137,10 @@ def _event(ev):
     end = _local(end_p.dt)[0] if end_p else start + (dt.timedelta(days=1) if all_day else dt.timedelta(hours=1))
     text = " ".join(str(ev.get(k, "")) for k in ("X-GOOGLE-CONFERENCE", "LOCATION", "DESCRIPTION"))
     m = MEET_RE.search(text)
-    return {"title": str(ev.get("SUMMARY", "")).strip() or "(sem título)", "start": start.isoformat(timespec="minutes"),
+    title = str(ev.get("SUMMARY", "")).strip()
+    if title.lower() in ("busy", "ocupado") and not ev.get("DESCRIPTION"):
+        title = "Ocupado"   # agenda compartilhada só como livre/ocupado: sem título nem link
+    return {"title": title or "(sem título)", "start": start.isoformat(timespec="minutes"),
             "end": end.isoformat(timespec="minutes"), "all_day": all_day, "link": m.group(0) if m else None,
             "where": str(ev.get("LOCATION", "")).strip()[:80] if not m else ""}
 
