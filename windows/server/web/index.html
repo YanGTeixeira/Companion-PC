@@ -503,6 +503,34 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .tmr-tiles .tile { min-height: 48px; }
 #tmr-left { font-size: 64px; }
 
+/* reunião */
+.meet { display: grid; gap: 10px; }
+.mhead .mrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--p2); font-size: 14px; }
+.mtitle2 { font: 30px/1.1 var(--display); margin: 8px 0 2px; overflow-wrap: anywhere; }
+.mbtns { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mbtns .dbtn { min-height: 84px; }
+.mbtns .mbig { min-height: 120px; }
+.mbtns .mbig .di { font-size: 44px; }
+.mbtns .dbtn.on { background: var(--p); color: var(--bg); text-shadow: none; }
+.mbtns .dbtn.off { border-color: var(--alert); color: var(--alert); }
+.mbtns .dbtn.danger { border-color: var(--alert); color: var(--alert); }
+.mbtns .dbtn.danger.hold { background: var(--alert); color: var(--bg); }
+.mbtns .dbtn:disabled { opacity: .3; }
+.meetchip { border-color: var(--alert) !important; color: var(--alert) !important; }
+.meetchip.muted { animation: blink 1.2s steps(1) infinite; }
+@container (min-width: 640px) {
+  .meet { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; }
+  .mbtns { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mbtns .mbig { grid-column: span 2; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .meet { height: 100%; }
+  .mbtns { height: 100%; grid-template-rows: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .mbtns .dbtn, .mbtns .mbig { min-height: 0; padding: 4px; gap: 4px; }
+  .mbtns .dbtn .di { font-size: 26px; } .mbtns .mbig .di { font-size: 34px; }
+  .mtitle2 { font-size: 24px; }
+}
+
 /* tempo de tela */
 .ubar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .ubar .chips { display: flex; gap: 6px; }
@@ -630,6 +658,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   <span class="via" id="via"></span>
   <span class="hchip hidden" id="fps-chip"></span>
   <button class="hchip hidden" id="tmr-chip" aria-label="Timer de energia"></button>
+  <button class="hchip hidden meetchip" id="meet-chip" aria-label="Reunião">REUNIÃO</button>
   <button class="hchip hidden" id="voz-chip" aria-label="Comandos de voz">VOZ</button>
   <button class="hchip hidden" id="mic-chip" aria-label="Microfone do PC">MIC</button>
   <span class="clock" id="clock"></span>
@@ -669,6 +698,29 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
     </div>
     <h2>Biblioteca</h2>
     <div class="lib" id="g-lib"><div class="empty">Carregando…</div></div>
+  </section>
+
+  <!-- STATUS > Reunião (só aparece durante uma chamada do Meet) -->
+  <section class="tab" id="t-meet">
+    <div class="meet">
+      <div class="card mhead">
+        <div class="mrow"><span class="chip" id="mt-app">MEET</span><span id="mt-ppl"></span></div>
+        <div class="mtitle2" id="mt-title">–</div>
+        <div class="gtime" id="mt-time"></div>
+        <div class="sub" id="mt-hint"></div>
+      </div>
+      <div class="mbtns" id="mt-btns">
+        <button class="dbtn mbig" data-m="mic"><span class="di">MIC</span><span class="dl">Microfone</span></button>
+        <button class="dbtn mbig" data-m="cam"><span class="di">CAM</span><span class="dl">Câmera</span></button>
+        <button class="dbtn" data-m="share"><span class="di">TELA</span><span class="dl">Compartilhar tela</span></button>
+        <button class="dbtn" data-m="hand"><span class="di">MÃO</span><span class="dl">Levantar a mão</span></button>
+        <button class="dbtn" data-m="captions"><span class="di">CC</span><span class="dl">Legendas</span></button>
+        <button class="dbtn" data-m="chat"><span class="di">MSG</span><span class="dl">Chat</span></button>
+        <button class="dbtn" data-m="focus"><span class="di">&gt;_</span><span class="dl">Mostrar no PC</span></button>
+        <button class="dbtn danger" data-m="leave"><span class="di">SAIR</span><span class="dl">Segure para sair</span></button>
+        <button class="dbtn mbig hidden" data-m="join"><span class="di">ENTRAR</span><span class="dl">Participar agora</span></button>
+      </div>
+    </div>
   </section>
 
   <!-- STATUS > Tempo de tela -->
@@ -907,7 +959,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 </main>
 
 <nav id="nav">
-  <div class="rail-top"><span id="dot2" class="dot"></span><span id="clock2"></span><button class="hchip hidden" id="voz-chip2" aria-label="Comandos de voz">VOZ</button><button class="hchip hidden" id="mic-chip2" aria-label="Microfone do PC">MIC</button></div>
+  <div class="rail-top"><span id="dot2" class="dot"></span><span id="clock2"></span><button class="hchip hidden meetchip" id="meet-chip2" aria-label="Reunião">REU</button><button class="hchip hidden" id="voz-chip2" aria-label="Comandos de voz">VOZ</button><button class="hchip hidden" id="mic-chip2" aria-label="Microfone do PC">MIC</button></div>
   <button data-sec="status">Status</button>
   <button data-sec="radio">Rádio</button>
   <button data-sec="ctrl">Controle</button>
@@ -1100,6 +1152,7 @@ function onMsg(m) {
     case "stats": state.stats = m.d; renderStats(); break;
     case "now": state.now = m.d; state.nowT = performance.now(); renderNow(); break;
     case "art": state.art = { [m.id]: "data:image/jpeg;base64," + m.jpg }; renderNow(); break;
+    case "meet": onMeet(m.d); break;
     case "games": state.games = m.d; state.gamesT = performance.now(); renderGames(); break;
     case "gameart": state.gameart = { [m.id]: "data:image/jpeg;base64," + m.jpg }; renderGames(); break;
     case "event":
@@ -1143,7 +1196,18 @@ const SECTIONS = {
 };
 const SPLIT = { status: "minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
   ctrl: "minmax(0,1fr) minmax(0,1.7fr)", pc: "minmax(0,1.1fr) minmax(0,.7fr) minmax(0,1.3fr) minmax(0,1.1fr)" };
-const VIEWS = Object.values(SECTIONS).flat().map(([n]) => n);
+let VIEWS = Object.values(SECTIONS).flat().map(([n]) => n);
+const BASE_STATUS = SECTIONS.status.slice();
+// abas que só existem enquanto algo acontece no PC (reunião, jogo); ficam no começo de Status
+const LIVE = {};
+function setLive(view, label, on) {
+  if (!!LIVE[view] === on) return;
+  if (on) LIVE[view] = label; else delete LIVE[view];
+  SECTIONS.status = [...Object.entries(LIVE).map(([v, l]) => [v, l]), ...BASE_STATUS];
+  VIEWS = Object.values(SECTIONS).flat().map(([n]) => n);
+  if (!on && prefs.tab === view) showView(lastView.status && lastView.status !== view ? lastView.status : "dash", true);
+  else showView(prefs.tab, true);
+}
 const secOf = (v) => Object.keys(SECTIONS).find((s) => SECTIONS[s].some(([n]) => n === v)) || "status";
 const wideMQ = matchMedia("(min-width: 1000px) and (min-height: 600px) and (orientation: landscape)");
 const MAIN = $("main"), lastView = store.get("views", {});
@@ -1170,6 +1234,7 @@ function showView(name, temp) {
   if (vis("games")) loadGamesExtra();
   if (vis("usage")) setTimeout(loadUsage);
   if (vis("voz")) setTimeout(loadVoiceHelp);  // no início, as funções da voz ainda nem foram declaradas
+  if (state.meet !== undefined) setTimeout(renderMeet);
 }
 $("subtabs").onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) { buzz(8); showView(b.dataset.view); } };
 document.querySelectorAll("nav button").forEach((b) => (b.onclick = () => { buzz(8); showView(lastView[b.dataset.sec] || SECTIONS[b.dataset.sec][0][0]); }));
@@ -1385,6 +1450,67 @@ function renderWeek(h) {
   $("gh-top").innerHTML = h.top.length ? h.top.map((g) => `<div class="toprow"><div class="row"><span>${esc(g.name)}</span><span>${humanDur(g.s)}</span></div>
     <div class="bar"><i style="width:${(g.s / top) * 100}%"></i></div></div>`).join("") : '<div class="empty">Nenhum jogo nos últimos 7 dias</div>';
 }
+// ---------------------------------------------------------------- Reunião (Meet no Edge, pela extensão)
+let meetSeen = null;   // reunião para a qual o app já mudou de aba sozinho
+function onMeet(d) {
+  state.meet = d;
+  const live = !!(d && (d.inCall || d.lobby));
+  setLive("meet", "Reunião", live);
+  if (live && d.inCall && meetSeen !== d.code) {
+    meetSeen = d.code;
+    if (prefs.tab !== "meet") { showView("meet", true); toast("Reunião: atalhos abertos", "ok"); }
+  }
+  if (!live) meetSeen = null;
+  renderMeet();
+}
+function renderMeet() {
+  const d = state.meet, live = !!(d && (d.inCall || d.lobby));
+  ["meet-chip", "meet-chip2"].forEach((id) => { $(id).classList.toggle("hidden", !live || vis("meet")); $(id).classList.toggle("muted", !!d && d.mic === false); });
+  if (!live) return;
+  $("mt-app").textContent = (d.app || "Meet").toUpperCase();
+  $("mt-title").textContent = d.title || d.code || "Reunião";
+  $("mt-ppl").textContent = d.people ? `${d.people} pessoa${d.people > 1 ? "s" : ""}` : "";
+  $("mt-hint").textContent = d.lobby ? "Na sala de espera" : d.sharing ? "Você está compartilhando a tela" : "";
+  const set = (k, on, lblOn, lblOff, can) => {
+    const b = document.querySelector(`#mt-btns [data-m="${k}"]`); if (!b) return;
+    b.disabled = can === false;
+    b.classList.toggle("on", on === true); b.classList.toggle("off", on === false && (k === "mic" || k === "cam"));
+    if (lblOn) b.querySelector(".dl").textContent = on ? lblOn : lblOff;
+  };
+  set("mic", d.mic, "Microfone ligado", "Mudo · toque para falar", d.can?.mic);
+  set("cam", d.cam, "Câmera ligada", "Câmera desligada", d.can?.cam);
+  set("hand", d.hand, "Abaixar a mão", "Levantar a mão", d.can?.hand);
+  set("share", d.sharing, "Parar de compartilhar", "Compartilhar tela", d.can?.share);
+  set("captions", null, null, null, d.can?.captions);
+  document.querySelectorAll("#mt-btns [data-m]").forEach((b) => {
+    const k = b.dataset.m, inCallOnly = ["share", "hand", "captions", "chat", "leave"].includes(k);
+    b.classList.toggle("hidden", k === "join" ? !d.lobby : d.lobby && inCallOnly);
+  });
+  tickMeet();
+}
+const humanClock = (s) => { s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0"); };
+function tickMeet() {
+  if (!vis("meet")) return;
+  const d = state.meet;
+  $("mt-time").textContent = d?.since ? humanClock(Math.max(0, Date.now() / 1000 - d.since)) : "";
+}
+setInterval(tickMeet, 1000);
+function meetCmd(cmd, arg) {
+  return send("meet.cmd", arg == null ? { cmd } : { cmd, arg }).then((r) => { if (typeof r === "string") toast(r, "ok"); }).catch((e) => toast(e.message, "bad"));
+}
+$("mt-btns").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-m]"); if (!b || b.dataset.m === "leave") return;
+  buzz(); meetCmd(b.dataset.m);
+});
+// sair: segurar 0,8 s (evita sair da chamada sem querer)
+(() => {
+  const b = document.querySelector('#mt-btns [data-m="leave"]'); let t = null;
+  const start = (e) => { e.preventDefault(); b.classList.add("hold"); buzz(8); t = setTimeout(() => { b.classList.remove("hold"); buzz(40); meetCmd("leave"); }, 800); };
+  const stop = () => { clearTimeout(t); b.classList.remove("hold"); };
+  b.addEventListener("pointerdown", start); ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => b.addEventListener(ev, stop));
+})();
+["meet-chip", "meet-chip2"].forEach((id) => ($(id).onclick = () => { buzz(8); showView("meet"); }));
+
 // ---------------------------------------------------------------- Tempo de tela
 // tons do tema para as categorias (sem cores fora da paleta)
 const CAT_STYLE = ["var(--p)", "var(--p2)", "var(--p3)", "repeating-linear-gradient(45deg, var(--p) 0 2px, transparent 2px 4px)",

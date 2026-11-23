@@ -15,6 +15,10 @@ Copy-Item (Join-Path $Source "server\*.py") $Dest -Force
 # App web (servido pelo próprio servidor na porta 8770)
 New-Item -ItemType Directory -Force -Path (Join-Path $Dest "web") | Out-Null
 Copy-Item (Join-Path $Source "server\web\*") (Join-Path $Dest "web") -Recurse -Force
+# Extensão do Edge para reuniões (Meet): carregue uma vez em edge://extensions > "Carregar sem compactação"
+$ExtDest = Join-Path $env:USERPROFILE "companion-pc\edge-extension"
+New-Item -ItemType Directory -Force -Path $ExtDest | Out-Null
+Copy-Item (Join-Path $Source "edge-extension\*") $ExtDest -Recurse -Force
 
 Write-Host "Instalando dependências..."
 py -3 -m pip install --user --disable-pip-version-check -q --no-warn-script-location `
@@ -57,3 +61,4 @@ Start-Sleep 3
 Get-Content (Join-Path $Dest "companion-server.log") -Tail 3
 Write-Host "Token: veja 'token' em $Dest\config.json"
 Write-Host "Abra o painel (ícone na bandeja) e escaneie o QR code. Uma vez: windows\setup-network.ps1"
+Write-Host "Reuniões do Meet: no Edge, edge://extensions > Modo de desenvolvedor > Carregar sem compactação > $ExtDest"

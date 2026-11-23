@@ -248,6 +248,41 @@ def foreground_title():
     return buf.value
 
 
+_WNDENUM = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+
+def focus_window_titled(part, exe=None):
+    """Traz para a frente a primeira janela visível cujo título contém `part`.
+    O Windows só deixa trocar o foco depois de uma tecla: um Alt solto antes destrava."""
+    found = []
+
+    def cb(h, _):
+        if user32.IsWindowVisible(h):
+            buf = ctypes.create_unicode_buffer(256)
+            user32.GetWindowTextW(h, buf, 256)
+            if part.lower() in buf.value.lower():
+                pid = ctypes.c_ulong()
+                user32.GetWindowThreadProcessId(h, ctypes.byref(pid))
+                try:
+                    ok = not exe or psutil.Process(pid.value).name().lower() == exe
+                except psutil.Error:
+                    ok = False
+                if ok:
+                    found.append(h)
+                    return False
+        return True
+    user32.EnumWindows(_WNDENUM(cb), 0)
+    if not found:
+        return False
+    h = found[0]
+    if user32.IsIconic(h):
+        user32.ShowWindow(h, 9)  # SW_RESTORE
+    user32.keybd_event(0x12, 0, 0, 0)
+    user32.keybd_event(0x12, 0, 2, 0)
+    user32.SetForegroundWindow(h)
+    return True
+
+
 def foreground_app():
     """(nome do exe em minúsculas, caminho, pid) do programa em foco."""
     pid = ctypes.c_ulong()
@@ -509,6 +544,7 @@ ASYNC_ACTIONS = {
     "voice.help": lambda p: voice_help(),
     "voice.try": lambda p: voice_try(p),
     "bat.refresh": lambda p: asyncio.to_thread(BAT.refresh),
+    "meet.cmd": lambda p: meet_cmd(p),
     "usage.get": lambda p: asyncio.to_thread(SCREEN.report, p.get("range", "day"), p.get("day")),
     "usage.app": lambda p: asyncio.to_thread(SCREEN.app_report, str(p["app"]), int(p.get("days", 7))),
     "usage.cat": lambda p: asyncio.to_thread(screen_cat, p),
@@ -679,6 +715,15 @@ async def session(ws, peer, kind):
     except Exception:
         await ws.close(4001, "hello")
         return
+    if hello.get("t") == "hello" and hello.get("kind") == "meet":
+        origin = (ws.request.headers.get("Origin") or "") if ws.request else ""
+        # só a extensão do navegador, no próprio PC (página nenhuma consegue mandar esse Origin)
+        if peer == "cabo USB" and origin.startswith(("chrome-extension://", "extension://", "moz-extension://")):
+            await meet_session(ws)
+        else:
+            log.warning("recusado: extensão de reunião de %s (origem %s)", peer, origin)
+            await ws.close(4001, "origin")
+        return
     if hello.get("t") != "hello" or not secrets.compare_digest(str(hello.get("token", "")), CFG["token"]):
         log.warning("recusado: token inválido de %s", peer)
         await ws.close(4001, "token")
@@ -693,13 +738,15 @@ async def session(ws, peer, kind):
                      "screen": True, "clipboard": True, "files": True, "deck": True,
                      "mic": pc_info.HAS_VOLUME, "timer": True, "deck_auto": True, "macro": True,
                      "library": True, "ping": True, "notif": True, "fps": True, "voice": VOICE.available,
-                     "battery": devices.hid is not None, "usage": True},
+                     "battery": devices.hid is not None, "usage": True, "meet": True},
     }))
     clients.add(ws)
     client_kind[ws] = kind
     sent_art[ws] = None
     sent_gameart[ws] = None
     await send_games(ws, MON.state)
+    if MEET["state"]:
+        await ws.send(json.dumps({"t": "meet", "d": MEET["state"]}, ensure_ascii=False))
     await push_now(only=ws)
     log.info("conectado: %s (%s) tela %s", kind, peer, str(hello.get("screen", "?"))[:120])
     try:
@@ -743,6 +790,88 @@ async def session(ws, peer, kind):
 
 
 sent_art: dict = {}
+
+
+# --------------------------------------------------------------------------
+# Reunião: extensão do Edge no Google Meet (windows/edge-extension)
+# --------------------------------------------------------------------------
+MEET = {"ws": None, "state": None, "since": None}
+MEET_CMDS = {"mic", "cam", "hand", "share", "leave", "join", "captions", "chat", "focus", "sharePrep"}
+
+
+async def broadcast(obj):
+    msg = json.dumps(obj, ensure_ascii=False)
+    for w in list(clients):
+        try:
+            await w.send(msg)
+        except ConnectionClosed:
+            clients.discard(w)
+
+
+async def meet_set(state):
+    if state and state.get("inCall"):
+        if not MEET["since"]:
+            MEET["since"] = time.time()
+            log.info("reunião começou: %s", state.get("app"))
+        state["since"] = int(MEET["since"])
+    elif MEET["since"]:
+        log.info("reunião terminou")
+        MEET["since"] = None
+    MEET["state"] = state
+    await broadcast({"t": "meet", "d": state})
+
+
+async def meet_session(ws):
+    if MEET["ws"] is not None:
+        try:
+            await MEET["ws"].close()
+        except Exception:  # noqa: BLE001
+            pass
+    MEET["ws"] = ws
+    log.info("extensão de reunião conectada")
+    try:
+        async for raw in ws:
+            try:
+                m = json.loads(raw)
+            except ValueError:
+                continue
+            if m.get("t") == "meet":
+                d = m.get("d")
+                await meet_set(d if isinstance(d, dict) else None)
+    except ConnectionClosed:
+        pass
+    finally:
+        if MEET["ws"] is ws:
+            MEET["ws"] = None
+            await meet_set(None)
+        log.info("extensão de reunião desconectada")
+
+
+async def meet_cmd(p):
+    cmd = str(p.get("cmd"))
+    if cmd not in MEET_CMDS:
+        raise ValueError("comando de reunião inválido")
+    if not MEET["ws"]:
+        raise ValueError("nenhuma reunião aberta no navegador")
+    msg = {"t": "meet.cmd", "cmd": cmd}
+    if isinstance(p.get("arg"), bool):
+        msg["arg"] = p["arg"]
+    st = MEET["state"] or {}
+    if cmd == "share" and not st.get("sharing"):
+        # o navegador só abre a escolha de tela com uma tecla/clique de verdade: traz o Meet para
+        # frente, a extensão foca o botão "Apresentar" e aqui apertamos Enter (só se o Meet estiver em foco)
+        await MEET["ws"].send(json.dumps({"t": "meet.cmd", "cmd": "focus"}))  # aba do Meet ativa
+        await asyncio.sleep(0.3)
+        await asyncio.to_thread(focus_window_titled, "Meet", "msedge.exe")
+        await MEET["ws"].send(json.dumps({"t": "meet.cmd", "cmd": "sharePrep"}))
+        for _ in range(10):
+            await asyncio.sleep(0.15)
+            if "meet" in foreground_title().lower() and foreground_app()[0] == "msedge.exe":
+                await asyncio.sleep(0.15)
+                await asyncio.to_thread(press_combo, "enter")
+                return "escolha a tela no PC"
+        raise ValueError("não consegui trazer o Meet para a frente")
+    await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
 QUIET_ACTIONS = {"bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
