@@ -24,6 +24,14 @@
 @font-face { font-family: "Press Start 2P"; src: url(fonts/press-start-2p.woff2) format("woff2"); font-display: swap; }
 @font-face { font-family: "Pixelify Sans"; src: url(fonts/pixelify-sans.woff2) format("woff2"); font-weight: 400 700; font-display: swap; }
 @font-face { font-family: "Playfair Display"; src: url(fonts/playfair-display.woff2) format("woff2"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url(fonts/jetbrains-mono.woff2) format("woff2"); font-weight: 100 800; font-display: swap; }
+@font-face { font-family: "Cinzel"; src: url(fonts/cinzel.woff2) format("woff2"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "Cormorant Garamond"; src: url(fonts/cormorant.woff2) format("woff2"); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: "Zen Maru Gothic"; src: url(fonts/zen-maru-500.woff2) format("woff2"); font-weight: 400 500; font-display: swap; }
+@font-face { font-family: "Zen Maru Gothic"; src: url(fonts/zen-maru-700.woff2) format("woff2"); font-weight: 600 900; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url(fonts/chakra-petch-500.woff2) format("woff2"); font-weight: 400 500; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url(fonts/chakra-petch-600.woff2) format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url(fonts/chakra-petch-700.woff2) format("woff2"); font-weight: 700 900; font-display: swap; }
 @font-face { font-family: "Lora"; src: url(fonts/lora.woff2) format("woff2"); font-weight: 400 700; font-display: swap; }
 
 /* ------------------------------------------------------------------ tema
@@ -187,6 +195,170 @@ a { color: var(--p); }
 [data-skin="paper"] header { border-bottom: 3px double var(--p); }
 [data-skin="paper"] .bar { height: 6px; }
 
+/* ---- variações de cor */
+[data-skin="fallout"][data-theme="blue"] { --p: #8fd3ff; --p2: #4fa3d9; --p3: #23597a; --p4: #0f2a3a; --bg: #030a10; --panel: #061522; --glow: #8fd3ff55; }
+[data-skin="fallout"][data-theme="white"] { --p: #e8f0f2; --p2: #b0bcc0; --p3: #5e6a6e; --p4: #252c2e; --bg: #07090a; --panel: #0e1213; --glow: #e8f0f240; }
+[data-skin="synth"][data-theme="sunset"] { --p: #ffe3ef; --p2: #ffb0c8; --p3: #b3608a; --p4: #4a1d3c; --bg: #140818; --panel: #200b26cc; --glow: #ff6b9d77;
+  --on: linear-gradient(90deg, #ff6b9d, #ffb347); --hl: #ffb347; --track: #3a1530; --bar2: #ff6b9d; }
+[data-skin="synth"][data-theme="ice"] { --p: #e0f2ff; --p2: #a6c8ff; --p3: #5a78b8; --p4: #1e2c5a; --bg: #050b1a; --panel: #0a1430cc; --glow: #7df9ff66;
+  --on: linear-gradient(90deg, #4d7cff, #7df9ff); --onfg: #04101f; --hl: #7df9ff; --track: #14204a; --bar2: #4d7cff; }
+[data-skin="minimal"][data-theme="amoled"] { --p: #f1f1f1; --p2: #9a9a9a; --p3: #5e5e5e; --p4: #1f1f1f; --bg: #000; --panel: #0a0a0a; --track: #1a1a1a; }
+[data-skin="minimal"][data-theme="amoled"] .card { box-shadow: none; border-color: #161616; }
+/* Cockpit aviônica: âmbar e ciano, régua de escala no pé dos cartões */
+[data-skin="hud"][data-theme="aviation"] { --p: #d6eef6; --p2: #8fb3bf; --p3: #4f6d78; --p4: #1b2b31; --bg: #04080a; --panel: #0a1216;
+  --glow: #ffb00040; --on: #ffb000; --onfg: #120a00; --hl: #ffb000; --track: #142026; --bar2: #3fd3ff; }
+[data-skin="hud"][data-theme="aviation"] .card { background:
+  repeating-linear-gradient(90deg, #3fd3ff66 0 1px, transparent 1px 12px) bottom left / 100% 4px no-repeat,
+  repeating-linear-gradient(90deg, #3fd3ff99 0 1px, transparent 1px 60px) bottom left / 100% 8px no-repeat,
+  linear-gradient(var(--hl), var(--hl)) top left / 18px 2px no-repeat, var(--panel); }
+[data-skin="hud"][data-theme="aviation"] .card h3 { color: #3fd3ff; }
+
+/* ---- Portátil: 4 tons de verde, moldura grossa, menu invertido */
+[data-skin="pocket"] {
+  --p: #0f380f; --p2: #306230; --p3: #4f7a1e; --p4: #6f8f0c;
+  --bg: #9bbc0f; --panel: #8bac0f; --glow: transparent; --alert: #0f380f;
+  --on: #0f380f; --onfg: #9bbc0f; --hl: #0f380f; --track: #7a9a0c; --bar2: #306230;
+  --r: 0px; --barr: 0px; --seg: 6px; --vseg: 5px; --gap: 3px;
+  --display: "Pixelify Sans", monospace; --mono: "Pixelify Sans", monospace;
+}
+[data-skin="pocket"][data-theme="gray"] { --p: #22221e; --p2: #4a4a42; --p3: #6e6e63; --p4: #8f8f82; --bg: #c4c4b2; --panel: #b4b4a2; --on: #22221e; --onfg: #c4c4b2; --hl: #22221e; --track: #a2a292; --bar2: #4a4a42; --alert: #22221e; }
+[data-skin="pocket"] body { font-size: 16px; }
+[data-skin="pocket"] .card { border: 3px solid var(--p); box-shadow: inset 0 0 0 2px var(--panel), inset 0 0 0 3px var(--p2); }
+[data-skin="pocket"] .big, [data-skin="pocket"] .gtime, [data-skin="pocket"] .utot b, [data-skin="pocket"] .pfps b { font-weight: 700; }
+[data-skin="pocket"] h2::before { content: "■ "; }
+[data-skin="pocket"] nav { background: var(--p); border-top: 0; }
+[data-skin="pocket"] nav button { color: var(--bg); } [data-skin="pocket"] nav button.on { background: var(--bg); color: var(--p); box-shadow: none; }
+[data-skin="pocket"] .btn, [data-skin="pocket"] .dbtn { border-width: 2px; box-shadow: 0 3px 0 var(--p); }
+[data-skin="pocket"] .bar { height: 10px; }
+
+/* ---- Código: editor escuro, cores de sintaxe */
+[data-skin="code"] {
+  --p: #d4d4d4; --p2: #9da5b4; --p3: #5c6370; --p4: #2d2f36;
+  --bg: #1e1e1e; --panel: #252526; --glow: transparent; --alert: #f44747;
+  --on: #0e639c; --onfg: #fff; --hl: #4ec9b0; --track: #333338; --bar2: #ce9178;
+  --kw: #c586c0; --num: #b5cea8; --cm: #6a9955; --var: #9cdcfe;
+  --r: 6px; --barr: 2px; --gap: 1px;
+  --display: "JetBrains Mono", ui-monospace, monospace; --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+[data-skin="code"][data-theme="mocha"] { --p: #cdd6f4; --p2: #a6adc8; --p3: #6c7086; --p4: #313244; --bg: #1e1e2e; --panel: #181825;
+  --on: #89b4fa; --onfg: #11111b; --hl: #94e2d5; --track: #313244; --bar2: #fab387; --alert: #f38ba8; --kw: #cba6f7; --num: #a6e3a1; --cm: #7f849c; --var: #89dceb; }
+[data-skin="code"] body { font-size: 14px; }
+[data-skin="code"] .card { border: 1px solid var(--p4); }
+[data-skin="code"] .card h3 { color: var(--var); font-weight: 600; }
+[data-skin="code"] .card h3 > span:first-child::before { content: "const "; color: var(--kw); font-weight: 400; }
+[data-skin="code"] .big, [data-skin="code"] .gtime, [data-skin="code"] .utot b, [data-skin="code"] .pfps b { color: var(--num); font-weight: 700; letter-spacing: -1px; }
+[data-skin="code"] h2 { font-weight: 600; } [data-skin="code"] h2::before { content: "// "; color: var(--cm); }
+[data-skin="code"] header { background: #181818; } [data-skin="code"][data-theme="mocha"] header { background: #11111b; }
+[data-skin="code"] nav { background: #181818; border-top: 1px solid var(--p4); } [data-skin="code"][data-theme="mocha"] nav { background: #11111b; }
+[data-skin="code"] nav button.on { background: var(--panel); color: var(--p); box-shadow: inset 0 2px 0 var(--on); }
+[data-skin="code"] .subtabs button.on { color: var(--p); border-bottom-color: var(--on); }
+[data-skin="code"] .bar { height: 6px; }
+
+/* ---- Fantasia: pedra escura, ouro e vermelho, cantos de moldura */
+[data-skin="rpg"] {
+  --p: #eadfc4; --p2: #bba982; --p3: #7e6d4f; --p4: #3b3228;
+  --bg: #13100d; --panel: #1d1813; --glow: #d4a84a30; --alert: #e0483e;
+  --on: linear-gradient(180deg, #e2b85a, #9c7424); --onfg: #1a1208; --hl: #d9ad4f; --track: #2c251d; --bar2: #b3302a;
+  --r: 2px; --barr: 1px; --gap: 1px;
+  --display: "Cinzel", Georgia, serif; --mono: "Lora", Georgia, serif;
+}
+[data-skin="rpg"][data-theme="crimson"] { --bg: #120a0b; --panel: #1c1012; --p4: #3d2427; --track: #2d1a1c; --hl: #e8c06a; --bar2: #c23b32; }
+[data-skin="rpg"] body { background: radial-gradient(ellipse at 50% 0%, #2a2117 0%, transparent 60%), radial-gradient(ellipse at center, transparent 55%, #000a 100%), var(--bg); }
+[data-skin="rpg"] .card { border: 1px solid #5a4a33; box-shadow: inset 0 0 0 3px var(--panel), inset 0 0 0 4px #3b3228, 0 6px 18px #0008; background:
+  linear-gradient(var(--hl), var(--hl)) top 4px left 4px / 14px 1px no-repeat, linear-gradient(var(--hl), var(--hl)) top 4px left 4px / 1px 14px no-repeat,
+  linear-gradient(var(--hl), var(--hl)) top 4px right 4px / 14px 1px no-repeat, linear-gradient(var(--hl), var(--hl)) top 4px right 4px / 1px 14px no-repeat,
+  linear-gradient(var(--hl), var(--hl)) bottom 4px left 4px / 14px 1px no-repeat, linear-gradient(var(--hl), var(--hl)) bottom 4px left 4px / 1px 14px no-repeat,
+  linear-gradient(var(--hl), var(--hl)) bottom 4px right 4px / 14px 1px no-repeat, linear-gradient(var(--hl), var(--hl)) bottom 4px right 4px / 1px 14px no-repeat,
+  linear-gradient(180deg, #221c16, var(--panel)); }
+[data-skin="rpg"] .card h3 { font-family: var(--display); text-transform: uppercase; letter-spacing: 2px; font-size: 12px; font-weight: 700; color: var(--hl); }
+[data-skin="rpg"] .big, [data-skin="rpg"] .gtime, [data-skin="rpg"] .utot b, [data-skin="rpg"] .pfps b { font-weight: 700; color: #f3e6c6; text-shadow: 0 0 12px #d4a84a40; }
+[data-skin="rpg"] h2 { font-weight: 700; letter-spacing: 1px; } [data-skin="rpg"] h2::before { content: "\2756  "; color: var(--hl); }
+[data-skin="rpg"] nav { border-top: 1px solid #5a4a33; box-shadow: 0 -1px 0 #000; }
+[data-skin="rpg"] nav button.on { color: var(--hl); box-shadow: inset 0 2px 0 var(--hl); background: linear-gradient(180deg, #d4a84a1a, transparent); }
+[data-skin="rpg"] .btn, [data-skin="rpg"] .dbtn { border-color: #5a4a33; }
+[data-skin="rpg"] .bar { height: 7px; }
+
+/* ---- Tático: oliva, laranja de alerta, grade de mapa, marcas de mira */
+[data-skin="tac"] {
+  --p: #dadccf; --p2: #a3a894; --p3: #6b705e; --p4: #363b2e;
+  --bg: #171a14; --panel: #20241c; --glow: transparent; --alert: #ff4433;
+  --on: #ff7a1a; --onfg: #140a00; --hl: #ff7a1a; --track: #2c3125; --bar2: #c9b458;
+  --r: 0px; --barr: 0px; --seg: 4px; --vseg: 3px; --gap: 2px;
+  --display: "Chakra Petch", sans-serif; --mono: "Chakra Petch", system-ui, sans-serif;
+}
+[data-skin="tac"][data-theme="urban"] { --p: #dfe3e8; --p2: #a2a9b3; --p3: #66707c; --p4: #2e353d; --bg: #121519; --panel: #1a1e23; --track: #252b32; --on: #ffb020; --hl: #ffb020; --bar2: #6fb7c9; }
+[data-skin="tac"] body { font-weight: 500; background:
+  linear-gradient(#ffffff07 1px, transparent 1px) 0 0 / 32px 32px, linear-gradient(90deg, #ffffff07 1px, transparent 1px) 0 0 / 32px 32px, var(--bg); }
+[data-skin="tac"] .card { border: 1px solid var(--p4); background:
+  linear-gradient(var(--hl), var(--hl)) top left / 10px 2px no-repeat, linear-gradient(var(--hl), var(--hl)) top left / 2px 10px no-repeat,
+  linear-gradient(var(--p3), var(--p3)) bottom right / 10px 2px no-repeat, linear-gradient(var(--p3), var(--p3)) bottom right / 2px 10px no-repeat, var(--panel); }
+[data-skin="tac"] .card h3 { text-transform: uppercase; letter-spacing: 2px; font-size: 12px; font-weight: 700; color: var(--p2); }
+[data-skin="tac"] .card h3 > span:first-child::before { content: "▮ "; color: var(--hl); }
+[data-skin="tac"] .big, [data-skin="tac"] .gtime, [data-skin="tac"] .utot b, [data-skin="tac"] .pfps b { font-weight: 700; letter-spacing: 1px; }
+[data-skin="tac"] h2 { text-transform: uppercase; letter-spacing: 3px; font-weight: 700; } [data-skin="tac"] h2::before { content: "// "; color: var(--hl); }
+[data-skin="tac"] nav button, [data-skin="tac"] .subtabs button { font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+[data-skin="tac"] nav button.on { background: var(--hl); color: var(--onfg); }
+[data-skin="tac"] .bar { height: 8px; }
+
+/* ---- Japão: washi, sakura e carimbo vermelho (claro) / noite de Tóquio (escuro) */
+[data-skin="jp"] {
+  --p: #2b2622; --p2: #5e554d; --p3: #a39889; --p4: #e6dccd;
+  --bg: #f7f1e8; --panel: #fffaf3; --glow: transparent; --alert: #b3261e;
+  --on: #c8372d; --onfg: #fff; --hl: #d94f78; --track: #f0e4d8; --bar2: #eba3b8; --shu: #c8372d; --wave: #e8a0b416;
+  --r: 14px; --barr: 99px; --gap: 0px;
+  --display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif; --mono: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+}
+[data-skin="jp"][data-theme="night"] { --p: #f4f0ff; --p2: #b9b5dc; --p3: #6f6ca0; --p4: #2b2c55; --bg: #0e0f24; --panel: #17193a; --alert: #ff6b81;
+  --on: #ff5c8a; --onfg: #fff; --hl: #6ee7ff; --track: #23254a; --bar2: #ff5c8a; --shu: #ff5c8a; --wave: #ffffff08; }
+[data-skin="jp"] body { font-weight: 500; background:
+  radial-gradient(circle at 100% 150%, var(--bg) 24%, var(--wave) 24% 28%, var(--bg) 28% 36%, var(--wave) 36% 40%, var(--bg) 40% 48%, var(--wave) 48% 52%, transparent 52%) 0 0 / 56px 28px,
+  radial-gradient(circle at 0 150%, var(--bg) 24%, var(--wave) 24% 28%, var(--bg) 28% 36%, var(--wave) 36% 40%, var(--bg) 40% 48%, var(--wave) 48% 52%, transparent 52%) 0 0 / 56px 28px,
+  radial-gradient(circle at 50% 100%, var(--wave) 10%, var(--bg) 10% 20%, var(--wave) 20% 24%, var(--bg) 24% 36%, var(--wave) 36% 40%, var(--bg) 40% 48%, var(--wave) 48% 52%, transparent 52%) 0 0 / 56px 28px, var(--bg); }
+[data-skin="jp"] .card { border: 1px solid var(--p4); box-shadow: 0 2px 0 var(--p4), 0 8px 24px #3a20100d; }
+[data-skin="jp"][data-theme="night"] .card { box-shadow: 0 0 0 1px #ff5c8a14 inset, 0 8px 24px #0006; }
+[data-skin="jp"] .card h3 { font-weight: 700; color: var(--p2); }
+[data-skin="jp"] .card h3 > span:first-child::before { content: ""; display: inline-block; width: 8px; height: 8px; margin: 0 7px 1px 0; border-radius: 50% 0; background: var(--hl); transform: rotate(45deg); }
+[data-skin="jp"] .big, [data-skin="jp"] .gtime, [data-skin="jp"] .utot b, [data-skin="jp"] .pfps b { font-weight: 700; color: var(--hl); }
+[data-skin="jp"] h2 { font-weight: 700; }
+[data-skin="jp"] h2::before { content: "和"; display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 4px; background: var(--shu); color: #fff; font: 700 13px/1 "Noto Sans CJK JP", "Hiragino Sans", sans-serif; vertical-align: 2px; }
+[data-skin="jp"] header { border-bottom: 2px solid var(--shu); }
+[data-skin="jp"] nav button, [data-skin="jp"] .subtabs button { font-weight: 700; }
+[data-skin="jp"] nav button.on { background: var(--hl); color: #fff; border-radius: 14px; box-shadow: none; }
+[data-skin="jp"][data-theme="night"] nav button.on { color: #0e0f24; }
+[data-skin="jp"] .subtabs button.on { color: var(--hl); border-bottom-color: var(--hl); }
+[data-skin="jp"] .bar { height: 8px; }
+[data-skin="jp"] .subtabs button { font-size: 15px; }
+[data-skin="jp"] .switch { border-radius: 99px; }
+
+/* ---- Executivo: marinho e champanhe, números em serifa, fios finos */
+[data-skin="exec"] {
+  --p: #eef0f4; --p2: #a9b2c3; --p3: #6c768a; --p4: #243049;
+  --bg: #0b1220; --panel: #111a2c; --glow: transparent; --alert: #e06a5a;
+  --on: #c9a961; --onfg: #0b1220; --hl: #c9a961; --track: #1b2538; --bar2: #c9a96199;
+  --r: 4px; --barr: 1px; --gap: 1px;
+  --display: "Cormorant Garamond", Georgia, serif; --mono: "Inter", system-ui, sans-serif;
+}
+[data-skin="exec"][data-theme="ivory"] { --p: #1c1f26; --p2: #4d5260; --p3: #8d909a; --p4: #e4dfd3; --bg: #f6f3ec; --panel: #fffdf8; --alert: #a83a2c;
+  --on: #1c2a44; --onfg: #f6f3ec; --hl: #9c7b3c; --track: #ebe6da; --bar2: #1c2a44aa; }
+[data-skin="exec"][data-theme="black"] { --p: #f2f2f2; --p2: #a8a8a8; --p3: #6a6a6a; --p4: #262626; --bg: #0a0a0a; --panel: #131313; --track: #1e1e1e; }
+[data-skin="exec"] body { font-size: 14px; letter-spacing: .1px; }
+[data-skin="exec"] .card { border: 1px solid var(--p4); border-top: 1px solid color-mix(in srgb, var(--hl) 55%, transparent); box-shadow: 0 10px 30px #0000001f; }
+[data-skin="exec"][data-theme="ivory"] .card { box-shadow: 0 1px 2px #0000000a, 0 10px 30px #1c2a440d; }
+[data-skin="exec"] .card h3 { text-transform: uppercase; letter-spacing: 2.5px; font-size: 10.5px; font-weight: 600; color: var(--p2); }
+[data-skin="exec"] .big, [data-skin="exec"] .gtime, [data-skin="exec"] .utot b, [data-skin="exec"] .pfps b { font-weight: 600; letter-spacing: -.5px; }
+[data-skin="exec"] h2 { font-family: var(--display); font-weight: 600; font-size: 22px; letter-spacing: .3px; }
+[data-skin="exec"] h2::before { content: ""; display: inline-block; width: 18px; height: 1px; background: var(--hl); margin-right: 10px; vertical-align: 6px; }
+[data-skin="exec"] header { border-bottom: 1px solid var(--p4); }
+[data-skin="exec"] nav { border-top: 1px solid var(--p4); }
+[data-skin="exec"] nav button, [data-skin="exec"] .subtabs button { text-transform: uppercase; letter-spacing: 2px; font-weight: 600; font-size: 11px; }
+[data-skin="exec"] nav button.on { background: transparent; color: var(--hl); box-shadow: inset 0 1px 0 var(--hl); }
+[data-skin="exec"] .subtabs button.on { color: var(--hl); border-bottom-color: var(--hl); }
+[data-skin="exec"] .bar { height: 4px; }
+[data-skin="exec"] .hchip, [data-skin="exec"] header .clock { font-family: var(--mono); font-weight: 500; letter-spacing: .5px; }
+[data-skin="exec"] .big, [data-skin="exec"] .gtime, [data-skin="exec"] .utot b, [data-skin="exec"] .pfps b, [data-skin="exec"] .dk-time { font-variant-numeric: lining-nums tabular-nums; }
+[data-skin="exec"] .big { font-size: 1.2em; }
+[data-skin="exec"] .switch { border-radius: 99px; font-size: 12px; letter-spacing: 1px; }
+
 /* menu e abas: fontes largas precisam de letra menor */
 [data-skin="synth"] nav .nb { font-size: 11px; letter-spacing: 0; font-weight: 700; }
 [data-skin="synth"] .subtabs button { font-size: 15px; font-weight: 600; }
@@ -195,6 +367,10 @@ a { color: var(--p); }
 [data-skin="paper"] nav .nb { font-size: 13px; letter-spacing: .3px; }
 [data-skin="lcd"] nav .nb { font-size: 8px; letter-spacing: 0; }
 [data-skin="minimal"] nav .nb { font-size: 13px; }
+[data-skin="pocket"] nav .nb { font-size: 12px; } [data-skin="code"] nav .nb { font-size: 11px; letter-spacing: 0; }
+[data-skin="rpg"] nav .nb { font-size: 9.5px; letter-spacing: 0; font-family: var(--display); font-weight: 700; }
+[data-skin="rpg"] .subtabs button { font-size: 15px; letter-spacing: 0; }
+[data-skin="tac"] nav .nb { font-size: 13px; } [data-skin="jp"] nav .nb { font-size: 13px; } [data-skin="exec"] nav .nb { font-size: 10px; }
 .hchip { font-family: var(--display); }
 
 /* ------------------------------------------------------------------ moldura */
@@ -1665,7 +1841,7 @@ function applyLayout(l, fromServer) {
     if (typeof LAYOUT.crt === "boolean") prefs.crt = LAYOUT.crt;
     store.set("skin", prefs.skin); store.set("theme", prefs.theme); store.set("crt", prefs.crt);
     if (typeof applyTheme === "function" && fromServer) applyTheme();
-  }
+  } else if (typeof autoTheme === "function" && fromServer) autoTheme();
   buildSections();
   if (fromServer) showView(prefs.tab, true);
 }
@@ -1924,6 +2100,7 @@ let playSeen = null;
 function onGameState() {
   const g = state.games?.game, key = g ? g.name : null;
   setLive("play", "Jogando", !!g);
+  if (typeof autoTheme === "function") autoTheme();
   if (g && playSeen !== key) {
     playSeen = key;
     // o jogo vira a tela principal (a não ser que esteja numa reunião agora)
@@ -3485,12 +3662,18 @@ if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWor
 prefs.theme = store.get("theme", "green"); prefs.crt = store.get("crt", true); prefs.skin = store.get("skin", "fallout");
 // temas: cada um tem variantes (cores) e alguns têm o efeito de tubo
 const THEMES = [
-  { id: "fallout", name: "Fallout", desc: "Terminal de fósforo", crt: true, variants: [["green", "Verde", "#5cff8a"], ["amber", "Âmbar", "#ffbf47"], ["cyan", "Ciano", "#7cf4ff"]] },
-  { id: "synth", name: "Synthwave", desc: "Neon rosa e ciano", crt: true, variants: [["neon", "Neon", "#ff4fd8"]] },
-  { id: "minimal", name: "Minimal", desc: "Limpo e moderno", variants: [["dark", "Escuro", "#171a20"], ["light", "Claro", "#f3f5f8"]] },
-  { id: "hud", name: "Cockpit", desc: "HUD laranja e branco", variants: [["orange", "Laranja", "#ff8a1f"]] },
+  { id: "fallout", name: "Fallout", desc: "Terminal de fósforo", crt: true, variants: [["green", "Verde", "#5cff8a"], ["amber", "Âmbar", "#ffbf47"], ["cyan", "Ciano", "#7cf4ff"], ["blue", "Azul", "#8fd3ff"], ["white", "Branco", "#e8f0f2"]] },
+  { id: "synth", name: "Synthwave", desc: "Neon rosa e ciano", crt: true, variants: [["neon", "Neon", "#ff4fd8"], ["sunset", "Pôr do sol", "#ffb347"], ["ice", "Gelo", "#7df9ff"]] },
+  { id: "minimal", name: "Minimal", desc: "Limpo e moderno", variants: [["dark", "Escuro", "#171a20"], ["light", "Claro", "#f3f5f8"], ["amoled", "Preto (AMOLED)", "#000000"]] },
+  { id: "hud", name: "Cockpit", desc: "HUD laranja e branco", variants: [["orange", "Laranja", "#ff8a1f"], ["aviation", "Aviônica", "#3fd3ff"]] },
   { id: "lcd", name: "LCD 8-bit", desc: "Tela de pixel verde", variants: [["olive", "Oliva", "#a4b465"]] },
   { id: "paper", name: "Papel", desc: "E-ink, preto no creme", variants: [["cream", "Creme", "#f2ede2"]] },
+  { id: "pocket", name: "Portátil", desc: "4 tons, tela de bolso", variants: [["dmg", "Verde", "#9bbc0f"], ["gray", "Cinza", "#c4c4b2"]] },
+  { id: "code", name: "Código", desc: "Editor escuro, cores de sintaxe", variants: [["dark", "Escuro", "#1e1e1e"], ["mocha", "Mocha", "#1e1e2e"]] },
+  { id: "rpg", name: "Fantasia", desc: "Pedra, ouro e moldura", variants: [["stone", "Pedra", "#d9ad4f"], ["crimson", "Carmim", "#c23b32"]] },
+  { id: "tac", name: "Tático", desc: "Mapa de missão", variants: [["olive", "Oliva", "#ff7a1a"], ["urban", "Urbano", "#ffb020"]] },
+  { id: "jp", name: "Japão", desc: "Washi, sakura e carimbo", variants: [["sakura", "Sakura", "#f7f1e8"], ["night", "Noite em Tóquio", "#17193a"]] },
+  { id: "exec", name: "Executivo", desc: "Marinho e champanhe", variants: [["navy", "Marinho", "#111a2c"], ["ivory", "Marfim", "#f6f3ec"], ["black", "Preto", "#131313"]] },
 ];
 function themeOk() {
   const t = THEMES.find((x) => x.id === prefs.skin) || THEMES[0];
@@ -3509,16 +3692,45 @@ function pickTheme(skin, variant) {
   // o tema vale para todos os aparelhos: grava no PC
   if (ws && ws.readyState === 1) send("layout.set", { layout: { ...LAYOUT, skin: prefs.skin, theme: prefs.theme, crt: prefs.crt } }).catch(() => {});
 }
+// troca automática (Personalizar > Tema): o jogo aberto vence o horário; os dois vencem a escolha manual
+const toMin = (hm) => { const [h, m] = String(hm || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+function autoPick() {
+  const a = LAYOUT?.auto || {};
+  if (a.game?.on) {
+    const g = state.games?.game?.name || "", k = /dota/i.test(g) ? "dota2" : /counter-strike/i.test(g) ? "cs2" : null;
+    if (k && a.game[k]) return a.game[k];
+  }
+  if (a.time?.on && a.time.night) {
+    const d = new Date(), m = d.getHours() * 60 + d.getMinutes(), f = toMin(a.time.from || "19:00"), t = toMin(a.time.to || "07:00");
+    const night = f > t ? m >= f || m < t : m >= f && m < t;
+    return night ? a.time.night : a.time.day || null;
+  }
+  return null;
+}
+let themeEff = "";
 function applyTheme() {
-  const t = themeOk();
-  document.documentElement.dataset.skin = prefs.skin;
-  document.documentElement.dataset.theme = prefs.theme;
+  themeOk();
+  let skin = prefs.skin, theme = prefs.theme;
+  const ap = autoPick();
+  if (ap) {
+    const [s2, v2] = ap.split(":"), t2 = THEMES.find((x) => x.id === s2);
+    if (t2) { skin = s2; theme = t2.variants.some(([v]) => v === v2) ? v2 : t2.variants[0][0]; }
+  }
+  const t = THEMES.find((x) => x.id === skin);
+  themeEff = skin + ":" + theme;
+  document.documentElement.dataset.skin = skin;
+  document.documentElement.dataset.theme = theme;
   document.body.classList.toggle("crt", prefs.crt && !!t.crt);
   $("sw-crt").closest(".set").classList.toggle("hidden", !t.crt);
   renderThemePicker();
   document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
   if (vis("dash")) drawSparks();
 }
+function autoTheme() {
+  const ap = autoPick(), want = ap || prefs.skin + ":" + prefs.theme;
+  if (want !== themeEff) applyTheme();
+}
+setInterval(autoTheme, 30000);
 $("themes").onclick = (e) => { const b = e.target.closest("[data-pick]"); if (!b) return; buzz(8); pickTheme(b.dataset.pick, b.dataset.var); };
 bindSwitch("sw-crt", "crt", () => { applyTheme(); if (ws && ws.readyState === 1) send("layout.set", { layout: { ...LAYOUT, skin: prefs.skin, theme: prefs.theme, crt: prefs.crt } }).catch(() => {}); });
 bindSwitch("sw-deckauto", "deckAuto", () => { lastApp = null; });

@@ -53,6 +53,10 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
   botão Entrar e o PC aplica o perfil de áudio escolhido (e, se marcado, já abre a reunião). Em Personalizar › *Hoje*.
 - **Seu dia (Status › Hoje):** tempo de tela (e a diferença da média), foco, horas jogando, partidas ganhas/perdidas,
   reuniões e app mais usado. Depois das 21h o modo base mostra o resumo.
+- **Temas novos:** Portátil (4 tons), Código (cores de sintaxe), Fantasia (pedra e ouro), Tático (mapa de missão),
+  Japão (sakura de dia, Tóquio à noite) e Executivo (marinho, marfim ou preto); variações Fallout azul/branco,
+  Synthwave pôr do sol/gelo, Minimal AMOLED e Cockpit aviônica. **Troca automática** por horário e pelo jogo aberto
+  (Dota 2 / CS2) em Personalizar › Tema.
 - Aba nova (como *Hoje*) entra sozinha em menus já salvos; clima usa wttr.in quando o Open-Meteo falha.
 
 **Novidades da 1.9**

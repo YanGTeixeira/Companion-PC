@@ -6,3 +6,5 @@ Fontes dos temas (todas SIL Open Font License 1.1, baixadas do Google Fonts, sub
 Orbitron (The Orbitron Project Authors), Exo 2 (Natanael Gama), Inter (The Inter Project Authors),
 Rajdhani (Indian Type Foundry), Press Start 2P (CodeMan38), Pixelify Sans (The Pixelify Sans Project Authors),
 Playfair Display (Claus Eggers Sørensen), Lora (The Lora Project Authors). https://openfontlicense.org
+JetBrains Mono (The JetBrains Mono Project Authors), Cinzel (Natanael Gama), Cormorant Garamond (Christian Thalmann),
+Zen Maru Gothic (Yoshimichi Ohira), Chakra Petch (Cadson Demak). SIL Open Font License 1.1, subconjunto latino.

@@ -11,6 +11,12 @@
 @font-face { font-family: "Orbitron"; src: url(fonts/orbitron.woff2) format("woff2"); font-weight: 400 900; }
 @font-face { font-family: "Rajdhani"; src: url(fonts/rajdhani-700.woff2) format("woff2"); font-weight: 700; }
 @font-face { font-family: "Press Start 2P"; src: url(fonts/press-start-2p.woff2) format("woff2"); }
+@font-face { font-family: "Pixelify Sans"; src: url(fonts/pixelify-sans.woff2) format("woff2"); font-weight: 400 700; }
+@font-face { font-family: "JetBrains Mono"; src: url(fonts/jetbrains-mono.woff2) format("woff2"); font-weight: 100 800; }
+@font-face { font-family: "Cinzel"; src: url(fonts/cinzel.woff2) format("woff2"); font-weight: 400 900; }
+@font-face { font-family: "Chakra Petch"; src: url(fonts/chakra-petch-700.woff2) format("woff2"); font-weight: 700; }
+@font-face { font-family: "Zen Maru Gothic"; src: url(fonts/zen-maru-700.woff2) format("woff2"); font-weight: 700; }
+@font-face { font-family: "Cormorant Garamond"; src: url(fonts/cormorant.woff2) format("woff2"); font-weight: 300 700; }
 @font-face { font-family: "Playfair Display"; src: url(fonts/playfair-display.woff2) format("woff2"); font-weight: 400 900; }
 :root {
   --bg: #0e1014; --panel: #161920; --panel2: #1d212a; --line: #2a2f39; --text: #e9edf2; --dim: #9aa3b1; --faint: #6b7380;
@@ -124,6 +130,12 @@ label.chk { display: inline-flex; gap: 8px; align-items: center; cursor: pointer
       <p class="hint">Vale para todos os aparelhos. A mudança aparece na hora no celular e nas prévias.</p>
       <div class="themes" id="themes"></div>
       <div class="row" style="margin-top:12px"><label class="chk" id="crt-wrap"><input type="checkbox" id="crt"> Efeito de tubo (linhas e brilho)</label></div>
+      <h3 style="margin:18px 0 6px;font-size:14px">Troca automática</h3>
+      <p class="hint" style="margin:0 0 8px">Quando ligada, vence o tema escolhido acima. O jogo aberto vence o horário.</p>
+      <div class="row" style="margin-bottom:6px;flex-wrap:wrap;gap:8px"><label class="chk"><input type="checkbox" id="au-time"> Pelo horário: de dia</label><select id="au-day" class="au-sel"></select>
+        <span>à noite</span><select id="au-night" class="au-sel"></select><span>das</span><input type="time" id="au-from" value="19:00"><span>às</span><input type="time" id="au-to" value="07:00"></div>
+      <div class="row" style="flex-wrap:wrap;gap:8px"><label class="chk"><input type="checkbox" id="au-game"> Pelo jogo: Dota 2</label><select id="au-dota" class="au-sel"></select>
+        <span>CS2</span><select id="au-cs" class="au-sel"></select></div>
     </section>
 
     <section class="box">
@@ -225,12 +237,18 @@ const NOTES = {
 };
 let SCR = "dash";
 const THEMES = [
-  { id: "fallout", name: "Fallout", desc: "Terminal de fósforo", font: "VT323", crt: true, variants: [["green", "#040d07", "#5cff8a", "#1c7a3d"], ["amber", "#0c0703", "#ffbf47", "#8a5a17"], ["cyan", "#030b0d", "#7cf4ff", "#1b6f7a"]] },
-  { id: "synth", name: "Synthwave", desc: "Neon rosa e ciano", font: "Orbitron", crt: true, variants: [["neon", "#0d0518", "#ff4fd8", "#3ef0ff"]] },
-  { id: "minimal", name: "Minimal", desc: "Limpo e moderno", font: "Inter", variants: [["dark", "#171a20", "#eef1f5", "#4c8dff"], ["light", "#f3f5f8", "#15181d", "#2563eb"]] },
-  { id: "hud", name: "Cockpit", desc: "HUD laranja e branco", font: "Rajdhani", variants: [["orange", "#0a0e12", "#eef3f7", "#ff8a1f"]] },
+  { id: "fallout", name: "Fallout", desc: "Terminal de fósforo", font: "VT323", crt: true, variants: [["green", "#040d07", "#5cff8a", "#1c7a3d"], ["amber", "#0c0703", "#ffbf47", "#8a5a17"], ["cyan", "#030b0d", "#7cf4ff", "#1b6f7a"], ["blue", "#030a10", "#8fd3ff", "#23597a"], ["white", "#07090a", "#e8f0f2", "#5e6a6e"]] },
+  { id: "synth", name: "Synthwave", desc: "Neon rosa e ciano", font: "Orbitron", crt: true, variants: [["neon", "#0d0518", "#ff4fd8", "#3ef0ff"], ["sunset", "#140818", "#ff6b9d", "#ffb347"], ["ice", "#050b1a", "#4d7cff", "#7df9ff"]] },
+  { id: "minimal", name: "Minimal", desc: "Limpo e moderno", font: "Inter", variants: [["dark", "#171a20", "#eef1f5", "#4c8dff"], ["light", "#f3f5f8", "#15181d", "#2563eb"], ["amoled", "#000000", "#f1f1f1", "#4c8dff"]] },
+  { id: "hud", name: "Cockpit", desc: "HUD laranja e branco", font: "Rajdhani", variants: [["orange", "#0a0e12", "#eef3f7", "#ff8a1f"], ["aviation", "#04080a", "#ffb000", "#3fd3ff"]] },
   { id: "lcd", name: "LCD 8-bit", desc: "Tela de pixel verde", font: "Press Start 2P", variants: [["olive", "#a4b465", "#1f2a10", "#5b6c32"]] },
   { id: "paper", name: "Papel", desc: "E-ink, preto no creme", font: "Playfair Display", variants: [["cream", "#f2ede2", "#161514", "#8a857a"]] },
+  { id: "pocket", name: "Portátil", desc: "4 tons, tela de bolso", font: "Pixelify Sans", variants: [["dmg", "#9bbc0f", "#0f380f", "#306230"], ["gray", "#c4c4b2", "#22221e", "#6e6e63"]] },
+  { id: "code", name: "Código", desc: "Editor escuro, cores de sintaxe", font: "JetBrains Mono", variants: [["dark", "#1e1e1e", "#4ec9b0", "#c586c0"], ["mocha", "#1e1e2e", "#94e2d5", "#cba6f7"]] },
+  { id: "rpg", name: "Fantasia", desc: "Pedra, ouro e moldura", font: "Cinzel", variants: [["stone", "#13100d", "#d9ad4f", "#b3302a"], ["crimson", "#120a0b", "#e8c06a", "#c23b32"]] },
+  { id: "tac", name: "Tático", desc: "Mapa de missão", font: "Chakra Petch", variants: [["olive", "#171a14", "#dadccf", "#ff7a1a"], ["urban", "#121519", "#dfe3e8", "#ffb020"]] },
+  { id: "jp", name: "Japão", desc: "Washi, sakura e carimbo", font: "Zen Maru Gothic", variants: [["sakura", "#f7f1e8", "#d94f78", "#c8372d"], ["night", "#0e0f24", "#6ee7ff", "#ff5c8a"]] },
+  { id: "exec", name: "Executivo", desc: "Marinho e champanhe", font: "Cormorant Garamond", variants: [["navy", "#0b1220", "#eef0f4", "#c9a961"], ["ivory", "#f6f3ec", "#1c1f26", "#9c7b3c"], ["black", "#0a0a0a", "#f2f2f2", "#c9a961"]] },
 ];
 
 // ------------------------------------------------------------ conexão
@@ -380,7 +398,7 @@ function onDrop(kind, id, list, idx) {
 }
 
 // ------------------------------------------------------------ desenho
-function renderAll() { renderThemes(); renderLayout(); }
+function renderAll() { renderThemes(); renderAuto(); renderLayout(); }
 function renderThemes() {
   const skin = LAY.skin || "fallout", theme = LAY.theme;
   $("themes").innerHTML = THEMES.map((t) => {
@@ -403,6 +421,23 @@ $("themes").onclick = (e) => {
   renderThemes(); save();
 };
 $("crt").onchange = () => { LAY.crt = $("crt").checked; save(); };
+// troca automática
+function renderAuto() {
+  const opts = '<option value="">(o escolhido acima)</option>' + THEMES.map((t) => t.variants.map(([v]) => `<option value="${t.id}:${v}">${esc(t.name)}${t.variants.length > 1 ? " · " + esc(VAR_NAME[v] || v) : ""}</option>`).join("")).join("");
+  const a = LAY.auto || {}, tm = a.time || {}, gm = a.game || {};
+  for (const id of ["au-day", "au-night", "au-dota", "au-cs"]) $(id).innerHTML = opts;
+  $("au-time").checked = !!tm.on; $("au-day").value = tm.day || ""; $("au-night").value = tm.night || "jp:night";
+  $("au-from").value = tm.from || "19:00"; $("au-to").value = tm.to || "07:00";
+  $("au-game").checked = !!gm.on; $("au-dota").value = gm.dota2 || "rpg:stone"; $("au-cs").value = gm.cs2 || "tac:olive";
+}
+const VAR_NAME = { green: "Verde", amber: "Âmbar", cyan: "Ciano", blue: "Azul", white: "Branco", neon: "Neon", sunset: "Pôr do sol", ice: "Gelo", dark: "Escuro", light: "Claro", amoled: "Preto (AMOLED)",
+  orange: "Laranja", aviation: "Aviônica", olive: "Oliva", cream: "Creme", dmg: "Verde", gray: "Cinza", mocha: "Mocha", stone: "Pedra", crimson: "Carmim", urban: "Urbano", sakura: "Sakura", night: "Noite em Tóquio", navy: "Marinho", ivory: "Marfim", black: "Preto" };
+function saveAuto() {
+  LAY.auto = { time: { on: $("au-time").checked, day: $("au-day").value, night: $("au-night").value, from: $("au-from").value || "19:00", to: $("au-to").value || "07:00" },
+               game: { on: $("au-game").checked, dota2: $("au-dota").value, cs2: $("au-cs").value } };
+  save();
+}
+for (const id of ["au-time", "au-day", "au-night", "au-from", "au-to", "au-game", "au-dota", "au-cs"]) $(id).onchange = saveAuto;
 
 function renderLayout() {
   document.querySelectorAll("#orient button").forEach((b) => b.classList.toggle("on", b.dataset.o === O));

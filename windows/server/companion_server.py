@@ -469,7 +469,7 @@ DOWNLOADS = extras.DownloadWatcher(CFG.get("downloads_dir") or DEFAULT_CFG["down
 LAYOUT_PATH = BASE / "layout.json"
 LAYOUT_VIEWS = {"dash", "today", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"}
 LAYOUT_CARDS = {"cpu", "ram", "gpu", "net", "procs", "disks", "bat", "sys"}
-SKINS = {"fallout", "synth", "minimal", "hud", "lcd", "paper"}
+SKINS = {"fallout", "synth", "minimal", "hud", "lcd", "paper", "pocket", "code", "rpg", "tac", "jp", "exec"}
 
 
 def layout_get():
@@ -533,6 +533,17 @@ def layout_set(p):
         clean["theme"] = lay["theme"][:16]
     if isinstance(lay.get("crt"), bool):
         clean["crt"] = lay["crt"]
+    au = lay.get("auto")
+    if isinstance(au, dict):
+        ok_theme = lambda v: isinstance(v, str) and len(v) <= 30 and (v == "" or v.split(":")[0] in SKINS)  # noqa: E731
+        ok_time = lambda v: isinstance(v, str) and re.fullmatch(r"\d{2}:\d{2}", v)  # noqa: E731
+        t, g, out = au.get("time") or {}, au.get("game") or {}, {}
+        if isinstance(t, dict):
+            out["time"] = {"on": bool(t.get("on")), **{k: t[k] for k in ("day", "night") if ok_theme(t.get(k))},
+                           **{k: t[k] for k in ("from", "to") if ok_time(t.get(k))}}
+        if isinstance(g, dict):
+            out["game"] = {"on": bool(g.get("on")), **{k: g[k] for k in ("dota2", "cs2") if ok_theme(g.get(k))}}
+        clean["auto"] = out
     for k in ("portrait", "landscape"):
         o = _clean_orient(lay.get(k))
         if o:
