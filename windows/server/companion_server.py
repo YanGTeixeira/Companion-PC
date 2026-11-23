@@ -494,6 +494,8 @@ def _clean_orient(o):
                 nav.append({"id": str(sec.get("id") or f"s{len(nav)}")[:20], "label": str(sec.get("label") or "")[:14], "views": views})
         if nav:
             out["nav"] = nav
+    if isinstance(o.get("known"), list):
+        out["known"] = [v for v in o["known"] if v in LAYOUT_VIEWS][:30]
     if isinstance(o.get("dash"), list):
         dash = []
         for d in o["dash"][:12]:

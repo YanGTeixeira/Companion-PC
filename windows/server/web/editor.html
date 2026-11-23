@@ -269,9 +269,21 @@ function save() {
 }
 
 // ------------------------------------------------------------ modelo
-function navOf(o) { return clone(LAY[o]?.nav || DEFAULT_NAV); }
+const LEGACY_VIEWS = ["dash", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"];
+// abas novas (que o layout salvo ainda não conhecia) entram na seção padrão delas, como no app
+function navOf(o) {
+  const nav = clone(LAY[o]?.nav || DEFAULT_NAV);
+  const k = new Set(LAY[o]?.known || LEGACY_VIEWS), used = new Set(nav.flatMap((s) => s.views));
+  for (const v of BASE_VIEWS) {
+    if (used.has(v) || k.has(v)) continue;
+    const def = DEFAULT_NAV.find((d) => d.views.includes(v)), sec = nav.find((s) => s.id === def?.id) || nav[0];
+    const prev = def ? def.views[def.views.indexOf(v) - 1] : null, i = sec.views.indexOf(prev);
+    sec.views.splice(i >= 0 ? i + 1 : sec.views.length, 0, v);
+  }
+  return nav;
+}
 function dashOf(o) { return clone(LAY[o]?.dash || DEFAULT_DASH[o].map(([id, span]) => ({ id, span, hidden: false }))); }
-function setNav(nav) { LAY[O] = { ...(LAY[O] || {}), nav }; save(); renderLayout(); }
+function setNav(nav) { LAY[O] = { ...(LAY[O] || {}), nav, known: BASE_VIEWS }; save(); renderLayout(); }
 function setDash(dash) { LAY[O] = { ...(LAY[O] || {}), dash }; save(); renderLayout(); }
 function blocksOf(o, v) {
   const cat = BLOCKS[v].flatMap((g) => g.items.map(([id]) => id));
@@ -429,12 +441,12 @@ $("blk-ed").addEventListener("change", (e) => {
 });
 $("blk-ed").addEventListener("click", (e) => { if (e.target.id === "blk-reset") setBlocks(SCR, null); });
 $("orient").onclick = (e) => { const b = e.target.closest("[data-o]"); if (!b) return; O = b.dataset.o; renderLayout(); preview(SCR); };
-$("copy-other").onclick = () => { const other = O === "portrait" ? "landscape" : "portrait"; LAY[O] = { nav: navOf(other), dash: dashOf(other).map((d) => ({ ...d, span: Math.min(d.span, COLS[O]) })), blocks: clone(LAY[other]?.blocks || {}) }; save(); renderLayout(); };
+$("copy-other").onclick = () => { const other = O === "portrait" ? "landscape" : "portrait"; LAY[O] = { nav: navOf(other), known: BASE_VIEWS, dash: dashOf(other).map((d) => ({ ...d, span: Math.min(d.span, COLS[O]) })), blocks: clone(LAY[other]?.blocks || {}) }; save(); renderLayout(); };
 $("reset").onclick = () => { if (!confirm(`Voltar o layout ${O === "portrait" ? "em pé" : "deitado"} ao padrão?`)) return; delete LAY[O]; save(); renderLayout(); };
 $("nav").addEventListener("change", (e) => {
   const id = e.target.dataset.label; if (!id) return;
   const nav = navOf(O); nav.find((s) => s.id === id).label = e.target.value.trim() || VIEW_LABEL[nav.find((s) => s.id === id).views[0]];
-  LAY[O] = { ...(LAY[O] || {}), nav }; save();
+  LAY[O] = { ...(LAY[O] || {}), nav, known: BASE_VIEWS }; save();
 });
 $("nav").addEventListener("click", (e) => {
   if (e.target.id === "addsec") {

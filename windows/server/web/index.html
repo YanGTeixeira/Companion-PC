@@ -1524,7 +1524,21 @@ let LAYOUT = store.get("layout", null) || {};
 let NAV = DEFAULT_NAV, SECTIONS = {}, SPLIT = {}, VIEWS = [];
 const LIVE = {};   // abas que só existem enquanto algo acontece no PC (jogo, reunião)
 const orient = () => (innerWidth > innerHeight ? "landscape" : "portrait");
-function cleanNav(nav) {
+// abas que existiam antes de o layout guardar "known" (1.8); as que vieram depois entram sozinhas no menu salvo
+const LEGACY_VIEWS = ["dash", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"];
+function addNewViews(nav, known) {
+  const k = new Set(known || LEGACY_VIEWS), used = new Set(nav.flatMap((s) => s.views || []));
+  for (const v of BASE_VIEWS) {
+    if (used.has(v) || k.has(v)) continue;
+    const def = DEFAULT_NAV.find((d) => d.views.includes(v)), sec = nav.find((s) => s.id === def?.id) || nav.find((s) => (s.views || []).some((x) => def?.views.includes(x))) || nav[0];
+    if (!sec) continue;
+    const prev = def ? def.views[def.views.indexOf(v) - 1] : null, i = sec.views.indexOf(prev);
+    sec.views = [...sec.views]; sec.views.splice(i >= 0 ? i + 1 : sec.views.length, 0, v);
+  }
+  return nav;
+}
+function cleanNav(nav, known) {
+  nav = addNewViews((Array.isArray(nav) ? nav : []).map((s) => ({ ...s, views: [...(s.views || [])] })), known);
   // aceita só abas que existem, sem repetir; Ajustes nunca some (senão não dá para voltar atrás)
   const seen = new Set(), out = [];
   for (const sec of Array.isArray(nav) ? nav : []) {
@@ -1537,7 +1551,7 @@ function cleanNav(nav) {
 }
 function buildSections() {
   const L = LAYOUT[orient()] || {};
-  NAV = cleanNav(L.nav || DEFAULT_NAV);
+  NAV = cleanNav(L.nav || DEFAULT_NAV, L.known);
   const home = (NAV.find((s) => s.views.includes("dash")) || NAV[0]).id;
   SECTIONS = {}; SPLIT = {};
   for (const sec of NAV) {
