@@ -880,7 +880,10 @@ async def session(ws, peer, kind):
                     data = await data
                 res = {"t": "res", "id": rid, "a": action, "ok": True, "d": data if isinstance(data, (str, int, float, dict, list)) else None}
                 if action not in QUIET_ACTIONS:
-                    log.info("%s %s", action, msg.get("p") or "")
+                    lp = msg.get("p") or ""
+                    if isinstance(lp, dict) and lp.get("ics"):
+                        lp = {**lp, "ics": "(link da agenda oculto)"}
+                    log.info("%s %s", action, lp)
             except Exception as e:  # noqa: BLE001
                 log.warning("falha %s: %s", action, e)
                 res = {"t": "res", "id": rid, "a": action, "ok": False, "e": str(e)}

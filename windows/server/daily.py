@@ -50,13 +50,55 @@ def geocode(city):
 
 
 def weather(city):
+    """Open-Meteo; se estiver fora do ar ou sobrecarregado, wttr.in."""
     g = geocode(city)
+    try:
+        return _open_meteo(g)
+    except Exception as e:  # noqa: BLE001
+        log.info("clima: Open-Meteo falhou (%s), usando wttr.in", e)
+        try:
+            return _wttr(g)
+        except Exception as e2:  # noqa: BLE001
+            raise RuntimeError(f"Open-Meteo: {e}; wttr.in: {e2}") from e2
+
+
+def _wttr(g):
+    d = json.loads(_get(f"https://wttr.in/{g['lat']:.4f},{g['lon']:.4f}?format=j1&lang=pt", timeout=20))
+    c, days = d["current_condition"][0], d["weather"]
+    pt = lambda x: ((x.get("lang_pt") or x.get("weatherDesc") or [{}])[0].get("value") or "").strip()  # noqa: E731
+    now_h = dt.datetime.now().hour
+    hrs = []
+    for di, day in enumerate(days[:2]):
+        for h in day["hourly"]:
+            hh = int(h["time"]) // 100
+            if di == 1 or hh >= now_h - 1:
+                hrs.append({"h": f"{hh:02d}", "t": int(h["tempC"]), "p": int(h["chanceofrain"])})
+    hrs = hrs[:6]
+    rain = None
+    for di, day in enumerate(days[:2]):
+        for h in day["hourly"]:
+            hh = int(h["time"]) // 100
+            if (di == 1 or hh >= now_h) and int(h["chanceofrain"]) >= 50:
+                rain = {"at": ("amanhã " if di else "") + f"{hh:02d}:00", "pct": int(h["chanceofrain"])}
+                break
+        if rain:
+            break
+    mx = lambda day: max(int(h["chanceofrain"]) for h in day["hourly"])  # noqa: E731
+    t0, t1 = days[0], days[1] if len(days) > 1 else None
+    return {"city": g["name"], "region": g["region"], "temp": int(c["temp_C"]), "feels": int(c["FeelsLikeC"]),
+            "code": None, "desc": pt(c), "day": True, "max": int(t0["maxtempC"]), "min": int(t0["mintempC"]),
+            "rain_pct": mx(t0), "rain": rain, "hours": hrs, "src": "wttr.in",
+            "tomorrow": {"max": int(t1["maxtempC"]), "min": int(t1["mintempC"]), "rain_pct": mx(t1),
+                         "desc": pt(t1["hourly"][4])} if t1 else None}
+
+
+def _open_meteo(g):
     q = urllib.parse.urlencode({
         "latitude": g["lat"], "longitude": g["lon"], "timezone": "auto", "forecast_days": 2,
         "current": "temperature_2m,apparent_temperature,weather_code,is_day",
         "hourly": "precipitation_probability,temperature_2m,weather_code",
         "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code"})
-    d = json.loads(_get("https://api.open-meteo.com/v1/forecast?" + q))
+    d = json.loads(_get("https://api.open-meteo.com/v1/forecast?" + q, timeout=10))
     cur, daily, hourly = d.get("current") or {}, d.get("daily") or {}, d.get("hourly") or {}
     now = cur.get("time", "")[:13]
     times = hourly.get("time") or []
@@ -64,7 +106,7 @@ def weather(city):
     rain = None
     for i in range(start, min(start + 12, len(times))):
         if (hourly["precipitation_probability"][i] or 0) >= 50:
-            rain = {"at": times[i][11:16], "pct": hourly["precipitation_probability"][i]}
+            rain = {"at": ("amanhã " if times[i][:10] > now[:10] else "") + times[i][11:16], "pct": hourly["precipitation_probability"][i]}
             break
     hours = [{"h": times[i][11:13], "t": round(hourly["temperature_2m"][i]), "p": hourly["precipitation_probability"][i]}
              for i in range(start, min(start + 12, len(times)), 2)]
