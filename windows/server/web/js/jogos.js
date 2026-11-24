@@ -54,6 +54,7 @@ function onGameState() {
     if (!vis("play") && !(state.meet?.inCall)) showView("play", true);
   }
   if (!g) playSeen = null;
+  dotaPlace(dotaRunning());
   renderPlay();
 }
 function renderPlay() {
@@ -110,6 +111,8 @@ function renderGsi() {
   play.classList.toggle("match", !!(h[1] || h[2]));
   if (state.post) $("pl-post").classList.toggle("hidden", play.classList.contains("match") || Date.now() / 1000 - state.post.t > 1800);
   if (d && d.g === "dota2" && !d.menu) dotaAlerts(d);
+  dotaPlace(isDota);
+  if (d && d.g === "dota2") dotaGsi(d);
 }
 
 // ---- histórico (aba Jogos)

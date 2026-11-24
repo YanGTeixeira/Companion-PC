@@ -165,6 +165,7 @@ function showView(name, temp) {
   if (vis("voz")) setTimeout(loadVoiceHelp);  // no início, as funções da voz ainda nem foram declaradas
   if (state.meet !== undefined) setTimeout(renderMeet);
   if (vis("play")) setTimeout(() => { renderPlay(); state.stats && renderPlayPerf(state.stats); });
+  if (vis("games") || vis("play")) setTimeout(() => typeof dotaShown === "function" && dotaShown());
 }
 $("subtabs").onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) { buzz(8); showView(b.dataset.view); } };
 buildSections();

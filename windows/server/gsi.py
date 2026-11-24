@@ -158,7 +158,7 @@ def summarize_dota(d):
         "g": "dota2", "state": DOTA_STATES.get(mp.get("game_state"), mp.get("game_state")), "raw_state": mp.get("game_state"),
         "clock": mp.get("clock_time"), "day": mp.get("daytime"), "paused": mp.get("paused"), "win": mp.get("win_team"),
         "rad": mp.get("radiant_score"), "dire": mp.get("dire_score"), "team": pl.get("team_name"),
-        "menu": not mp, "hero": _pretty(he.get("name"), "npc_dota_hero_"), "level": he.get("level"),
+        "menu": not mp, "hero": _pretty(he.get("name"), "npc_dota_hero_"), "hero_id": he.get("id") or None, "level": he.get("level"),
         "alive": he.get("alive"), "respawn": he.get("respawn_seconds"), "hp": he.get("health"), "hpmax": he.get("max_health"),
         "mana": he.get("mana"), "manamax": he.get("max_mana"), "buyback": he.get("buyback_cost"), "bbcd": he.get("buyback_cooldown"),
         "k": pl.get("kills"), "d": pl.get("deaths"), "a": pl.get("assists"), "lh": pl.get("last_hits"), "dn": pl.get("denies"),

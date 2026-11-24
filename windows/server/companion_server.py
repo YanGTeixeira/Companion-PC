@@ -34,6 +34,7 @@ import https_cert
 import matches
 import daily
 import dota_stats
+import dota_draft
 import steam
 import overlay
 import pc_info
@@ -463,6 +464,11 @@ ASYNC_ACTIONS = {
     "stratz.get": lambda p: _async(stratz_public()),
     "stratz.set": lambda p: stratz_set(p),
     "dota.report": lambda p: dota_report_now(p),
+    "dota.heroes": lambda p: dota_draft_call(DRAFT.hero_list),
+    "dota.draft": lambda p: dota_draft_call(DRAFT.draft, p.get("pos"), p.get("enemies"), p.get("allies"), p.get("bracket"), dota_acc(), p.get("prefer") or ()),
+    "dota.plan.get": lambda p: _async(DOTA_PLAN.state()),
+    "dota.plan.set": lambda p: dota_plan_set(p),
+    "dota.build": lambda p: dota_draft_call(DRAFT.build, p.get("hero"), p.get("pos"), p.get("bracket"), dota_acc(), p.get("enemies") or ()),
     "daily.set": lambda p: daily_set(p),
     "daily.open": lambda p: _async(daily_open(p)),
     "focus.start": lambda p: focus_start(p),
@@ -821,7 +827,7 @@ async def meet_cmd(p):
         raise ValueError("não consegui trazer o Meet para a frente")
     await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"layout.get", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"layout.get", "dota.plan.get", "dota.heroes", "dota.draft", "dota.build", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -1311,6 +1317,7 @@ def match_saved(pm):
     loop.create_task(broadcast({"t": "match_end", "d": pm}))
     if pm.get("game") == "dota2" and pm.get("key"):
         loop.create_task(dota_report_job(pm["key"], pm.get("data") or {}))
+        loop.create_task(dota_plan_reset())   # o plano era para esta partida
 
 
 MATCHES.on_saved = match_saved
@@ -1393,6 +1400,53 @@ async def dota_report_resume():
     """Servidor reiniciou no meio da espera: retoma as partidas das últimas 2 h sem relatório completo."""
     for key, data in MATCHES.pending("dota2", "report", time.time() - 7200):
         asyncio.create_task(dota_report_job(key, data, dota_stats.DELAYS[1:]))
+
+
+# Draft e builds (estatísticas públicas do STRATZ) - dota_draft.py
+DRAFT = dota_draft.Draft(stratz_token, BASE)
+
+
+DOTA_PLAN = dota_draft.Plan(BASE / "dota-plan.json")
+PLAN_WARM = {"task": None}
+
+
+async def dota_plan_set(p):
+    st = DOTA_PLAN.set(p)
+    await broadcast({"t": "dota_plan", "d": st})
+    # já deixa as builds dos preferidos no cache: na hora de escolher o herói elas abrem na hora
+    if stratz_token() and st["heroes"] and (PLAN_WARM["task"] is None or PLAN_WARM["task"].done()):
+        PLAN_WARM["task"] = asyncio.create_task(dota_plan_warm())
+    return st
+
+
+async def dota_plan_warm():
+    await asyncio.sleep(3)   # espera terminar de escolher
+    st = DOTA_PLAN.state()
+    for h in st["heroes"]:
+        try:
+            await asyncio.to_thread(DRAFT.build, h, st["pos"], "auto", dota_acc())
+        except (ValueError, dota_stats.ApiError) as e:
+            log.info("plano do Dota: build de %s não veio (%s)", h, e)
+            return
+
+
+async def dota_plan_reset():
+    await broadcast({"t": "dota_plan", "d": DOTA_PLAN.reset(), "reset": True})
+
+
+def dota_acc():
+    """Sua conta do Dota: a da última partida salva pelo GSI, senão a do login da Steam."""
+    d = LAST_MATCH["d"] or {}
+    return dota_me((d.get("data") or {}) if d.get("game") == "dota2" else {})[0]
+
+
+async def dota_draft_call(fn, *args):
+    if not stratz_token():
+        raise ValueError("Coloque a chave grátis do STRATZ em Personalizar > Dota 2 para ver draft e builds")
+    try:
+        return await asyncio.to_thread(fn, *args)
+    except dota_stats.ApiError as e:
+        raise ValueError(f"STRATZ: {e}") from None
 
 
 async def dota_report_now(p):

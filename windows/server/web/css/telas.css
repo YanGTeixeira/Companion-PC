@@ -348,3 +348,45 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .dpl .dh { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dpl .dh small { color: var(--p3); }
 .dpl.me { color: var(--p); font-weight: 600; }
+
+/* Dota 2: draft e build (dota.js) */
+.dota .dpos { margin: 2px 0 6px; flex-wrap: wrap; overflow: visible; }
+.dota .dbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+.dota .dbar .sub { flex: 1; min-width: 0; }
+.dota .dbar .inp { flex: 1 1 160px; min-width: 0; padding: 7px 10px; border: 1px solid var(--p3); background: var(--bg); color: var(--p); font: 15px var(--mono); border-radius: var(--r); }
+.dslots { display: grid; grid-template-columns: 64px repeat(5, minmax(0, 1fr)); gap: 4px; align-items: center; margin: 4px 0; }
+.dslots small { color: var(--p3); font-size: 12px; }
+.dslot { min-height: 38px; padding: 4px 2px; border: 1px dashed var(--p3); color: var(--p3); font-size: 12px; line-height: 1.15; border-radius: var(--r); overflow: hidden; overflow-wrap: anywhere; }
+.dslot.on { border-style: solid; border-color: var(--p2); color: var(--p); }
+.dnote { color: var(--p3); font-size: 12px; margin: 6px 0; }
+.dnote.warn { color: var(--alert); }
+.dsug { display: grid; gap: 4px; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); }
+.dsg { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; text-align: left; padding: 7px 9px; border: 1px solid var(--p4); border-radius: var(--r); }
+.dsg .dsn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsg .dsn b { font-weight: 400; color: var(--p); }
+.dsg .mine { color: var(--p2); }
+.dsg .dss { font: 20px/1 var(--display); }
+.dsg .dsd { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 2px 10px; color: var(--p3); font-size: 12px; }
+.dsg .dsd i { font-style: normal; }
+.dota .up { color: var(--p); } .dota .dn { color: var(--alert); }
+.dvs { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px; }
+.dgrid { display: grid; gap: 4px 14px; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); align-items: start; }
+.dsec h4 { margin: 8px 0 2px; font-weight: 400; font-size: 13px; color: var(--p2); border-bottom: 1px solid var(--p4); padding-bottom: 2px; }
+.dsec h4 small { color: var(--p3); }
+.dsec .row { padding: 2px 0; font-size: 13px; }
+.dtal span:first-child { white-space: normal; }
+.dtal b { font-weight: 400; color: var(--p2); margin-right: 4px; }
+.dtal small { color: var(--p3); }
+.dpick { display: flex; flex-wrap: wrap; gap: 4px; max-height: 50vh; overflow-y: auto; }
+.dpick .chip2.used { opacity: .45; }
+.dota .dpos.ask .chip2 { border-color: var(--alert); }
+.dota .dh { margin: 10px 0 4px; font-weight: 400; font-size: 13px; color: var(--p2); }
+.dota .dh small { color: var(--p3); }
+.dfav { display: flex; flex-wrap: wrap; gap: 4px; }
+.dsg.fav { border-color: var(--p2); }
+.dbans .row { padding: 4px 0; border-bottom: 1px solid var(--p4); }
+.dbans .row span:first-child { white-space: normal; }
+.dbans .row b { font-weight: 400; color: var(--p); }
+.dbans small { color: var(--p3); }
+.dbans small.dn { color: var(--alert); }
+.dfrow { width: 100%; text-align: left; }

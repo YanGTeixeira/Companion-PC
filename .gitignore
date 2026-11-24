@@ -4,3 +4,7 @@ config.json
 config.json.bak*
 *.log
 certs/
+dota-cache/
+dota-items*.json
+dota-heroes.json
+dota-plan.json

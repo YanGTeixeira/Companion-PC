@@ -99,7 +99,7 @@ function connect() {
   sock.onerror = () => {};
 }
 
-function send(a, p = {}, reply = true) {
+function send(a, p = {}, reply = true, timeout = 8000) {
   if (!ws || ws.readyState !== 1) { if (reply) toast("Sem conexão com o PC", "bad"); return Promise.reject(new Error("offline")); }
   const msg = { t: "req", a, p };
   if (!reply) { ws.send(JSON.stringify(msg)); return Promise.resolve(); }
@@ -107,7 +107,7 @@ function send(a, p = {}, reply = true) {
   ws.send(JSON.stringify(msg));
   return new Promise((resolve, reject) => {
     pending.set(msg.id, { resolve, reject });
-    setTimeout(() => { if (pending.delete(msg.id)) reject(new Error("sem resposta")); }, 8000);
+    setTimeout(() => { if (pending.delete(msg.id)) reject(new Error("sem resposta")); }, timeout);
   });
 }
 function act(a, p, label) {
@@ -128,6 +128,7 @@ function onMsg(m) {
       renderPower(); loadDeck(); pollMixer();
       if (vis("screen")) screenLoop();
       bootLine(`${m.host} conectado.`); bootDone();
+      if (typeof dotaShown === "function") dotaShown();
       snd("on"); wasOnline = true;
       if (m.features?.notif) subNotif();
       libT = 0; if (vis("games")) loadGamesExtra();
@@ -152,6 +153,7 @@ function onMsg(m) {
     case "steam": onSteam(m.d); break;
     case "match_end": onMatchEnd(m.d); break;
     case "match_report": onMatchReport(m.d); break;
+    case "dota_plan": onDotaPlan(m.d, m.reset); break;
     case "meet_soon": onMeetSoon(m.d); break;
     case "focus": onFocus(m.d); break;
     case "games": state.games = m.d; state.gamesT = performance.now(); renderGames(); onGameState(); break;

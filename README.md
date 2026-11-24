@@ -59,6 +59,15 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
   Japão (sakura de dia, Tóquio à noite) e Executivo (marinho, marfim ou preto); variações Fallout azul/branco,
   Synthwave pôr do sol/gelo, Minimal AMOLED e Cockpit aviônica. **Troca automática** por horário e pelo jogo aberto
   (Dota 2 / CS2) em Personalizar › Tema.
+- **Dota 2: draft e build** (Jogos, e Jogando com o Dota aberto; precisa da chave grátis do STRATZ em
+  Personalizar › *Dota 2*). *Draft*: escolha sua posição, marque os heróis inimigos (e aliados, se quiser) e veja os
+  heróis da posição ordenados por vantagem contra eles + sinergia + força no meta, com o número contra cada inimigo e
+  quantas partidas você tem com cada um (*Só os que eu jogo*). O GSI do jogador não mostra o time inimigo, por isso
+  é marcado à mão. *Build*: abre sozinha com o herói que você pegou — itens iniciais, botas, primeiros itens, itens
+  principais com o minuto médio, situacionais, ordem das skills e talentos mais escolhidos, na sua posição e faixa
+  de rank (o rank vem do seu perfil público no STRATZ). *Fila*: antes da partida escolha a posição e até 6 heróis preferidos;
+  o draft e a build já abrem com isso, aparecem os seus preferidos na posição e quem banir contra eles, e o plano
+  zera quando a partida termina (fica no PC, igual em todos os aparelhos). Estatísticas em cache em `dota-cache\` por horas.
 - Aba nova (como *Hoje*) entra sozinha em menus já salvos; clima usa wttr.in quando o Open-Meteo falha.
 
 **Novidades da 1.9**
@@ -169,6 +178,8 @@ os arquivos do celular) e `"downloads_dir"` (a pasta vigiada para o alerta de do
 | `windows/server/devices.py` | Bateria: Attack Shark X11, AULA F75, Bluetooth, XInput |
 | `windows/server/screentime.py` | Tempo de tela por app (SQLite) |
 | `windows/server/gsi.py` | Game State Integration de CS2 e Dota 2 |
+| `windows/server/dota_stats.py` | Relatório do Dota depois da partida (STRATZ / OpenDota) |
+| `windows/server/dota_draft.py` | Draft (counters) e builds do Dota com as estatísticas do STRATZ |
 | `windows/server/matches.py` | Acompanha rounds/minutos das partidas e guarda o histórico |
 | `windows/server/daily.py` | Clima (Open-Meteo) e agenda (iCal) |
 | `windows/server/steam.py` | Steam: downloads (appmanifest) e amigos (Web API com a chave do usuário) |
