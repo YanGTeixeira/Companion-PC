@@ -134,6 +134,7 @@ function onMsg(m) {
       uT = 0; if (vis("usage")) setTimeout(loadUsage);
       vozHelpT = 0; vozDevs = false; if (vis("voz")) loadVoiceHelp();
       CONN = `${m.host} · servidor ${m.version} · ${location.host}`; showConn();
+      $("b-secure").classList.toggle("hidden", !m.https || window.isSecureContext);
       break;
     case "res": {
       const p = pending.get(m.id); if (!p) return; pending.delete(m.id);
@@ -181,6 +182,11 @@ $("login-form").onsubmit = (e) => {
   e.preventDefault();
   const t = $("token").value.trim(); if (!t) return;
   store.set("token", t); $("login").classList.add("hidden"); connect();
+};
+// HTTP pela rede local -> o mesmo app no endereço HTTPS do PC (Tailscale), levando o token
+$("b-secure").onclick = () => {
+  if (!welcome.https) return;
+  location.href = welcome.https + "#t=" + encodeURIComponent(store.get("token", ""));
 };
 $("b-logout").onclick = () => { store.set("token", ""); if (ws) { const s = ws; ws = null; s.close(); } showLogin(); };
 

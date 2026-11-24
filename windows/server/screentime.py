@@ -49,16 +49,26 @@ def idle_seconds():
     return ((ctypes.windll.kernel32.GetTickCount() - li.dwTime) & 0xFFFFFFFF) / 1000
 
 
+class _MI(ctypes.Structure):   # MONITORINFO
+    _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT), ("rcWork", wintypes.RECT), ("dwFlags", wintypes.DWORD)]
+
+
+# ctypes.windll.user32 é um objeto só para o processo todo: o extras.py declara GetMonitorInfoW com a
+# estrutura dele, e aí a nossa era recusada (ArgumentError). Uma instância própria não divide declarações.
+_user32_own = ctypes.WinDLL("user32")
+_user32_own.GetMonitorInfoW.argtypes = [wintypes.HMONITOR, ctypes.POINTER(_MI)]
+_user32_own.GetMonitorInfoW.restype = wintypes.BOOL
+_user32_own.MonitorFromWindow.argtypes = [wintypes.HWND, wintypes.DWORD]
+_user32_own.MonitorFromWindow.restype = wintypes.HMONITOR   # ponteiro: sem isso volta cortado em int
+
+
 def is_fullscreen(hwnd):
     r = wintypes.RECT()
     if not hwnd or not user32.GetWindowRect(hwnd, ctypes.byref(r)):
         return False
-    mon = user32.MonitorFromWindow(hwnd, 2)
-
-    class MI(ctypes.Structure):
-        _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT), ("rcWork", wintypes.RECT), ("dwFlags", wintypes.DWORD)]
-    mi = MI(ctypes.sizeof(MI))
-    if not user32.GetMonitorInfoW(mon, ctypes.byref(mi)):
+    mon = _user32_own.MonitorFromWindow(hwnd, 2)   # MONITOR_DEFAULTTONEAREST
+    mi = _MI(ctypes.sizeof(_MI))
+    if not _user32_own.GetMonitorInfoW(mon, ctypes.byref(mi)):
         return False
     m = mi.rcMonitor
     return r.left <= m.left and r.top <= m.top and r.right >= m.right and r.bottom >= m.bottom

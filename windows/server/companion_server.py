@@ -30,6 +30,7 @@ import devices
 import extras
 import games
 import gsi
+import https_cert
 import matches
 import daily
 import steam
@@ -50,6 +51,8 @@ DEFAULT_CFG = {
     "shutdown_delay_s": 30,
     # App do celular. host "0.0.0.0" = rede local + cabo; "127.0.0.1" = só cabo (adb).
     "web": {"host": "0.0.0.0", "port": 8770, "adb_reverse": True, "adb_path": ""},
+    # HTTPS na porta 8771 com o certificado do Tailscale (ou cert_file/key_file, ex.: mkcert; "host" = nome do link)
+    "https": dict(https_cert.DEFAULT),
     "upload_dir": "%USERPROFILE%\\Downloads\\Companion PC",  # arquivos enviados pelo celular
     "downloads_dir": "%USERPROFILE%\\Downloads",               # avisa no celular quando um download termina
     # Teclas que o servidor aperta para o Discord. Configure as MESMAS como
@@ -651,7 +654,7 @@ async def session(ws, peer, kind):
         return
 
     await ws.send(json.dumps({
-        "t": "welcome", "version": VERSION, "web": web_build(), "host": socket.gethostname(),
+        "t": "welcome", "version": VERSION, "web": web_build(), "host": socket.gethostname(), "https": https_url(),
         "os": f"{platform.system()} {platform.release()}",
         "shortcuts": [{"id": s["id"], "name": s["name"]} for s in CFG["shortcuts"]],
         "power": bool(CFG.get("allow_power")), "layout": layout_get(),
@@ -1417,7 +1420,8 @@ async def now_loop():
         await asyncio.sleep(1)
 
 
-NET = {"web": False, "adb": []}
+NET = {"web": False, "https": False, "adb": []}
+HTTPS = https_cert.Https(BASE, CFG.get("https"))
 
 
 def lan_ip():
@@ -1430,6 +1434,14 @@ def lan_ip():
         return None
 
 
+def https_url():
+    """https://<nome do certificado>:<porta>/ quando o HTTPS está no ar (mkcert sem "host": IP da rede)."""
+    if not NET["https"]:
+        return None
+    host = HTTPS.host or lan_ip()
+    return f"https://{host}:{HTTPS.port}/" if host else None
+
+
 def phone_links():
     """Links para abrir o app no celular (o token vai no #, que não é enviado na rede)."""
     port, tok = WEB["port"], CFG["token"]
@@ -1437,6 +1449,8 @@ def phone_links():
     ip = lan_ip()
     if ip and WEB["host"] not in ("127.0.0.1", "localhost"):
         links["wifi"] = f"http://{ip}:{port}/#t={tok}"
+    if https_url():
+        links["https"] = f"{https_url()}#t={tok}"
     return links
 
 
@@ -1447,7 +1461,8 @@ def status():
     n = kinds.count("celular")
     parts = ["aparelho conectado" if n == 1 else f"{n} aparelhos conectados"] if n else []
     phone = {"web": NET["web"], "adb": list(NET["adb"]), "port": WEB["port"],
-             "links": phone_links() if NET["web"] else {}}
+             "links": phone_links() if NET["web"] or NET["https"] else {},
+             "https": {**HTTPS.state(), "on": NET["https"]} if HTTPS.enabled else None}
     vs = VOICE.state()
     if parts:
         return {"state": "ok", "text": " + ".join(parts), "game": game, "phone": phone, "voice": vs}
@@ -1460,14 +1475,14 @@ def status():
 # --------------------------------------------------------------------------
 from web_static import serve_static, web_build  # noqa: E402
 
+SERVE_KW = dict(process_request=serve_static, ping_interval=5, ping_timeout=10, max_size=4 * 2**20, max_queue=64)
+
 
 async def web_main():
     host, port = WEB["host"], int(os.environ.get("COMPANION_WEB_PORT", WEB["port"]))
     while True:
         try:
-            async with serve(web_handler, host, port, process_request=serve_static,
-                             ping_interval=5, ping_timeout=10, max_size=4 * 2**20,
-                             max_queue=64) as server:
+            async with serve(web_handler, host, port, **SERVE_KW) as server:
                 NET["web"] = True
                 for name, url in phone_links().items():
                     log.info("celular (%s): %s", name, url.split("#")[0])
@@ -1476,6 +1491,32 @@ async def web_main():
             NET["web"] = False
             log.warning("app do celular: não consegui escutar em %s:%s: %s", host, port, e)
             await asyncio.sleep(10)
+
+
+async def https_main():
+    """O mesmo app com HTTPS numa segunda porta (certificado do Tailscale ou cert/key do config)."""
+    if not HTTPS.enabled:
+        return
+    while not await asyncio.to_thread(HTTPS.refresh):
+        await asyncio.sleep(600)   # Tailscale desligado/sem HTTPS: tenta de novo daqui a pouco
+    asyncio.create_task(https_renew())
+    while True:
+        try:
+            async with serve(web_handler, WEB["host"], HTTPS.port, ssl=HTTPS.ctx, **SERVE_KW) as server:
+                NET["https"] = True
+                log.info("celular (https): %s", https_url())
+                await server.serve_forever()
+        except OSError as e:
+            NET["https"] = False
+            log.warning("HTTPS: não consegui escutar na porta %s: %s", HTTPS.port, e)
+            await asyncio.sleep(10)
+
+
+async def https_renew():
+    while True:
+        await asyncio.sleep(3600)
+        if HTTPS.due():
+            await asyncio.to_thread(HTTPS.refresh)
 
 
 def find_adb():
@@ -1588,6 +1629,7 @@ async def main():
     asyncio.create_task(downloads_loop())
     asyncio.create_task(web_watch())
     VOICE.start(asyncio.get_running_loop())
+    asyncio.create_task(https_main())
     await web_main()
 
 

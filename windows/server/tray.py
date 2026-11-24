@@ -275,7 +275,7 @@ class Panel:
         self.voice_ov_btn = vbutton(lambda: self._voice({"overlay": not self._vstate.get("overlay")}))
         self._vstate = {}
 
-        # Celular: QR com o link (Wi-Fi) + estado do cabo
+        # Celular: QR com o link (HTTPS do Tailscale, ou Wi-Fi) + estado do cabo
         tk.Label(root, text="Celular (Android)", font=f_b, fg=self.DIM, bg=self.BG, anchor="w").pack(fill="x", padx=16, pady=(12, 4))
         pc = tk.Frame(root, bg=self.CARD)
         pc.pack(fill="x", padx=16)
@@ -285,6 +285,8 @@ class Panel:
         info.pack(side="left", fill="both", expand=True, padx=(4, 12), pady=10)
         self.phone_wifi = tk.Label(info, font=f, fg=self.TEXT, bg=self.CARD, anchor="w", justify="left", wraplength=380)
         self.phone_wifi.pack(fill="x")
+        self.phone_https = tk.Label(info, font=f, fg=self.DIM, bg=self.CARD, anchor="w", justify="left", wraplength=380)
+        self.phone_https.pack(fill="x", pady=(8, 0))
         self.phone_cable = tk.Label(info, font=f, fg=self.DIM, bg=self.CARD, anchor="w", justify="left", wraplength=380)
         self.phone_cable.pack(fill="x", pady=(8, 0))
         self.phone_btn = tk.Button(info, text="Abrir app no celular (cabo)", font=f, fg=self.TEXT, bg="#2b323c",
@@ -364,8 +366,18 @@ class Panel:
 
     def _refresh_phone(self, phone):
         links = phone.get("links") or {}
+        hs = phone.get("https")
+        if "https" in links:
+            self.phone_https.configure(text="Seguro (Tailscale): o QR abre " + links["https"].split("#")[0]
+                                            + "\nFunciona em casa e fora, com o Tailscale ligado no celular.", fg="#2ecc71")
+        elif hs:
+            self.phone_https.configure(text=f"HTTPS: {hs.get('error') or 'preparando o certificado…'}", fg=self.DIM)
+        else:
+            self.phone_https.configure(text="")
         if not phone.get("web"):
             self.phone_wifi.configure(text=f"App do celular desligado (porta {phone.get('port')} em uso?)")
+        elif "wifi" in links and "https" in links:
+            self.phone_wifi.configure(text=f"Wi-Fi sem Tailscale: abra {links['wifi'].split('#')[0]} e digite o token.")
         elif "wifi" in links:
             self.phone_wifi.configure(text="Wi-Fi: aponte a câmera do celular para o QR code\n"
                                            f"ou abra {links['wifi'].split('#')[0]} e digite o token.")
@@ -382,7 +394,7 @@ class Panel:
             if self.phone_btn.winfo_ismapped():
                 self.phone_btn.pack_forget()
                 self.phone_msg.pack_forget()
-        url = links.get("wifi")
+        url = links.get("https") or links.get("wifi")
         if url != self._qr_url:
             self._qr_url = url
             self._qr_img = None

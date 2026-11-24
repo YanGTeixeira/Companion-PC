@@ -51,14 +51,14 @@ async function notify(title, body, tag) {
 }
 function askNotify(explicit) {
   if (!("Notification" in window) || !window.isSecureContext) {
-    if (explicit) toast("Notificações só funcionam pelo cabo (localhost)", "bad"); return;
+    if (explicit) toast(welcome.https ? "Notificações precisam da versão segura (Ajustes › Conexão)" : "Notificações só funcionam com HTTPS (Tailscale) ou pelo cabo", "bad"); return;
   }
   if (Notification.permission === "default") Notification.requestPermission().then(updNotifBtn);
   else if (explicit && Notification.permission === "denied") toast("Bloqueadas — libere nas configurações do Chrome", "bad");
 }
 function updNotifBtn() {
   const ok = "Notification" in window && window.isSecureContext, p = ok ? Notification.permission : "na";
-  $("al-notif").textContent = { granted: "Ativas", denied: "Bloqueadas", na: "Só no cabo" }[p] || "Ativar";
+  $("al-notif").textContent = { granted: "Ativas", denied: "Bloqueadas", na: "Só com HTTPS" }[p] || "Ativar";
 }
 $("al-notif").onclick = () => askNotify(true);
 updNotifBtn();

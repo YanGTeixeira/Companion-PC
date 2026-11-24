@@ -2,21 +2,33 @@
 # Rode UMA vez (duplo clique > Executar com o PowerShell, ou no terminal):
 #   powershell -ExecutionPolicy Bypass -File setup-network.ps1
 #  1) libera a porta 8770 no Firewall (só redes Privadas) -> Wi-Fi   [pede admin (UAC)]
+#     e a porta 8771 (HTTPS) só para aparelhos do Tailscale
 #  2) instala o adb (Android Platform Tools) -> cabo USB              [sem admin]
 # O winget NÃO pode rodar como Administrador (ele recusa), por isso só o
 # firewall é elevado.
-param([int]$Port = 8770)
+param([int]$Port = 8770, [int]$HttpsPort = 8771)
 
+# Regras que faltam; todas num único pedido de admin
+$rules = @()
 $name = "Companion PC ($Port)"
 if (Get-NetFirewallRule -DisplayName $name, "R36S PC Companion - celular ($Port)" -ErrorAction SilentlyContinue) {
     Write-Host "Firewall: regra da porta $Port já existe."
 } else {
-    Write-Host "Firewall: liberando a porta $Port (o Windows vai pedir permissão)..."
-    $fw = "New-NetFirewallRule -DisplayName '$name' -Direction Inbound -Protocol TCP -LocalPort $Port -Action Allow -Profile Private | Out-Null"
+    $rules += "New-NetFirewallRule -DisplayName '$name' -Direction Inbound -Protocol TCP -LocalPort $Port -Action Allow -Profile Private | Out-Null"
+}
+# HTTPS: só para aparelhos da sua rede Tailscale (endereços 100.64.0.0/10 e fd7a:115c:a1e0::/48), em qualquer rede
+$tsName = "Companion PC HTTPS Tailscale ($HttpsPort)"
+if (Get-NetFirewallRule -DisplayName $tsName -ErrorAction SilentlyContinue) {
+    Write-Host "Firewall: regra do HTTPS ($HttpsPort) já existe."
+} else {
+    $rules += "New-NetFirewallRule -DisplayName '$tsName' -Direction Inbound -Protocol TCP -LocalPort $HttpsPort -RemoteAddress 100.64.0.0/10,fd7a:115c:a1e0::/48 -Action Allow -Profile Any | Out-Null"
+}
+if ($rules) {
+    Write-Host "Firewall: liberando as portas (o Windows vai pedir permissão)..."
     try {
-        Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList "-NoProfile", "-Command", $fw
-        Write-Host "Firewall: porta $Port liberada em redes Privadas."
-    } catch { Write-Warning "Permissão negada: o Wi-Fi não vai funcionar até liberar a porta $Port." }
+        Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList "-NoProfile", "-Command", ($rules -join "; ")
+        Write-Host "Firewall: porta $Port liberada em redes Privadas e $HttpsPort para o Tailscale."
+    } catch { Write-Warning "Permissão negada: o Wi-Fi e o HTTPS não vão funcionar até liberar as portas $Port e $HttpsPort." }
 }
 $pub = Get-NetConnectionProfile | Where-Object NetworkCategory -eq Public
 if ($pub) {

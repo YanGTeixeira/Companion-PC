@@ -180,6 +180,6 @@ function bootLine(t, dim) {
 function bootDone(now) { setTimeout(() => $("boot").classList.add("done"), now || REDUCED ? 0 : 500); }
 bootLine("PC COMPANION 1.9");
 bootLine("Terminal de bolso para o seu PC", true);
-bootLine(`Conectando pelo ${["localhost", "127.0.0.1"].includes(location.hostname) ? "cabo USB" : "Wi-Fi"}…`);
+bootLine(`Conectando pelo ${["localhost", "127.0.0.1"].includes(location.hostname) ? "cabo USB" : location.hostname.endsWith(".ts.net") ? "Tailscale" : "Wi-Fi"}…`);
 setTimeout(() => bootDone(true), 5000);   // sem PC: mostra o app com o aviso de conexão
 

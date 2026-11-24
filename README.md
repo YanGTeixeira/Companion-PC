@@ -22,9 +22,11 @@ Celular Android          ──cabo USB (adb reverse)───  http://localhost
 - **Cabo (opcional, Android):** no celular ative *Opções do desenvolvedor → Depuração USB*, ligue no
   PC e aceite a permissão. O servidor faz o `adb reverse` sozinho; abra
   `http://localhost:8770` no Chrome (o botão "Abrir app no celular (cabo)" do
-  painel abre já com o token). Pelo cabo dá para instalar como app de verdade;
-  "manter a tela ligada", notificações e "Compartilhar com Companion PC" só
+  painel abre já com o token). Pelo cabo (ou pelo HTTPS do Tailscale, abaixo) dá para instalar
+  como app de verdade; "manter a tela ligada", notificações e "Compartilhar com Companion PC" só
   funcionam assim.
+- **Tailscale (recomendado):** HTTPS de verdade, em casa e fora, Android e iPhone. Veja
+  [HTTPS e acesso fora de casa](#https-e-acesso-fora-de-casa-tailscale).
 
 ### Abas
 
@@ -153,6 +155,7 @@ os arquivos do celular) e `"downloads_dir"` (a pasta vigiada para o alerta de do
 |---|---|
 | `windows/server/companion_server.py` | Servidor (WebSocket na porta 8770), ações permitidas, voz, reunião, foco |
 | `windows/server/web_static.py` | Entrega os arquivos de `web/` (só os de dentro da pasta) e os links de download |
+| `windows/server/https_cert.py` | HTTPS: certificado do Tailscale (renova sozinho) ou cert/key do config |
 | `windows/server/win_input.py` | Teclado e mouse virtuais e a janela em foco (Win32) |
 | `windows/server/web/index.html` | App web (PWA): só a marcação; o estilo e o código ficam em `css/` e `js/` |
 | `windows/server/web/css/` | `base` (fontes e cores), `temas`, `moldura` (barra, cartões, diálogos, deitado) e `telas` |
@@ -193,11 +196,32 @@ rodam na ordem do `index.html`; código que roda ao carregar só pode chamar fun
 anteriores. Cada arquivo começa com `"use strict";`. Antes de instalar, rode os testes em
 `windows/server`: `py -3 -m unittest`.
 
+## HTTPS e acesso fora de casa (Tailscale)
+
+Com HTTPS o navegador trata o app como seguro também sem cabo: instala como app (inclusive no iPhone),
+notificações, tela sempre ligada, "Compartilhar com Companion PC" e o app abre mesmo com o PC
+desligado (mostra "sem conexão" e reconecta sozinho quando o PC volta).
+
+1. Instale o [Tailscale](https://tailscale.com/download) no PC e no celular, com a mesma conta.
+2. No painel do Tailscale (*login.tailscale.com › DNS*) ative **MagicDNS** e **HTTPS Certificates**.
+3. Rode de novo `windows\setup-network.ps1`: libera a porta **8771** só para aparelhos do Tailscale.
+4. Reinicie o servidor. O painel da bandeja mostra *Seguro (Tailscale)* e o QR passa a abrir
+   `https://<pc>.<tailnet>.ts.net:8771`. Quem já usa pelo Wi-Fi acha **Versão segura** em
+   *PC › Ajustes › Conexão* (leva o token junto).
+
+O certificado (Let's Encrypt, 90 dias) fica em `certs\` e o servidor pede a renovação todo dia.
+O endereço `http://<IP>:8770` continua funcionando para quem não tem o Tailscale.
+Sem Tailscale, dá para usar outro certificado (ex.: [mkcert](https://github.com/FiloSottile/mkcert),
+com a CA instalada no celular) em `config.json`:
+`"https": {"enabled": true, "port": 8771, "cert_file": "C:\\caminho\\pc.pem", "key_file": "C:\\caminho\\pc-key.pem", "host": "192.168.0.10"}`
+(`"enabled": false` desliga o HTTPS).
+
 ## Segurança
 
 - O servidor escuta na porta 8770 (rede local + cabo) e exige o token do `config.json`.
-  O tráfego no Wi-Fi não é criptografado: use em rede doméstica de confiança
-  (o firewall só libera redes Privadas). Texto digitado ou copiado pelo celular não vai para o log.
+  O tráfego no Wi-Fi (porta 8770) não é criptografado: use em rede doméstica de confiança (o firewall
+  só libera redes Privadas), ou o HTTPS do Tailscale (porta 8771, criptografado e só para aparelhos
+  da sua conta). Texto digitado ou copiado pelo celular não vai para o log.
 - Quem tem o token controla o PC (teclado, mouse, tela). Botões criados pelo
   celular só podem apertar teclas, digitar, usar ações prontas ou abrir programas
   já listados no `config.json` — caminhos novos de programas só pelo PC.
