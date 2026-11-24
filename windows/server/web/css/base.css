@@ -1,0 +1,79 @@
+@font-face { font-family: "VT323"; src: url(../fonts/vt323.woff2) format("woff2"); font-display: swap; }
+@font-face { font-family: "Share Tech Mono"; src: url(../fonts/share-tech-mono.woff2) format("woff2"); font-display: swap; }
+/* fontes dos outros temas (só baixam quando o tema usa) */
+@font-face { font-family: "Orbitron"; src: url(../fonts/orbitron.woff2) format("woff2"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "Exo 2"; src: url(../fonts/exo-2.woff2) format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Inter"; src: url(../fonts/inter.woff2) format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Rajdhani"; src: url(../fonts/rajdhani-500.woff2) format("woff2"); font-weight: 400 500; font-display: swap; }
+@font-face { font-family: "Rajdhani"; src: url(../fonts/rajdhani-600.woff2) format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Rajdhani"; src: url(../fonts/rajdhani-700.woff2) format("woff2"); font-weight: 700 900; font-display: swap; }
+@font-face { font-family: "Press Start 2P"; src: url(../fonts/press-start-2p.woff2) format("woff2"); font-display: swap; }
+@font-face { font-family: "Pixelify Sans"; src: url(../fonts/pixelify-sans.woff2) format("woff2"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Playfair Display"; src: url(../fonts/playfair-display.woff2) format("woff2"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url(../fonts/jetbrains-mono.woff2) format("woff2"); font-weight: 100 800; font-display: swap; }
+@font-face { font-family: "Cinzel"; src: url(../fonts/cinzel.woff2) format("woff2"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "Cormorant Garamond"; src: url(../fonts/cormorant.woff2) format("woff2"); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: "Zen Maru Gothic"; src: url(../fonts/zen-maru-500.woff2) format("woff2"); font-weight: 400 500; font-display: swap; }
+@font-face { font-family: "Zen Maru Gothic"; src: url(../fonts/zen-maru-700.woff2) format("woff2"); font-weight: 600 900; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url(../fonts/chakra-petch-500.woff2) format("woff2"); font-weight: 400 500; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url(../fonts/chakra-petch-600.woff2) format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url(../fonts/chakra-petch-700.woff2) format("woff2"); font-weight: 700 900; font-display: swap; }
+@font-face { font-family: "Lora"; src: url(../fonts/lora.woff2) format("woff2"); font-weight: 400 700; font-display: swap; }
+
+/* ------------------------------------------------------------------ tema
+   Terminal de fósforo: uma cor só em 4 intensidades. Estado ativo = vídeo
+   inverso (fundo aceso, texto escuro). Vermelho só para ações perigosas. */
+:root, [data-theme="green"] {
+  --p: #5cff8a; --p2: #33cf68; --p3: #1c7a3d; --p4: #0e3a1f;
+  --bg: #040d07; --panel: #071a0e; --glow: #5cff8a55;
+}
+[data-theme="amber"] {
+  --p: #ffbf47; --p2: #e0962a; --p3: #8a5a17; --p4: #3d2a0c;
+  --bg: #0c0703; --panel: #181006; --glow: #ffbf4750;
+}
+[data-theme="cyan"] {
+  --p: #7cf4ff; --p2: #3cc4d6; --p3: #1b6f7a; --p4: #0c3036;
+  --bg: #030b0d; --panel: #061619; --glow: #7cf4ff50;
+}
+:root {
+  --alert: #ff5a4f;
+  /* tokens que os temas trocam */
+  --on: var(--p); --onfg: var(--bg); --hl: var(--p); --track: var(--p4); --bar2: var(--p2);
+  --r: 2px; --barr: 0px; --seg: 6px; --vseg: 5px; --gap: 2px;
+}
+/* os tokens que dependem das cores são refeitos em cada elemento com tema (os cartões de escolher tema) */
+[data-skin] {
+  --on: var(--p); --onfg: var(--bg); --hl: var(--p); --track: var(--p4); --bar2: var(--p2);
+  --r: 2px; --barr: 0px; --seg: 6px; --vseg: 5px; --gap: 2px;
+  --display: "VT323", ui-monospace, monospace; --mono: "Share Tech Mono", ui-monospace, "Cascadia Mono", monospace;
+  /* nomes usados pelo JS (gráficos) */
+  --accent: var(--p); --ok: var(--p2); --warn: var(--p);
+  --text: var(--p); --dim: var(--p2); --faint: var(--p3); --line: var(--p3);
+  --display: "VT323", ui-monospace, monospace;
+  --mono: "Share Tech Mono", ui-monospace, "Cascadia Mono", monospace;
+  --rail: 0px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--p); overscroll-behavior: none; }
+body {
+  font: 15px/1.4 var(--mono); height: 100vh; height: 100dvh; overflow: hidden;
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "banner" "header" "subtabs" "main" "nav";
+  user-select: none; -webkit-user-select: none;
+}
+body.crt { text-shadow: 0 0 5px var(--glow); }
+/* linhas de varredura + vinheta, por cima de tudo, sem pegar toque */
+body.crt::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 2px, #0000002e 2px 3px),
+    radial-gradient(ellipse at center, transparent 60%, #00000080 100%);
+}
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; text-shadow: inherit; padding: 0; }
+input, textarea, select { user-select: text; -webkit-user-select: text; }
+:focus-visible { outline: 2px dashed var(--p); outline-offset: 2px; }
+.hidden { display: none !important; }
+a { color: var(--p); }
+

@@ -1,0 +1,409 @@
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+// mesmos nomes do app (index.html)
+const VIEW_LABEL = { dash: "Sistema", today: "Hoje", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
+  screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes" };
+const BASE_VIEWS = Object.keys(VIEW_LABEL);
+const DEFAULT_NAV = [
+  { id: "status", label: "Status", views: ["dash", "today", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
+  { id: "ctrl", label: "Controle", views: ["mouse", "screen"] }, { id: "deck", label: "Botões", views: ["deck"] },
+  { id: "pc", label: "PC", views: ["send", "power", "voz", "sys"] }];
+const CARD_LABEL = { cpu: "CPU", ram: "Memória", gpu: "GPU", net: "Rede", procs: "Processos", disks: "Discos", bat: "Bateria", sys: "Sistema" };
+const DEFAULT_DASH = {
+  portrait: [["cpu", 1], ["ram", 1], ["gpu", 1], ["net", 1], ["bat", 2], ["procs", 2], ["disks", 2], ["sys", 2]],
+  landscape: [["cpu", 1], ["ram", 1], ["gpu", 1], ["net", 1], ["procs", 1], ["disks", 1], ["bat", 1], ["sys", 1]],
+};
+const COLS = { portrait: 2, landscape: 4 };
+// telas e seus blocos (data-b no index.html); cada grupo é um conjunto de irmãos que dá para reordenar
+const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["today", "Hoje"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
+  ["mix", "Mixer"], ["mouse", "Mouse e teclado"], ["send", "Arquivos"], ["power", "Energia"], ["voz", "Voz"], ["sys", "Ajustes"]];
+const BLOCKS = {
+  play: [{ wide: 1, items: [["hero", "Jogo (capa, tempo e atalhos)"], ["perf", "Desempenho e FPS"], ["gsi", "Partida (CS2 / Dota 2)"], ["post", "Fim de partida (comparação)"], ["tact", "Timers do Dota / bomba e economia do CS"], ["graph", "Gráficos do Dota / rounds do CS"]] },
+    { title: "Atalhos do jogo", items: [["a-mic", "MIC (microfone do PC)"], ["a-dmute", "Discord mudo"], ["a-ddeaf", "Discord surdo"], ["a-shot", "Print F12"], ["a-clip", "Clipe 30 s (Game Bar)"]] }],
+  meet: [{ wide: 1, items: [["head", "Título, pessoas e tempo"], ["btns", "Botões"]] },
+    { title: "Botões da reunião", items: [["m-mic", "Microfone"], ["m-cam", "Câmera"], ["m-share", "Compartilhar tela"], ["m-hand", "Levantar a mão"],
+      ["m-captions", "Legendas"], ["m-chat", "Chat"], ["m-focus", "Mostrar no PC"], ["m-leave", "Sair"]] }],
+  today: [{ wide: 1, items: [["weather", "Clima"], ["agenda", "Agenda"], ["day", "Seu dia (resumo)"], ["focus", "Foco"]] }],
+  games: [{ wide: 1, items: [["now", "Jogo atual"], ["recent", "Jogados recentemente"], ["week", "Esta semana"], ["post", "Fim de partida"], ["dl", "Downloads da Steam"], ["friends", "Amigos da Steam"], ["hist", "Partidas (CS2 / Dota 2)"], ["lib", "Biblioteca"]] }],
+  usage: [{ items: [["range", "Hoje / Semana / Mês"]] }, { wide: 1, items: [["total", "Total, gráfico e categorias"], ["apps", "Por aplicativo"]] }],
+  media: [{ items: [["art", "Capa"], ["info", "Música e artista"], ["prog", "Barra de progresso"], ["ctrls", "Anterior / tocar / próxima"], ["vol", "Volume"], ["out", "Saída de áudio"]] }],
+  mix: [{ wide: 1, items: [["outs", "Saída de áudio"], ["profiles", "Perfis de áudio"], ["apps", "Volume por aplicativo"]] }],
+  mouse: [{ items: [["pad", "Touchpad"], ["mbtns", "Botões do mouse"], ["keys1", "Teclas: teclado, Ctrl, Alt, Enter…"], ["keys2", "Teclas: setas, copiar, colar…"]] }],
+  send: [{ wide: 1, items: [["text", "Texto para o PC"], ["files", "Arquivos para o PC"], ["get", "PC para o celular"]] }],
+  power: [{ wide: 1, items: [["power", "Desligar, suspender, reiniciar…"], ["timer", "Timer"]] }],
+  voz: [{ wide: 1, items: [["cfg", "Ajustes de voz"], ["test", "Testar"], ["tips", "Como falar"], ["help", "O que dá para falar"]] }],
+  sys: [{ wide: 1, items: [["alerts", "Alertas"], ["visual", "Visual"], ["device", "Este aparelho", 1]] }],
+};
+const NOTES = {
+  play: "Só aparece com um jogo aberto. A prévia mostra a tela vazia.",
+  meet: "Só aparece numa chamada do Meet. Entrar aparece sozinho na sala de espera.",
+  media: "Deitado, a capa fica sempre à esquerda.",
+  mouse: "Deitado, touchpad e botões ficam à esquerda e as teclas à direita; a ordem vale dentro de cada lado.",
+  sys: "Este aparelho fica sempre visível: é onde troca o token.",
+};
+let SCR = "dash";
+const THEMES = [
+  { id: "fallout", name: "Fallout", desc: "Terminal de fósforo", font: "VT323", crt: true, variants: [["green", "#040d07", "#5cff8a", "#1c7a3d"], ["amber", "#0c0703", "#ffbf47", "#8a5a17"], ["cyan", "#030b0d", "#7cf4ff", "#1b6f7a"], ["blue", "#030a10", "#8fd3ff", "#23597a"], ["white", "#07090a", "#e8f0f2", "#5e6a6e"]] },
+  { id: "synth", name: "Synthwave", desc: "Neon rosa e ciano", font: "Orbitron", crt: true, variants: [["neon", "#0d0518", "#ff4fd8", "#3ef0ff"], ["sunset", "#140818", "#ff6b9d", "#ffb347"], ["ice", "#050b1a", "#4d7cff", "#7df9ff"]] },
+  { id: "minimal", name: "Minimal", desc: "Limpo e moderno", font: "Inter", variants: [["dark", "#171a20", "#eef1f5", "#4c8dff"], ["light", "#f3f5f8", "#15181d", "#2563eb"], ["amoled", "#000000", "#f1f1f1", "#4c8dff"]] },
+  { id: "hud", name: "Cockpit", desc: "HUD laranja e branco", font: "Rajdhani", variants: [["orange", "#0a0e12", "#eef3f7", "#ff8a1f"], ["aviation", "#04080a", "#ffb000", "#3fd3ff"]] },
+  { id: "lcd", name: "LCD 8-bit", desc: "Tela de pixel verde", font: "Press Start 2P", variants: [["olive", "#a4b465", "#1f2a10", "#5b6c32"]] },
+  { id: "paper", name: "Papel", desc: "E-ink, preto no creme", font: "Playfair Display", variants: [["cream", "#f2ede2", "#161514", "#8a857a"]] },
+  { id: "pocket", name: "Portátil", desc: "4 tons, tela de bolso", font: "Pixelify Sans", variants: [["dmg", "#9bbc0f", "#0f380f", "#306230"], ["gray", "#c4c4b2", "#22221e", "#6e6e63"]] },
+  { id: "code", name: "Código", desc: "Editor escuro, cores de sintaxe", font: "JetBrains Mono", variants: [["dark", "#1e1e1e", "#4ec9b0", "#c586c0"], ["mocha", "#1e1e2e", "#94e2d5", "#cba6f7"]] },
+  { id: "rpg", name: "Fantasia", desc: "Pedra, ouro e moldura", font: "Cinzel", variants: [["stone", "#13100d", "#d9ad4f", "#b3302a"], ["crimson", "#120a0b", "#e8c06a", "#c23b32"]] },
+  { id: "tac", name: "Tático", desc: "Mapa de missão", font: "Chakra Petch", variants: [["olive", "#171a14", "#dadccf", "#ff7a1a"], ["urban", "#121519", "#dfe3e8", "#ffb020"]] },
+  { id: "jp", name: "Japão", desc: "Washi, sakura e carimbo", font: "Zen Maru Gothic", variants: [["sakura", "#f7f1e8", "#d94f78", "#c8372d"], ["night", "#0e0f24", "#6ee7ff", "#ff5c8a"]] },
+  { id: "exec", name: "Executivo", desc: "Marinho e champanhe", font: "Cormorant Garamond", variants: [["navy", "#0b1220", "#eef0f4", "#c9a961"], ["ivory", "#f6f3ec", "#1c1f26", "#9c7b3c"], ["black", "#0a0a0a", "#f2f2f2", "#c9a961"]] },
+];
+
+// ------------------------------------------------------------ conexão
+const m = location.hash.match(/[#&]t=([^&]+)/);
+if (m) { try { localStorage.setItem("pcc.token", JSON.stringify(decodeURIComponent(m[1]))); } catch {} history.replaceState(null, "", location.pathname); }
+let TOKEN = ""; try { TOKEN = JSON.parse(localStorage.getItem("pcc.token") || '""'); } catch {}
+let ws = null, rid = 0, LAY = {}, DECK = null, O = "portrait", page = 0;
+const pending = new Map();
+function status(cls, text) { $("status").className = cls; $("status").lastElementChild.textContent = text; }
+function send(a, p) {
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error("desconectado"));
+    const id = ++rid; pending.set(id, { res, rej }); ws.send(JSON.stringify({ t: "req", id, a, p }));
+    setTimeout(() => pending.delete(id) && rej(new Error("sem resposta")), a === "daily.set" || a === "steam.set" ? 45000 : 8000);
+  });
+}
+function connect() {
+  if (!TOKEN) { $("login").hidden = false; $("app").hidden = true; status("bad", "Sem token"); return; }
+  ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
+  ws.onopen = () => ws.send(JSON.stringify({ t: "hello", token: TOKEN, role: "editor" }));
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.t === "welcome") { LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); loadDaily(); loadSteam(); mountPreviews(); }
+    else if (msg.t === "res") { const p = pending.get(msg.id); if (p) { pending.delete(msg.id); msg.ok ? p.res(msg.d) : p.rej(new Error(msg.e)); } }
+    else if (msg.t === "layout" && !saveT) { LAY = msg.d || {}; renderAll(); }
+    else if (msg.t === "deck" && msg.d) { DECK = msg.d.deck; renderDeck(); }
+  };
+  ws.onclose = (e) => {
+    ws = null;
+    if (e.code === 4001) { TOKEN = ""; try { localStorage.removeItem("pcc.token"); } catch {} connect(); return; }
+    status("bad", "Desconectado · tentando de novo"); setTimeout(connect, 2000);
+  };
+}
+$("tok-ok").onclick = () => { TOKEN = $("tok").value.trim(); try { localStorage.setItem("pcc.token", JSON.stringify(TOKEN)); } catch {} connect(); };
+
+// ------------------------------------------------------------ salvar (automático)
+let saveT = null;
+function save() {
+  status("saving", "Salvando…");
+  clearTimeout(saveT);
+  saveT = setTimeout(async () => {
+    try { LAY = await send("layout.set", { layout: LAY }); status("ok", "Conectado · tudo salvo"); }
+    catch (e) { status("bad", "Erro ao salvar: " + e.message); }
+    saveT = null;
+  }, 250);
+}
+
+// ------------------------------------------------------------ modelo
+const LEGACY_VIEWS = ["dash", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"];
+// abas novas (que o layout salvo ainda não conhecia) entram na seção padrão delas, como no app
+function navOf(o) {
+  const nav = clone(LAY[o]?.nav || DEFAULT_NAV);
+  const k = new Set(LAY[o]?.known || LEGACY_VIEWS), used = new Set(nav.flatMap((s) => s.views));
+  for (const v of BASE_VIEWS) {
+    if (used.has(v) || k.has(v)) continue;
+    const def = DEFAULT_NAV.find((d) => d.views.includes(v)), sec = nav.find((s) => s.id === def?.id) || nav[0];
+    const prev = def ? def.views[def.views.indexOf(v) - 1] : null, i = sec.views.indexOf(prev);
+    sec.views.splice(i >= 0 ? i + 1 : sec.views.length, 0, v);
+  }
+  return nav;
+}
+function dashOf(o) { return clone(LAY[o]?.dash || DEFAULT_DASH[o].map(([id, span]) => ({ id, span, hidden: false }))); }
+function setNav(nav) { LAY[O] = { ...(LAY[O] || {}), nav, known: BASE_VIEWS }; save(); renderLayout(); }
+function setDash(dash) { LAY[O] = { ...(LAY[O] || {}), dash }; save(); renderLayout(); }
+function blocksOf(o, v) {
+  const cat = BLOCKS[v].flatMap((g) => g.items.map(([id]) => id));
+  const saved = (LAY[o]?.blocks?.[v] || []).filter((b) => cat.includes(b.id)), have = new Set(saved.map((b) => b.id));
+  return [...saved.map((b) => ({ ...b })), ...cat.filter((id) => !have.has(id)).map((id) => ({ id, hidden: false, wide: false }))];
+}
+function setBlocks(v, list) {
+  const o = { ...(LAY[O] || {}) }, blocks = { ...(o.blocks || {}) };
+  if (list) blocks[v] = list; else delete blocks[v];
+  o.blocks = blocks; LAY[O] = o; save(); renderScreens(); preview(v);
+}
+
+// ------------------------------------------------------------ arrastar e soltar
+// Itens com data-drag="tipo:id" vão para listas com data-drop="tipo"; a posição vem do mouse.
+let drag = null;
+document.addEventListener("dragstart", (e) => {
+  const el = e.target.closest?.("[data-drag]"); if (!el) return;
+  const [kind, id] = el.dataset.drag.split(":");
+  drag = { kind, id, el }; el.classList.add("dragging");
+  e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", el.dataset.drag);
+});
+document.addEventListener("dragend", () => { drag?.el.classList.remove("dragging"); drag = null; clearPh(); });
+function clearPh() { document.querySelectorAll(".ph").forEach((p) => p.remove()); document.querySelectorAll(".drop-ok").forEach((d) => d.classList.remove("drop-ok")); }
+function dropIndex(list, e, horizontal) {
+  const items = [...list.children].filter((c) => c.dataset.drag && !c.classList.contains("dragging"));
+  for (let i = 0; i < items.length; i++) {
+    const r = items[i].getBoundingClientRect();
+    if (horizontal ? e.clientX < r.left + r.width / 2 : e.clientY < r.top + r.height / 2) return [i, items[i]];
+  }
+  return [items.length, null];
+}
+document.addEventListener("dragover", (e) => {
+  if (!drag) return;
+  const pageTab = e.target.closest?.(".pg");
+  if (drag.kind === "btn" && pageTab && +pageTab.dataset.i !== page) { e.preventDefault(); clearPh(); pageTab.classList.add("drop-ok"); return; }
+  const list = e.target.closest?.(`[data-drop="${drag.kind}"]`); if (!list) return;
+  e.preventDefault();
+  const horizontal = list.dataset.dir === "h";
+  const [, before] = dropIndex(list, e, horizontal);
+  clearPh(); list.classList.add("drop-ok");
+  const ph = document.createElement("div"); ph.className = "ph" + (horizontal ? " v" : "");
+  list.insertBefore(ph, before);
+});
+document.addEventListener("drop", (e) => {
+  if (!drag) return;
+  e.preventDefault();
+  const pageTab = e.target.closest?.(".pg");
+  if (drag.kind === "btn" && pageTab && +pageTab.dataset.i !== page) { moveBtnToPage(+drag.id, +pageTab.dataset.i); clearPh(); return; }
+  const list = e.target.closest?.(`[data-drop="${drag.kind}"]`); if (!list) { clearPh(); return; }
+  const [idx] = dropIndex(list, e, list.dataset.dir === "h");
+  clearPh();
+  onDrop(drag.kind, drag.id, list, idx);
+});
+function onDrop(kind, id, list, idx) {
+  if (kind === "view") {
+    const nav = navOf(O);
+    for (const s of nav) s.views = s.views.filter((v) => v !== id);
+    const target = list.dataset.sec;
+    if (target === "_hidden") { if (id === "sys") return alert("Ajustes não pode ficar escondido (é onde fica o tema e a conexão)."); }
+    else { const s = nav.find((x) => x.id === target); s.views.splice(idx, 0, id); }
+    setNav(nav.filter((s) => s.views.length || s._new));
+    preview(id);
+  } else if (kind === "sec") {
+    const nav = navOf(O), from = nav.findIndex((s) => s.id === id);
+    const [s] = nav.splice(from, 1); nav.splice(idx > from ? idx - 1 : idx, 0, s);
+    setNav(nav);
+  } else if (kind === "card") {
+    const dash = dashOf(O), from = dash.findIndex((d) => d.id === id);
+    const [d] = dash.splice(from, 1); dash.splice(idx > from ? idx - 1 : idx, 0, d);
+    setDash(dash); preview("dash");
+  } else if (kind.startsWith("blk")) {
+    const ids = BLOCKS[SCR][+kind.slice(3)].items.map(([b]) => b), list = blocksOf(O, SCR);
+    const grp = list.filter((b) => ids.includes(b.id)), from = grp.findIndex((b) => b.id === id);
+    const [x] = grp.splice(from, 1); grp.splice(idx > from ? idx - 1 : idx, 0, x);
+    let k = 0; setBlocks(SCR, list.map((b) => (ids.includes(b.id) ? grp[k++] : b)));
+  } else if (kind === "btn") {
+    const btns = DECK.pages[page].buttons, from = +id;
+    const [b] = btns.splice(from, 1); btns.splice(idx > from ? idx - 1 : idx, 0, b);
+    saveDeck();
+  } else if (kind === "page") {
+    const from = +id, [p] = DECK.pages.splice(from, 1); const to = idx > from ? idx - 1 : idx;
+    DECK.pages.splice(to, 0, p); page = to; saveDeck();
+  }
+}
+
+// ------------------------------------------------------------ desenho
+function renderAll() { renderThemes(); renderAuto(); renderLayout(); }
+function renderThemes() {
+  const skin = LAY.skin || "fallout", theme = LAY.theme;
+  $("themes").innerHTML = THEMES.map((t) => {
+    const v = t.variants.find(([id]) => id === theme && t.id === skin) || t.variants[0];
+    const [, bg, fg, acc] = v;
+    return `<div class="thm${t.id === skin ? " on" : ""}" data-skin="${t.id}" style="background:${bg};color:${fg}">
+      <span class="tn" style="font-family:'${t.font}';font-size:${t.id === "lcd" ? 12 : 20}px">${t.name}</span><small>${t.desc}</small>
+      ${t.variants.length > 1 ? `<div class="vars">${t.variants.map(([id, b, f]) => `<button data-var="${id}" class="${t.id === skin && id === (theme || t.variants[0][0]) ? "on" : ""}" style="background:${id === "light" || id === "dark" ? b : f}" title="${id}"></button>`).join("")}</div>` : ""}
+      <div class="bars"><i style="background:${fg}"></i><i style="background:${acc}"></i><i style="background:${fg};opacity:.4"></i></div></div>`;
+  }).join("");
+  const t = THEMES.find((x) => x.id === skin) || THEMES[0];
+  $("crt-wrap").hidden = !t.crt;
+  $("crt").checked = LAY.crt !== false;
+}
+$("themes").onclick = (e) => {
+  const card = e.target.closest(".thm"); if (!card) return;
+  const t = THEMES.find((x) => x.id === card.dataset.skin);
+  const v = e.target.closest("[data-var]")?.dataset.var;
+  LAY.skin = t.id; LAY.theme = v || (LAY.skin === t.id && t.variants.some(([id]) => id === LAY.theme) ? LAY.theme : t.variants[0][0]);
+  renderThemes(); save();
+};
+$("crt").onchange = () => { LAY.crt = $("crt").checked; save(); };
+// troca automática
+function renderAuto() {
+  const opts = '<option value="">(o escolhido acima)</option>' + THEMES.map((t) => t.variants.map(([v]) => `<option value="${t.id}:${v}">${esc(t.name)}${t.variants.length > 1 ? " · " + esc(VAR_NAME[v] || v) : ""}</option>`).join("")).join("");
+  const a = LAY.auto || {}, tm = a.time || {}, gm = a.game || {};
+  for (const id of ["au-day", "au-night", "au-dota", "au-cs"]) $(id).innerHTML = opts;
+  $("au-time").checked = !!tm.on; $("au-day").value = tm.day || ""; $("au-night").value = tm.night || "jp:night";
+  $("au-from").value = tm.from || "19:00"; $("au-to").value = tm.to || "07:00";
+  $("au-game").checked = !!gm.on; $("au-dota").value = gm.dota2 || "rpg:stone"; $("au-cs").value = gm.cs2 || "tac:olive";
+}
+const VAR_NAME = { green: "Verde", amber: "Âmbar", cyan: "Ciano", blue: "Azul", white: "Branco", neon: "Neon", sunset: "Pôr do sol", ice: "Gelo", dark: "Escuro", light: "Claro", amoled: "Preto (AMOLED)",
+  orange: "Laranja", aviation: "Aviônica", olive: "Oliva", cream: "Creme", dmg: "Verde", gray: "Cinza", mocha: "Mocha", stone: "Pedra", crimson: "Carmim", urban: "Urbano", sakura: "Sakura", night: "Noite em Tóquio", navy: "Marinho", ivory: "Marfim", black: "Preto" };
+function saveAuto() {
+  LAY.auto = { time: { on: $("au-time").checked, day: $("au-day").value, night: $("au-night").value, from: $("au-from").value || "19:00", to: $("au-to").value || "07:00" },
+               game: { on: $("au-game").checked, dota2: $("au-dota").value, cs2: $("au-cs").value } };
+  save();
+}
+for (const id of ["au-time", "au-day", "au-night", "au-from", "au-to", "au-game", "au-dota", "au-cs"]) $(id).onchange = saveAuto;
+
+function renderLayout() {
+  document.querySelectorAll("#orient button").forEach((b) => b.classList.toggle("on", b.dataset.o === O));
+  $("pv-portrait").classList.toggle("cur", O === "portrait"); $("pv-landscape").classList.toggle("cur", O === "landscape");
+  $("copy-other").textContent = O === "portrait" ? "Copiar de deitado" : "Copiar de em pé";
+  const nav = navOf(O), used = new Set(nav.flatMap((s) => s.views));
+  const hidden = BASE_VIEWS.filter((v) => !used.has(v));
+  const chip = (v) => `<div class="chip${v === "sys" ? " lock" : ""}" draggable="true" data-drag="view:${v}" data-view="${v}"><span>${VIEW_LABEL[v]}</span>${v === "sys" ? "<small>fixa</small>" : ""}</div>`;
+  $("nav").innerHTML = `<div class="nav" data-drop="sec" data-dir="h" style="display:contents">${nav.map((s) => `
+    <div class="sec" draggable="true" data-drag="sec:${esc(s.id)}">
+      <div class="sh"><span class="grip" title="arraste para mudar a ordem">::</span><input type="text" value="${esc(s.label)}" data-label="${esc(s.id)}" maxlength="14">
+        <button class="del" data-del="${esc(s.id)}" title="apagar seção (as abas vão para Escondidas)">×</button></div>
+      <div class="chips" data-drop="view" data-sec="${esc(s.id)}">${s.views.map(chip).join("")}</div></div>`).join("")}</div>
+    <button class="addsec" id="addsec">+ Nova seção</button>
+    <div class="sec hiddenzone"><div class="sh"><b style="color:var(--dim)">Escondidas</b></div>
+      <div class="chips" data-drop="view" data-sec="_hidden">${hidden.map(chip).join("") || '<div class="empty">Arraste aqui o que não usa</div>'}</div></div>`;
+  const dash = dashOf(O), maxSpan = COLS[O];
+  $("cards").dataset.drop = "card";
+  $("cards").innerHTML = dash.map((d) => `<div class="card${d.hidden ? " off" : ""}" draggable="true" data-drag="card:${d.id}">
+    <span class="grip">::</span><span>${CARD_LABEL[d.id]}</span>
+    <div class="seg">${[1, 2, 3, 4].filter((n) => n <= maxSpan).map((n) => `<button data-span="${d.id}:${n}" class="${Math.min(d.span, maxSpan) === n ? "on" : ""}">${n === maxSpan ? "inteiro" : n === 1 ? "1 col" : n + " col"}</button>`).join("")}</div>
+    <label class="chk"><input type="checkbox" data-show="${d.id}" ${d.hidden ? "" : "checked"}> mostrar</label></div>`).join("");
+  $("minigrid").style.gridTemplateColumns = `repeat(${maxSpan}, minmax(0, 1fr))`;
+  $("minigrid").innerHTML = dash.filter((d) => !d.hidden).map((d) => `<div style="grid-column:span ${Math.min(d.span, maxSpan)}">${CARD_LABEL[d.id]}</div>`).join("");
+  renderScreens();
+}
+function renderScreens() {
+  $("vtabs").innerHTML = SCREENS.map(([v, l]) => `<button data-scr="${v}" class="${v === SCR ? "on" : ""}">${l}</button>`).join("");
+  $("dash-ed").hidden = SCR !== "dash"; $("blk-ed").hidden = SCR === "dash";
+  if (SCR === "dash") return;
+  const list = blocksOf(O, SCR), by = Object.fromEntries(list.map((b, i) => [b.id, { ...b, i }]));
+  $("blk-ed").innerHTML = (NOTES[SCR] ? `<p class="hint">${NOTES[SCR]}</p>` : "") + BLOCKS[SCR].map((g, gi) => {
+    const items = g.items.map(([id, label, lock]) => ({ label, lock, ...by[id] })).sort((a, b) => a.i - b.i);
+    return `${g.title ? `<h4>${g.title}</h4>` : ""}<div class="cards" data-drop="blk${gi}">${items.map((b) => `<div class="card${b.hidden ? " off" : ""}" draggable="true" data-drag="blk${gi}:${b.id}">
+      <span class="grip">::</span><span>${b.label}</span>
+      ${g.wide ? `<label class="chk" title="Ocupa todas as colunas quando a tela tem mais de uma"><input type="checkbox" data-wide="${b.id}" ${b.wide ? "checked" : ""}> largura inteira</label>` : "<span></span>"}
+      ${b.lock ? '<small style="color:var(--faint)">sempre visível</small>' : `<label class="chk"><input type="checkbox" data-bshow="${b.id}" ${b.hidden ? "" : "checked"}> mostrar</label>`}</div>`).join("")}</div>`;
+  }).join("") + `<div class="row" style="margin-top:12px"><button id="blk-reset">Voltar esta tela ao padrão</button></div>`;
+}
+$("vtabs").onclick = (e) => { const b = e.target.closest("[data-scr]"); if (!b) return; SCR = b.dataset.scr; renderScreens(); preview(SCR); };
+$("blk-ed").addEventListener("change", (e) => {
+  const id = e.target.dataset.bshow || e.target.dataset.wide; if (!id) return;
+  const list = blocksOf(O, SCR), b = list.find((x) => x.id === id);
+  if (e.target.dataset.bshow) b.hidden = !e.target.checked; else b.wide = e.target.checked;
+  setBlocks(SCR, list);
+});
+$("blk-ed").addEventListener("click", (e) => { if (e.target.id === "blk-reset") setBlocks(SCR, null); });
+$("orient").onclick = (e) => { const b = e.target.closest("[data-o]"); if (!b) return; O = b.dataset.o; renderLayout(); preview(SCR); };
+$("copy-other").onclick = () => { const other = O === "portrait" ? "landscape" : "portrait"; LAY[O] = { nav: navOf(other), known: BASE_VIEWS, dash: dashOf(other).map((d) => ({ ...d, span: Math.min(d.span, COLS[O]) })), blocks: clone(LAY[other]?.blocks || {}) }; save(); renderLayout(); };
+$("reset").onclick = () => { if (!confirm(`Voltar o layout ${O === "portrait" ? "em pé" : "deitado"} ao padrão?`)) return; delete LAY[O]; save(); renderLayout(); };
+$("nav").addEventListener("change", (e) => {
+  const id = e.target.dataset.label; if (!id) return;
+  const nav = navOf(O); nav.find((s) => s.id === id).label = e.target.value.trim() || VIEW_LABEL[nav.find((s) => s.id === id).views[0]];
+  LAY[O] = { ...(LAY[O] || {}), nav, known: BASE_VIEWS }; save();
+});
+$("nav").addEventListener("click", (e) => {
+  if (e.target.id === "addsec") {
+    const name = prompt("Nome da seção (até 14 letras):", "Nova"); if (!name) return;
+    const nav = navOf(O), used = new Set(nav.flatMap((s) => s.views));
+    const first = BASE_VIEWS.find((v) => !used.has(v));
+    if (!first) return alert("Todas as abas já estão no menu. Tire uma de outra seção primeiro (arraste para Escondidas).");
+    nav.push({ id: "s" + Date.now().toString(36), label: name.slice(0, 14), views: [first] }); setNav(nav); return;
+  }
+  const del = e.target.dataset.del;
+  if (del) { const nav = navOf(O); if (nav.length <= 1) return; const s = nav.find((x) => x.id === del); if (s.views.includes("sys")) return alert("Esta seção tem Ajustes: mova Ajustes para outra seção antes."); setNav(nav.filter((x) => x.id !== del)); return; }
+  const chip = e.target.closest("[data-view]"); if (chip) preview(chip.dataset.view);
+});
+$("cards").addEventListener("click", (e) => {
+  const sp = e.target.dataset.span; if (!sp) return;
+  const [id, n] = sp.split(":"); const dash = dashOf(O); dash.find((d) => d.id === id).span = +n; setDash(dash); preview("dash");
+});
+$("cards").addEventListener("change", (e) => {
+  const id = e.target.dataset.show; if (!id) return;
+  const dash = dashOf(O); dash.find((d) => d.id === id).hidden = !e.target.checked; setDash(dash); preview("dash");
+});
+
+// ------------------------------------------------------------ hoje
+function dailyStatus(d) {
+  const parts = [];
+  if (d.city) parts.push(d.weather ? `Clima: ${d.weather.city}, ${d.weather.temp}° ${d.weather.desc}` : d.err?.weather ? "Clima: " + d.err.weather : "Clima: carregando…");
+  if (d.has_ics) parts.push(d.err?.calendar ? "Agenda: " + d.err.calendar : `Agenda: ${d.events.length} compromisso(s) hoje e amanhã`);
+  if (d.busy_only) parts.push("Atenção: esse link só mostra livre/ocupado, sem título nem link do Meet. Use o endereço secreto (abaixo).");
+  $("d-st").textContent = parts.join(" · ");
+}
+async function loadDaily() { try {
+  const [d, profs] = await Promise.all([send("daily.get"), send("audio.profiles").catch(() => [])]);
+  $("d-mprof").innerHTML = '<option value="">(sem perfil)</option>' + (profs || []).map((p) => `<option>${esc(p.name)}</option>`).join("");
+  $("d-mprof").value = d.meet_profile || ""; $("d-mauto").checked = d.meet_auto !== false; $("d-mopen").checked = !!d.meet_open;
+  $("d-city").value = d.city || ""; $("d-ics").placeholder = d.has_ics ? "agenda conectada (cole outro link para trocar)" : $("d-ics").placeholder; dailyStatus(d); } catch {} }
+$("d-save").onclick = async () => {
+  const p = { city: $("d-city").value.trim(), meet_auto: $("d-mauto").checked, meet_open: $("d-mopen").checked, meet_profile: $("d-mprof").value };
+  if ($("d-ics").value.trim() || $("d-ics").dataset.clear) p.ics = $("d-ics").value.trim();
+  status("saving", "Salvando…"); $("d-st").textContent = "Buscando…";
+  try { const d = await send("daily.set", p); $("d-ics").value = ""; dailyStatus(d); status("ok", "Conectado · tudo salvo"); }
+  catch (e) { $("d-st").textContent = "Erro: " + e.message; status("bad", "Erro ao salvar"); }
+};
+$("d-ics").addEventListener("input", () => { $("d-ics").dataset.clear = $("d-ics").value ? "" : "1"; });
+
+// ------------------------------------------------------------ steam
+function steamStatus(d) {
+  $("st-st").textContent = !d.has_key ? "Sem chave: só downloads" : d.err ? "Erro: " + d.err : d.friends ? `${d.friends.filter((f) => f.on).length} amigo(s) online de ${d.friends.length}` : "Buscando amigos…";
+}
+async function loadSteam() { try { const d = await send("steam.get"); if (d.has_key) $("st-key").placeholder = "chave salva (cole outra para trocar)"; steamStatus(d); } catch {} }
+$("st-save").onclick = async () => {
+  const key = $("st-key").value.trim();
+  if (!key && !confirm("Tirar a chave da Steam?")) return;
+  $("st-st").textContent = "Testando…";
+  try {
+    const r = await send("steam.set", { key }); $("st-key").value = "";
+    $("st-st").textContent = !r.has_key ? "Chave removida: só downloads" : r.err ? "Erro: " + r.err : `Funcionou: ${r.friends} amigo(s)`;
+  }
+  catch (e) { $("st-st").textContent = "Erro: " + e.message; }
+};
+
+// ------------------------------------------------------------ botões (deck)
+async function loadDeck() { try { DECK = (await send("deck.get")).deck; renderDeck(); } catch {} }
+function renderDeck() {
+  if (!DECK) return;
+  page = Math.min(page, DECK.pages.length - 1);
+  $("pages").dataset.drop = "page"; $("pages").dataset.dir = "h";
+  $("pages").innerHTML = DECK.pages.map((p, i) => `<button class="pg${i === page ? " on" : ""}" draggable="true" data-drag="page:${i}" data-i="${i}">${esc(p.name)}</button>`).join("");
+  const pg = DECK.pages[page];
+  $("pg-name").value = pg.name;
+  $("pg-auto").hidden = pg.auto !== "shortcuts";
+  $("btns").dataset.drop = "btn";
+  $("btns").innerHTML = pg.auto === "shortcuts" ? "" : (pg.buttons || []).map((b, i) => `<div class="dbtn" draggable="true" data-drag="btn:${i}" style="--c:${esc(b.color || "transparent")}">
+    <b>${esc(b.icon || "")}</b><span>${esc(b.label)}</span></div>`).join("") || '<div class="empty">Página vazia</div>';
+}
+$("pages").addEventListener("click", (e) => { const b = e.target.closest(".pg"); if (!b) return; page = +b.dataset.i; renderDeck(); preview("deck"); });
+$("pg-name").addEventListener("change", () => { DECK.pages[page].name = $("pg-name").value.trim().slice(0, 24) || "Página"; saveDeck(); });
+function moveBtnToPage(i, to) {
+  const target = DECK.pages[to];
+  if (target.auto === "shortcuts") return alert("Essa página é automática (mostra seus atalhos); não recebe botões.");
+  const [b] = DECK.pages[page].buttons.splice(i, 1); (target.buttons = target.buttons || []).push(b); saveDeck();
+}
+let deckT = null;
+function saveDeck() {
+  renderDeck(); status("saving", "Salvando botões…");
+  clearTimeout(deckT);
+  deckT = setTimeout(async () => {
+    try { DECK = (await send("deck.save", { deck: DECK })).deck; renderDeck(); status("ok", "Conectado · tudo salvo"); }
+    catch (e) { status("bad", "Erro ao salvar botões: " + e.message); loadDeck(); }
+  }, 300);
+}
+
+// ------------------------------------------------------------ prévias (o próprio app em iframes)
+const PV = { portrait: [412, 860, 0.52], landscape: [1104, 405, 0.5] };
+function mountPreviews() {
+  for (const [o, [w, h, sc]] of Object.entries(PV)) {
+    const box = $("fr-" + o); if (box.firstChild) continue;
+    box.style.width = w * sc + "px"; box.style.height = h * sc + "px";
+    const f = document.createElement("iframe");
+    f.src = `/?preview=1#t=${encodeURIComponent(TOKEN)}`; f.width = w; f.height = h; f.style.transform = `scale(${sc})`;
+    f.title = "Prévia " + o; box.appendChild(f);
+  }
+}
+function preview(view) {
+  document.querySelectorAll(".frame iframe").forEach((f) => { try { f.contentWindow.postMessage({ pcc: "view", view }, location.origin); } catch {} });
+}
+
+connect();

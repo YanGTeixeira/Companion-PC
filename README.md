@@ -65,7 +65,7 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
   itens neutros, stack em x:53, dia/noite, Tormentor), Roshan e Aegis com um toque em *Roshan morreu* ou sozinhos
   quando o jogo manda o evento. Avisos com bipe e vibração (escolha quais pelo círculo de cada linha): timers 15 s antes,
   ultimate e BKB prontas, buyback disponível, vida baixa. Gráficos de last hits (com meta de 7/min) e GPM/XPM.
-  Os tempos são do patch 7.3x e ficam em `DOTA_TIMERS` no `index.html`.
+  Os tempos são do patch 7.3x e ficam em `DOTA_TIMERS` no `web/js/jogos.js`.
 - **CS2 (aba Jogando):** contagem da bomba plantada (e se dá para desarmar com ou sem kit), economia (dinheiro,
   equipamento, bônus de derrota, quanto terá se perder ou ganhar e sugestão de compra), rounds ganhos e perdidos
   com o motivo, seus abates/HS/dano por round, HS% e ADR. Depois de morrer continua mostrando os seus números.
@@ -151,8 +151,13 @@ os arquivos do celular) e `"downloads_dir"` (a pasta vigiada para o alerta de do
 
 | Caminho | O que é |
 |---|---|
-| `windows/server/companion_server.py` | Servidor (HTTP + WebSocket na porta 8770) |
-| `windows/server/web/` | App web (HTML/JS, PWA) |
+| `windows/server/companion_server.py` | Servidor (WebSocket na porta 8770), ações permitidas, voz, reunião, foco |
+| `windows/server/web_static.py` | Entrega os arquivos de `web/` (só os de dentro da pasta) e os links de download |
+| `windows/server/win_input.py` | Teclado e mouse virtuais e a janela em foco (Win32) |
+| `windows/server/web/index.html` | App web (PWA): só a marcação; o estilo e o código ficam em `css/` e `js/` |
+| `windows/server/web/css/` | `base` (fontes e cores), `temas`, `moldura` (barra, cartões, diálogos, deitado) e `telas` |
+| `windows/server/web/js/` | Um arquivo por parte do app (`core` = conexão, `layout`, `jogos`, `mixer`, `hoje`…), carregados em ordem pelo `index.html`; `main.js` por último |
+| `windows/server/tests/` | Testes (dentro de `windows/server`: `py -3 -m unittest`) |
 | `windows/server/tray.py` | Ícone na bandeja + painel de status com QR code |
 | `windows/server/pc_info.py` | Mídia tocando (GSMTC), volume, mixer e saída de áudio (pycaw), GPU (nvidia-smi), sensores (LHM) |
 | `windows/server/extras.py` | Deck, área de transferência, arquivos, tela do PC, vigia de downloads |
@@ -182,6 +187,11 @@ Duplo clique no ícone (ou abrir "Companion PC" no Menu Iniciar) mostra o
 painel com status, QR code, jogo atual e log; o menu tem Reiniciar e Sair. Só roda uma
 instância — abrir de novo apenas mostra o painel. Para depurar no terminal:
 `py -3 companion_server.py --console`.
+
+**Mexendo no código:** os arquivos de `web/js/` dividem o mesmo escopo global (não são módulos) e
+rodam na ordem do `index.html`; código que roda ao carregar só pode chamar funções de arquivos
+anteriores. Cada arquivo começa com `"use strict";`. Antes de instalar, rode os testes em
+`windows/server`: `py -3 -m unittest`.
 
 ## Segurança
 
