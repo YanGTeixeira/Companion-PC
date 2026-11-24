@@ -20,7 +20,7 @@ const COLS = { portrait: 2, landscape: 4 };
 const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["today", "Hoje"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
   ["mix", "Mixer"], ["mouse", "Mouse e teclado"], ["send", "Arquivos"], ["power", "Energia"], ["voz", "Voz"], ["sys", "Ajustes"]];
 const BLOCKS = {
-  play: [{ wide: 1, items: [["hero", "Jogo (capa, tempo e atalhos)"], ["perf", "Desempenho e FPS"], ["gsi", "Partida (CS2 / Dota 2)"], ["post", "Fim de partida (comparação)"], ["tact", "Timers do Dota / bomba e economia do CS"], ["dota", "Dota 2: draft e build"], ["graph", "Gráficos do Dota / rounds do CS"]] },
+  play: [{ wide: 1, items: [["hero", "Jogo (capa, tempo e atalhos)"], ["perf", "Desempenho e FPS"], ["gsi", "Partida (CS2 / Dota 2)"], ["post", "Fim de partida (comparação)"], ["agora", "Dota: próximo item, skill e talento"], ["tact", "Timers do Dota / bomba e economia do CS"], ["dota", "Dota 2: draft e build"], ["graph", "Gráficos do Dota / rounds do CS"]] },
     { title: "Atalhos do jogo", items: [["a-mic", "MIC (microfone do PC)"], ["a-dmute", "Discord mudo"], ["a-ddeaf", "Discord surdo"], ["a-shot", "Print F12"], ["a-clip", "Clipe 30 s (Game Bar)"]] }],
   meet: [{ wide: 1, items: [["head", "Título, pessoas e tempo"], ["btns", "Botões"]] },
     { title: "Botões da reunião", items: [["m-mic", "Microfone"], ["m-cam", "Câmera"], ["m-share", "Compartilhar tela"], ["m-hand", "Levantar a mão"],

@@ -39,9 +39,12 @@ function dotaShown() {
 // chamado pelo GSI (jogos.js): draft novo limpa os heróis marcados; herói escolhido abre a build dele
 function dotaGsi(d) {
   if (!d || d.g !== "dota2") return;
-  const st = d.raw_state;
-  if (st === "DOTA_GAMERULES_STATE_HERO_SELECTION" && dota.gsiState && dota.gsiState !== st) {
-    dota.en = []; dota.al = []; dota.mode = "draft"; dota.draft = null; dotaSave(); dotaFetch();
+  const st = d.menu ? "menu" : d.raw_state;
+  // escolha de heróis começou: vai para o draft; limpa os inimigos marcados só se veio de outra fase
+  // (abrir o app no meio do draft não apaga o que já foi marcado)
+  if (st === "DOTA_GAMERULES_STATE_HERO_SELECTION" && dota.gsiState !== st) {
+    if (dota.gsiState !== null) { dota.en = []; dota.al = []; }
+    dota.mode = "draft"; dota.pick = null; dota.draft = null; dotaSave(); dotaFetch();
   }
   dota.gsiState = st;
   if (d.hero_id && d.hero_id !== dota.gsiHero) {
@@ -92,21 +95,25 @@ async function dotaFetch() {
       if (seq === dota.seq) dota.build = r;
     }
   } catch (e) { if (seq === dota.seq) dota.err = e.message === "offline" ? "Sem conexão com o PC" : e.message; }
-  if (seq === dota.seq) { dota.busy = false; dotaRender(); }
+  if (seq === dota.seq) { dota.busy = false; dotaRender(); if (typeof renderGsi === "function") renderGsi(); }
 }
 
 function dotaRender() {
   const ui = $("dota-ui"); if (!ui) return;
   const chip = (attr, v, label, on) => `<button class="chip2${on ? " on" : ""}" data-${attr}="${v}">${esc(label)}</button>`;
-  let h = `<h3><span>Dota 2</span><span class="chips" style="flex:none">${[["plan", "Fila"], ["draft", "Draft"], ["build", "Build"]].map(([m, l]) => chip("dm", m, l, dota.mode === m)).join("")}</span></h3>
-    <div class="chips dpos${dota.pos ? "" : " ask"}">${DOTA_POS.map(([p, l]) => chip("dp", p, l, dota.pos === p)).join("")}</div>
+  let h = `<div class="dleft"><h3><span>Dota 2</span><span class="chips" style="flex:none">${[["plan", "Fila"], ["draft", "Draft"], ["build", "Build"]].map(([m, l]) => chip("dm", m, l, dota.mode === m)).join("")}</span></h3>
+    <div class="chips dpos dset${dota.pos ? "" : " ask"}">${DOTA_POS.map(([p, l]) => chip("dp", p, l, dota.pos === p)).join("")}</div>
     ${dota.pos ? "" : `<div class="dnote warn">Qual posição você vai jogar? Escolha aqui (vale até a partida acabar).</div>`}
-    <div class="dbar"><button class="chip2${dota.turbo ? " on" : ""}" data-dx="turbo">Turbo</button><select class="sel" id="dota-br">${DOTA_BR.map(([v, l]) => `<option value="${v}"${dota.br === v ? " selected" : ""}>${l}</option>`).join("")}</select>
+    <div class="dbar dset"><button class="chip2${dota.turbo ? " on" : ""}" data-dx="turbo">Turbo</button><select class="sel" id="dota-br">${DOTA_BR.map(([v, l]) => `<option value="${v}"${dota.br === v ? " selected" : ""}>${l}</option>`).join("")}</select>
       <span class="sub">${dota.busy ? "carregando…" : esc(dotaBrNote())}</span></div>`;
-  if (dota.pick) h += dotaPicker();
-  else if (!dota.heroes) h += `<div class="empty">${esc(dota.err || "Carregando heróis…")}</div>`;
-  else h += dota.mode === "plan" ? dotaPlanHtml() : dota.mode === "draft" ? dotaDraftHtml() : dotaBuildHtml();
+  // entradas (abas, posição, inimigos, preferidos) à esquerda e resultados à direita; empilha quando é estreito
+  let body = dota.pick ? dotaPicker() : !dota.heroes ? `<div class="empty">${esc(dota.err || "Carregando heróis…")}</div>`
+    : dota.mode === "plan" ? dotaPlanHtml() : dota.mode === "draft" ? dotaDraftHtml() : dotaBuildHtml();
+  const cut = body.indexOf(SPLIT_MARK);
+  const two = cut >= 0 && !dota.pick;
+  h += two ? body.slice(0, cut) + `</div><div class="dright">${body.slice(cut + SPLIT_MARK.length)}</div>` : `</div><div class="dright">${body.replace(SPLIT_MARK, "")}</div>`;
   ui.innerHTML = h;
+  ui.classList.toggle("dtwo", two);
   const f = $("dota-q"); if (f && dota.pick) { f.value = dota.q; if (!f.dataset.touched) f.focus({ preventScroll: true }); }
 }
 function dotaBrNote() {
@@ -120,9 +127,10 @@ function dotaSlots(side, n, label) {
     return `<button class="dslot${id ? " on" : ""}" data-slot="${side}:${i}">${id ? esc(heroName(id)) : "+"}</button>`;
   }).join("")}</div>`;
 }
+const SPLIT_MARK = "<!--dsplit-->";
 function dotaDraftHtml() {
   let h = dotaSlots("en", 5, "Inimigos") + dotaSlots("al", 4, "Aliados") +
-    `<div class="dbar"><button class="chip2${dota.onlyMine ? " on" : ""}" data-dx="mine">Só os que eu jogo</button><button class="chip2" data-dx="clear">Limpar</button></div>`;
+    `<div class="dbar"><button class="chip2${dota.onlyMine ? " on" : ""}" data-dx="mine">Só os que eu jogo</button><button class="chip2" data-dx="clear">Limpar</button></div>` + SPLIT_MARK;
   if (dota.err) return h + `<div class="empty">${esc(dota.err)}</div>`;
   const r = dota.draft; if (!r) return h + `<div class="empty">${dota.busy ? "Calculando…" : ""}</div>`;
   let list = r.list || [];
@@ -151,7 +159,7 @@ function dotaPlanHtml() {
   let h = `<div class="dnote">Escolha enquanto está na fila: a posição acima e os heróis que quer jogar. O draft e a build já abrem com isso, e tudo zera quando a partida termina.</div>
     <h4 class="dh">Heróis preferidos <small>(até 6)</small></h4>
     <div class="dfav">${dota.fav.map((id) => `<button class="chip2 on" data-fx="${id}">${esc(heroName(id))} ×</button>`).join("")}
-      ${dota.fav.length < 6 ? `<button class="chip2 add" data-dx="fav">+ Adicionar</button>` : ""}</div>`;
+      ${dota.fav.length < 6 ? `<button class="chip2 add" data-dx="fav">+ Adicionar</button>` : ""}</div>` + SPLIT_MARK;
   if (dota.err) return h + `<div class="empty">${esc(dota.err)}</div>`;
   const r = dota.draft;
   if (!dota.fav.length) return h + `<div class="empty">Com preferidos, aparece aqui como cada um vai na posição e quem banir contra eles.</div>`;
@@ -256,4 +264,86 @@ $("dota-ui").addEventListener("input", (e) => {
 $("dota-ui").addEventListener("change", (e) => {
   if (e.target.id !== "dota-br") return;
   dota.br = e.target.value; dota.draft = null; dota.build = null; dotaSave(); dotaFetch();
+});
+
+// ---------------------------------------------------------------- "Agora": o que fazer em seguida (estratégia e partida)
+// Cruza a build com o que o GSI diz que você tem (inventário, mochila, esconderijo), seu ouro, nível e skills.
+prefs.dotaBuy = store.get("dotaBuy", true);
+function nowBuild(d) {
+  const b = dota.build;
+  return b && d?.hero_id && b.hero === d.hero_id ? b : null;
+}
+// itens na ordem em que costumam sair; feitos = você tem, ou (botas/primeiros itens) já passou dessa fase
+function nextItems(d, b) {
+  const inv = new Set(d.inv || []), has = (x) => x.k && inv.has(x.k);
+  const min = (dotaClock(d) || 0) / 60;
+  const coreHave = b.core.some(has);
+  const bootsDone = b.boots.some(has) || inv.has("item_travel_boots") || inv.has("item_travel_boots_2");
+  const seq = [...(b.boots[0] ? [{ ...b.boots[0], boot: true }] : []), ...b.early.map((x) => ({ ...x, early: true })), ...b.core]
+    .sort((a, c) => a.min - c.min);
+  return seq.map((x) => ({ ...x, done: has(x) || (x.boot && bootsDone) || (x.early && (coreHave || min > 20)) }));
+}
+function nextSkill(d, b) {
+  const L = d.level || 0, lv = Object.fromEntries((d.abilities || []).map((a) => [a.k, a.lvl || 0]));
+  const name = (k) => b.anames?.[k] || k;
+  const ult = (d.abilities || []).find((a) => a.ult);
+  if (ult && ((L >= 6 && ult.lvl < 1) || (L >= 12 && ult.lvl < 2) || (L >= 18 && ult.lvl < 3))) return { k: ult.k, name: name(ult.k), to: ult.lvl + 1, ult: true };
+  for (const sk of b.skills) {
+    const cur = lv[sk.k]; if (cur == null || sk.ult || sk.k === ult?.k) continue;   // ultimate só no 6/12/18 (acima)
+    if (cur < 4 && L >= 2 * cur + 1) return { k: sk.k, name: sk.name, to: cur + 1 };
+  }
+  return null;
+}
+function nextTalent(d, b) {
+  const L = d.level || 0, tal = d.tal || [];
+  for (let i = 0; i < 4; i++) {
+    const t = b.talents.find((x) => x.lvl === [10, 15, 20, 25][i]); if (!t) continue;
+    const taken = tal[2 * i] || tal[2 * i + 1];
+    if (taken) continue;
+    return { ...t, ready: L >= t.lvl };
+  }
+  return null;
+}
+function dotaNowHtml(d, ph) {
+  if (!d?.hero_id) return `<h3><span>Agora</span></h3><div class="sub">Escolha o herói: a build aparece aqui.</div>`;
+  const b = nowBuild(d);
+  if (!b) return `<h3><span>Agora</span></h3><div class="sub">${dota.err ? esc(dota.err) : "Carregando a build de " + esc(d.hero) + "…"}</div>`;
+  const inv = new Set(d.inv || []), gold = d.gold ?? 0;
+  if (ph === "strat") {
+    const ultK = (d.abilities || []).find((a) => a.ult)?.k;
+    const first = b.skills.find((x) => !x.ult && x.k !== ultK);
+    return `<h3><span>Compre agora</span><span>ouro ${gold}</span></h3>
+      <div class="nlist">${b.start.map((x) => `<div class="nrow${inv.has(x.k) ? " ok" : ""}"><span>${inv.has(x.k) ? "✓" : "·"} ${x.q > 1 ? x.q + "× " : ""}${esc(x.name)}</span><span>${x.c * (x.q || 1)}</span></div>`).join("")}</div>
+      ${first ? `<div class="nsk">Primeiro ponto: <b>${esc(first.name)}</b></div>` : ""}
+      ${b.vs?.length ? `<div class="dvs">${b.vs.map((v) => `<span class="chip3 ${v.adv > 0 ? "up" : v.adv < 0 ? "dn" : ""}">vs ${esc(v.n)} ${v.adv == null ? "–" : sgn(v.adv)}</span>`).join("")}</div>` : ""}`;
+  }
+  const seq = nextItems(d, b), todo = seq.filter((x) => !x.done), nx = todo[0];
+  const min = Math.floor((dotaClock(d) || 0) / 60);
+  let h = `<h3><span>Agora</span><button class="btn sm" data-nb="buy" style="padding:0 8px">${prefs.dotaBuy ? "aviso de compra: sim" : "aviso de compra: não"}</button></h3>`;
+  if (nx) {
+    const left = Math.max(0, nx.c - gold), late = min - nx.min;
+    h += `<div class="nitem${left ? "" : " can"}"><div class="nrow"><b>${esc(nx.name)}</b><span>${nx.c}</span></div>
+      <div class="bar"><i style="width:${nx.c ? Math.min(100, (gold / nx.c) * 100) : 100}%"></i></div>
+      <div class="nrow"><small>${left ? `faltam ${left} de ouro` : "dá para comprar agora"}</small><small>${late > 2 ? `costuma sair aos ${nx.min} min · ${late} min atrasado` : late < -2 ? `costuma sair aos ${nx.min} min · adiantado` : `no tempo (~${nx.min} min)`}</small></div></div>`;
+    if (todo.length > 1) h += `<div class="nafter">depois: ${todo.slice(1, 4).map((x) => esc(x.name)).join(" → ")}</div>`;
+  } else h += `<div class="sub">Build principal completa. Situacionais: ${b.situ.slice(0, 3).map((x) => esc(x.name)).join(", ") || "–"}.</div>`;
+  const sk = nextSkill(d, b), tl = nextTalent(d, b);
+  if (sk) h += `<div class="nsk">Próximo ponto: <b>${esc(sk.name)}</b> (nível ${sk.to})${sk.ult ? " · ultimate" : ""}</div>`;
+  if (tl) h += `<div class="nsk${tl.ready ? " can" : ""}">${tl.ready ? "Talento disponível" : "Talento no " + tl.lvl}: <b>${esc(tl.name)}</b> <small>(${tl.pct}%)</small></div>`;
+  return h;
+}
+// aviso quando dá para comprar o próximo item (uma vez por item)
+const buyFired = new Set();
+function dotaBuyAlert(d) {
+  if (!prefs.dotaBuy || PREVIEW || !d || d.raw_state !== "DOTA_GAMERULES_STATE_GAME_IN_PROGRESS") return;
+  const b = nowBuild(d); if (!b) return;
+  const nx = nextItems(d, b).find((x) => !x.done);
+  if (!nx || (d.gold ?? 0) < nx.c) return;
+  const key = d.hero_id + ":" + nx.k;
+  if (buyFired.has(key)) return;
+  buyFired.add(key); alarm(`Dá para comprar ${nx.name}`);
+}
+document.querySelector(".play").addEventListener("click", (e) => {
+  if (!e.target.closest("[data-nb]")) return;
+  prefs.dotaBuy = !prefs.dotaBuy; store.set("dotaBuy", prefs.dotaBuy); buzz(8); renderGsi();
 });

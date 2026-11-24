@@ -141,11 +141,20 @@ const vis = (v) => shown.has(v);
 function showView(name, temp) {
   if (!VIEWS.includes(name)) name = VIEWS.includes("dash") ? "dash" : VIEWS[0];
   const sec = secOf(name), views = SECTIONS[sec], multi = wideMQ.matches && views.length > 1;
-  shown = new Set(multi ? views.map(([n]) => n) : [name]);
-  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", shown.has(t.id.slice(2))));
+  // tela larga com jogo/reunião aberto: a aba ao vivo fica larga à esquerda + uma aba comum ao lado
+  // (antes entravam todas sem largura definida e as ao vivo ficavam espremidas)
+  let list = views.map(([n]) => n), cols = SPLIT[sec] || "";
+  const live = list.filter((n) => LIVE[n]);
+  if (multi && live.length) {
+    const other = !LIVE[name] && list.includes(name) ? name : list.includes(lastView[sec]) && !LIVE[lastView[sec]] ? lastView[sec] : list.find((n) => !LIVE[n]);
+    list = [...live, other].filter(Boolean);
+    cols = list.map((n) => (LIVE[n] ? "minmax(0,1.9fr)" : "minmax(0,1fr)")).join(" ");
+  }
+  shown = new Set(multi ? list : [name]);
+  document.querySelectorAll(".tab").forEach((t) => { t.classList.toggle("on", shown.has(t.id.slice(2))); t.style.order = multi && LIVE[t.id.slice(2)] ? -1 : ""; });
   document.querySelectorAll("nav .nb").forEach((b) => b.classList.toggle("on", b.dataset.sec === sec));
   MAIN.classList.toggle("multi", multi);
-  MAIN.style.gridTemplateColumns = multi ? SPLIT[sec] || "" : "";
+  MAIN.style.gridTemplateColumns = multi ? cols : "";
   const sub = $("subtabs"), showSub = !multi && views.length > 1;
   sub.classList.toggle("hidden", !showSub);
   sub.innerHTML = showSub ? views.map(([n, l]) => `<button role="tab" data-view="${n}" aria-selected="${n === name}"${n === name ? ' class="on"' : ""}>${l}</button>`).join("") : "";

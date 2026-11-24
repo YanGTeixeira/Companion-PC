@@ -11,6 +11,7 @@ Tudo fica em cache no disco (horas/dias): as estatísticas mudam devagar e o STR
 """
 import json
 import logging
+import re
 import time
 from pathlib import Path
 
@@ -153,6 +154,44 @@ def ban_suggestions(prefer, pos_stats, mu, heroes, top=5, min_pick=0.03):
     return out[:top]
 
 
+def talent_pt(template, english):
+    """Talento da Valve em PT-BR tem os números como {s:valor}; os números vêm do texto em inglês do STRATZ.
+
+    "+{s:bonus_duration}s de duração para Ataque Fantasma" + "+0.8s Phantom Strike Duration" -> "+0,8s de duração ..."
+    """
+    holes = re.findall(r"\{s:[^}]+\}", template or "")
+    if not template:
+        return english
+    if not holes:
+        return template
+    nums = re.findall(r"\d+(?:\.\d+)?", english or "")
+    if len(nums) != len(holes):
+        return english or template
+    for h, n in zip(holes, nums):
+        template = template.replace(h, n.replace(".", ","), 1)
+    return template
+
+
+def localize(build, loc):
+    """Troca os nomes da build pelos do jogo em português (lista oficial da Valve). Sem a lista, fica em inglês."""
+    items, abil = (loc or {}).get("items") or {}, (loc or {}).get("abil") or {}
+    for key in ("start", "boots", "early", "core", "situ"):
+        for x in build.get(key) or []:
+            pt = items.get(x.get("id")) or items.get(str(x.get("id")))
+            if pt:
+                x["name"] = pt
+    for x in build.get("skills") or []:
+        pt = abil.get(x.get("id")) or abil.get(str(x.get("id")))
+        if pt:
+            x["name"] = pt
+    for t in build.get("talents") or []:
+        for f, fid in (("name", "id"), ("alt", "alt_id")):
+            pt = abil.get(t.get(fid)) or abil.get(str(t.get(fid)))
+            if pt and t.get(f):
+                t[f] = talent_pt(pt, t[f])
+    return build
+
+
 def hero_positions(pos_stats, hero):
     """{pos: fração das partidas do herói} na faixa."""
     got = {int(p): (rows.get(hero) or rows.get(str(hero)) or [0, 0])[0] for p, rows in pos_stats.items()}
@@ -163,6 +202,12 @@ def hero_positions(pos_stats, hero):
 def _item(items, iid):
     it = items.get(iid) or items.get(str(iid)) or {}
     return it.get("n") or f"item {iid}", it.get("c") or 0
+
+
+def _irow(items, iid, **kw):
+    """Linha de item para o celular: nome, id, nome interno do jogo (igual ao do GSI, ex.: item_bfury) e preço."""
+    it = items.get(iid) or items.get(str(iid)) or {}
+    return {"name": it.get("n") or f"item {iid}", "id": iid, "k": it.get("k"), "c": it.get("c") or 0, **kw}
 
 
 def make_build(raw, items, total):
@@ -177,7 +222,7 @@ def make_build(raw, items, total):
             s["first"] = max(s["first"], r["matchCount"])
         s["q"] = max(s["q"], (r.get("instance") or 0) + 1 if r["matchCount"] >= 0.4 * max(s["first"], 1) else 0)
     first_n = max([s["first"] for s in start.values()] or [1])
-    start_out = sorted(({"name": _item(items, i)[0], "q": max(1, s["q"]), "pct": round(s["first"] / first_n * 100)}
+    start_out = sorted((_irow(items, i, q=max(1, s["q"]), pct=round(s["first"] / first_n * 100))
                         for i, s in start.items() if s["first"] >= 0.25 * first_n), key=lambda x: -x["pct"])[:8]
 
     boots_ids, boots = set(), []
@@ -185,8 +230,8 @@ def make_build(raw, items, total):
     for r in sorted(raw.get("boots") or [], key=lambda r: -r["matchCount"]):
         boots_ids.add(r["itemId"])
         if r["matchCount"] / bt >= 0.05 and len(boots) < 3:
-            boots.append({"name": _item(items, r["itemId"])[0], "min": round((r.get("timeAverage") or 0) / 60),
-                          "pct": round(r["matchCount"] / bt * 100), "wr": round((r.get("winAverage") or 0) * 100)})
+            boots.append(_irow(items, r["itemId"], min=round((r.get("timeAverage") or 0) / 60),
+                               pct=round(r["matchCount"] / bt * 100), wr=round((r.get("winAverage") or 0) * 100)))
 
     # as compras vêm de uma amostra maior que a contagem de partidas; quase todo mundo compra botas,
     # então a soma das botas é o melhor denominador para "% das partidas"
@@ -202,8 +247,8 @@ def make_build(raw, items, total):
     for iid, (n, wins, tsum) in agg.items():
         if iid in boots_ids or not n:
             continue
-        name, cost = _item(items, iid)
-        row = {"name": name, "min": round(tsum / n), "pct": round(n / total * 100), "wr": round(wins / n * 100)}
+        cost = _item(items, iid)[1]
+        row = _irow(items, iid, min=round(tsum / n), pct=round(n / total * 100), wr=round(wins / n * 100))
         share = n / total
         if cost >= 1800 and share >= 0.15:
             core.append(row)
@@ -222,7 +267,7 @@ def make_build(raw, items, total):
         if aid in names and r["matchCount"] > modal.get(aid, (0, 0))[1]:
             modal[aid] = (r["level"], r["matchCount"])
     # nível < 5: habilidade de um nível só (inata/passiva), não entra na ordem de maximizar
-    skills = [{"name": names[a]["name"], "max": lvl, "ult": names[a]["ult"]}
+    skills = [{"name": names[a]["name"], "id": a, "k": names[a].get("key"), "max": lvl, "ult": names[a]["ult"]}
               for a, (lvl, _) in sorted(modal.items(), key=lambda kv: kv[1][0]) if lvl >= 5]
 
     tal = {r["abilityId"]: r for r in raw.get("talent") or []}
@@ -235,9 +280,9 @@ def make_build(raw, items, total):
             continue
         c, best = max(counted, key=lambda x: x[0])
         other = next((t for t in pair if t is not best), None)
-        talents.append({"lvl": lvl, "name": best.get("name") or "?", "pct": round(c / tot * 100),
+        talents.append({"lvl": lvl, "name": best.get("name") or "?", "id": best["abilityId"], "pct": round(c / tot * 100),
                         "wr": round((tal[best["abilityId"]].get("winsAverage") or 0) * 100),
-                        "alt": (other or {}).get("name")})
+                        "alt": (other or {}).get("name"), "alt_id": (other or {}).get("abilityId")})
     return {"start": start_out, "boots": boots, "early": early[:5], "core": core[:8], "situ": situ[:6],
             "skills": skills, "talents": talents}
 
@@ -246,7 +291,8 @@ def make_build(raw, items, total):
 # STRATZ + cache
 # --------------------------------------------------------------------------
 HEROES_Q = "{ constants { heroes { id displayName shortName } } }"
-ITEMS_Q = "{ constants { items { id displayName stat { cost } } } }"
+ITEMS_Q = "{ constants { items { id displayName shortName stat { cost } } } }"
+VALVE_FEED = "https://www.dota2.com/datafeed/{}?language=brazilian"
 TURBO_POS_Q = "query($b: [RankBracket]) { heroStats { " + " ".join(
     f"p{p}: winWeek(gameModeIds: [TURBO], take: 1, bracketIds: $b, positionIds: [POSITION_{p}], groupBy: HERO_ID) "
     "{ heroId winCount matchCount }" for p in range(1, 6)) + " } }"
@@ -265,7 +311,7 @@ BUILD_Q = """query($h: Short!, $b: [RankBracketBasicEnum], $p: [MatchPlayerPosit
     talent(heroId: $h, bracketBasicIds: $b, positionIds: $p) { abilityId matchCount winsAverage }
     maxlvl: abilityMaxLevel(heroId: $h, bracketBasicIds: $b) { abilityId level matchCount position }
   }
-  constants { hero(id: $h) { abilities { slot abilityId ability { language { displayName } stat { isUltimate } } } talents { slot abilityId } } }
+  constants { hero(id: $h) { abilities { slot abilityId ability { name language { displayName } stat { isUltimate } } } talents { slot abilityId } } }
 }"""
 
 
@@ -318,10 +364,28 @@ class Draft:
         return {int(k): v for k, v in d.items()}
 
     def items(self):
-        d = self._get("items", "items", lambda: {
-            i["id"]: {"n": i.get("displayName") or "", "c": (i.get("stat") or {}).get("cost") or 0}
+        d = self._get("items2", "items", lambda: {
+            i["id"]: {"n": i.get("displayName") or "", "c": (i.get("stat") or {}).get("cost") or 0,
+                      "k": "item_" + i["shortName"] if i.get("shortName") else None}
             for i in self.sz().gql(ITEMS_Q)["constants"]["items"] if i.get("id")})
         return {int(k): v for k, v in d.items()}
+
+    def loc(self):
+        """Nomes em português do jogo (datafeed oficial do dota2.com): {"items": {id: nome}, "abil": {id: nome}}."""
+        def build():
+            out = {}
+            for feed, key in (("itemlist", "items"), ("abilitylist", "abil")):
+                d = dota_stats._http(VALVE_FEED.format(feed), headers={"User-Agent": "Mozilla/5.0"}, timeout=30) or {}
+                out[key] = {a["id"]: a["name_loc"] for a in ((d.get("result") or {}).get("data") or {}).get("itemabilities") or []
+                            if a.get("id") and a.get("name_loc")}
+            if not out.get("items"):
+                raise dota_stats.ApiError("lista da Valve vazia")
+            return out
+        try:
+            return self._get("loc-ptbr", "heroes", build)
+        except dota_stats.ApiError as e:
+            log.info("nomes em português indisponíveis (%s): ficam em inglês", e)
+            return {}
 
     def pos_stats(self, bracket, turbo=False):
         if turbo:
@@ -453,11 +517,17 @@ class Draft:
                     "maxlvl": maxlvl,
                     "abilities": [{"abilityId": a["abilityId"], "slot": a.get("slot"),
                                    "name": ((a.get("ability") or {}).get("language") or {}).get("displayName") or "?",
+                                   "key": (a.get("ability") or {}).get("name"),
                                    "ult": bool(((a.get("ability") or {}).get("stat") or {}).get("isUltimate"))}
                                   for a in h.get("abilities") or []],
                     "talents": [{"slot": t.get("slot"), "abilityId": t["abilityId"], "name": names.get(t["abilityId"])} for t in talents]}
-        raw = self._get(f"build-{bracket}-{hero}-{pos}", "build", fetch)
-        out = make_build(raw, self.items(), raw.get("total"))
+        raw = self._get(f"build2-{bracket}-{hero}-{pos}", "build", fetch)
+        loc = self.loc()
+        out = localize(make_build(raw, self.items(), raw.get("total")), loc)
+        # nomes de todas as habilidades do herói (o ultimate não entra na ordem de maximizar, mas o celular sugere)
+        la = loc.get("abil") or {}
+        out["anames"] = {a["key"]: la.get(a["abilityId"]) or la.get(str(a["abilityId"])) or a["name"]
+                         for a in raw.get("abilities") or [] if a.get("key")}
         games, wins = raw.get("total") or 0, raw.get("wins") or 0
         if turbo:
             turbo_times(out)

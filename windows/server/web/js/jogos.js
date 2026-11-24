@@ -54,6 +54,7 @@ function onGameState() {
     if (!vis("play") && !(state.meet?.inCall)) showView("play", true);
   }
   if (!g) playSeen = null;
+  if (!!g !== !!onGameState.was) { onGameState.was = !!g; if (typeof applyWake === "function") applyWake(); if (g && typeof idleStop === "function") idleStop(); }
   dotaPlace(dotaRunning());
   renderPlay();
 }
@@ -87,7 +88,7 @@ function renderPlayPerf(s) {
 }
 const clock = (s) => { if (s == null) return "–"; const neg = s < 0; s = Math.abs(Math.floor(s)); return (neg ? "-" : "") + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
 // ---------------------------------------------------------------- partida (Game State Integration de CS2 e Dota 2)
-const GSI_BOX = ["pl-gsi", "pl-tact", "pl-graph"];
+const GSI_BOX = ["pl-gsi", "pl-tact", "pl-graph", "pl-now"];
 function gsiFresh() {
   const g = state.games?.game, d = state.gsi, name = (g?.name || "").toLowerCase();
   const isCs = /counter-strike/.test(name), isDota = /dota 2/.test(name);
@@ -98,26 +99,40 @@ function setBox(id, h) {
   const box = $(id); box.classList.toggle("hidden", !h);
   if (box.innerHTML !== h) box.innerHTML = h;
 }
+// fases do Dota (cada uma com layout e cabeçalho próprios): menu/fila, escolha de heróis, estratégia, partida, fim
+function dotaPhase(d, isDota) {
+  if (!isDota) return null;
+  const st = d && d.g === "dota2" && !d.menu ? d.raw_state : null;
+  if (st === "DOTA_GAMERULES_STATE_HERO_SELECTION") return "draft";
+  if (DOTA_PREGAME.has(st)) return "strat";
+  if (st === "DOTA_GAMERULES_STATE_GAME_IN_PROGRESS") return "game";
+  if (st === "DOTA_GAMERULES_STATE_POST_GAME") return "post";
+  return "menu";
+}
+let gsiEver = false;
 function renderGsi() {
   const { d, isCs, isDota } = gsiFresh();
-  let h = ["", "", ""];
-  if (d && d.g === "cs2") h = d.menu ? [`<h3><span>CS2</span><span>menu</span></h3><div class="sub">Esperando uma partida…</div>`, "", ""] : [gsiCs(d), csTact(d), csRounds(d)];
-  else if (d && d.g === "dota2") h = d.menu || !d.hero ? [`<h3><span>Dota 2</span><span>${esc(d.state || "menu")}</span></h3><div class="sub">Esperando uma partida…</div>`, "", ""] : [gsiDota(d), dotaTimers(d), dotaGraph(d)];
-  else if (isDota) h[0] = `<h3><span>Partida</span></h3><div class="sub" style="white-space:normal">Para ver a partida aqui: na Steam, clique com o botão direito em Dota 2 > Propriedades > Opções de inicialização e escreva <b>-gamestateintegration</b>. Depois reabra o jogo.</div>`;
+  if (d && d.g === "dota2") gsiEver = true;
+  const ph = dotaPhase(d, isDota);
+  let h = ["", "", "", ""];
+  if (d && d.g === "cs2") h = d.menu ? [`<h3><span>CS2</span><span>menu</span></h3><div class="sub">Esperando uma partida…</div>`, "", "", ""] : [gsiCs(d), csTact(d), csRounds(d), ""];
+  else if (ph) {
+    if (d && d.g === "dota2") dotaGsi(d);
+    h[0] = dotaHead(d, ph);
+    if (ph === "game" || ph === "strat") { h[1] = dotaTimers(d); h[3] = dotaNowHtml(d, ph); }
+    if (ph === "game") h[2] = dotaGraph(d);
+  }
   else if (isCs) h[0] = `<h3><span>Partida</span></h3><div class="sub" style="white-space:normal">Entre numa partida para ver placar, economia e rounds aqui.</div>`;
   GSI_BOX.forEach((id, i) => setBox(id, h[i]));
   const play = $("pl-gsi").parentElement;
   play.classList.toggle("has-gsi", !!h[0]);
-  play.classList.toggle("match", !!(h[1] || h[2]));
-  // escolha de heróis / estratégia / antes da buzina: a build (card do Dota) sobe para logo abaixo da partida
-  play.classList.toggle("pregame", !!d && d.g === "dota2" && DOTA_PREGAME.has(d.raw_state));
-  if (state.post) $("pl-post").classList.toggle("hidden", play.classList.contains("match") || Date.now() / 1000 - state.post.t > 1800);
-  if (d && d.g === "dota2" && !d.menu) dotaAlerts(d);
+  play.classList.toggle("match", !!(h[1] || h[2]) || !!ph);
+  for (const p of ["menu", "draft", "strat", "game", "post"]) play.classList.toggle("ph-" + p, ph === p);
+  if (state.post) $("pl-post").classList.toggle("hidden", (ph ? !["menu", "post"].includes(ph) : play.classList.contains("match")) || Date.now() / 1000 - state.post.t > 1800);
   dotaPlace(isDota);
-  if (d && d.g === "dota2") dotaGsi(d);
 }
 
-const DOTA_PREGAME = new Set(["DOTA_GAMERULES_STATE_HERO_SELECTION", "DOTA_GAMERULES_STATE_STRATEGY_TIME", "DOTA_GAMERULES_STATE_TEAM_SHOWCASE",
+const DOTA_PREGAME = new Set(["DOTA_GAMERULES_STATE_STRATEGY_TIME", "DOTA_GAMERULES_STATE_TEAM_SHOWCASE",
   "DOTA_GAMERULES_STATE_WAIT_FOR_MAP_TO_LOAD", "DOTA_GAMERULES_STATE_PRE_GAME"]);
 
 // ---- histórico (aba Jogos)
@@ -230,7 +245,7 @@ function dotaRows(d) {
 }
 function dotaTimers(d) {
   const rows = dotaRows(d).slice(0, 8);
-  return `<h3><span>Timers · ${clock(dotaClock(d))}</span><button class="btn sm" data-dt="alerts" style="padding:0 8px">${prefs.dotaAlerts ? "avisos: sim" : "avisos: não"}</button></h3>
+  return `<h3><span>Timers</span><button class="btn sm" data-dt="alerts" style="padding:0 8px">${prefs.dotaAlerts ? "avisos: sim" : "avisos: não"}</button></h3>
     <div id="dt-rows">${rows.map((r) => ttRow(r)).join("")}</div>
     <div class="tbtns"><button class="btn sm" data-dt="rosh">Roshan morreu</button><button class="btn sm" data-dt="torm">Tormentor morreu</button>${d.marks?.rosh != null || d.marks?.torm != null ? '<button class="btn sm" data-dt="clear">Limpar</button>' : ""}</div>`;
 }
@@ -261,19 +276,25 @@ function dotaGraph(d) {
     ${svgChart([[gp, "l1"], [xp, "l3"]], xmax, gmax)}
     <div class="clg"><span><i></i>GPM</span><span><i class="h"></i>XPM</span><span>ouro agora: ${d.gold ?? "–"}</span></div>`;
 }
-function gsiDota(d) {
-  const hp = d.hpmax ? Math.round((d.hp / d.hpmax) * 100) : 0, mp = d.manamax ? Math.round((d.mana / d.manamax) * 100) : 0;
+function dotaHead(d, ph) {
+  const head = (tag, title, sub) => `<div class="phh"><b class="phn">${tag}</b><span class="pht">${title}</span></div>${sub ? `<div class="phs">${sub}</div>` : ""}`;
+  if (ph === "menu") return head("FILA", "Prepare a próxima partida", gsiEver ? "Posição, heróis preferidos e Turbo no card abaixo. Muda sozinho quando a escolha de heróis começar."
+    : `Para o celular acompanhar as fases: Steam > Dota 2 > Propriedades > Opções de inicialização: <b>-gamestateintegration</b> (e reabra o jogo).`);
+  if (ph === "draft") return head("DRAFT", "Escolha de heróis", "Marque os inimigos conforme aparecem: as sugestões mudam na hora.");
+  if (ph === "post") return head("FIM", d?.win ? (d.win === d.team ? "Vitória" : "Derrota") : "Partida encerrada", `Placar ${d?.rad ?? "–"} × ${d?.dire ?? "–"}. O relatório chega em alguns minutos.`);
+  const c = dotaClock(d), st = state.stats || {};
+  const perf = [st.fps?.fps != null ? st.fps.fps + " FPS" : "", st.ping?.ok ? st.ping.ms + " ms" : ""].filter(Boolean).join(" · ");
+  if (ph === "strat") return head("ESTRATÉGIA", `${esc(d.hero || "Escolha seu herói")}`, `Começa em <b id="dh-clock">${clock(c)}</b> · compre os itens iniciais abaixo`);
+  // partida: painel compacto (vida e mana você vê no jogo)
+  const dead = d.alive === false;
+  const bb = !d.buyback ? "" : d.bbcd ? `buyback em ${clock(d.bbcd)}` : (d.gold ?? 0) >= d.buyback ? `buyback: tem (${d.buyback})` : `buyback: falta ${d.buyback - (d.gold ?? 0)}`;
   const ult = (d.abilities || []).find((a) => a.ult);
-  return `<h3><span>${esc(d.hero)} · nível ${d.level ?? "–"}</span><span>${clock(dotaClock(d))} ${d.day === false ? "noite" : "dia"}${d.paused ? " · pausado" : ""}</span></h3>
-    <div class="gsc"><div><b>${d.rad ?? "–"}</b> <span class="vs">Radiant</span></div><span class="vs">${esc(d.state || "")}</span><div><span class="vs">Dire</span> <b>${d.dire ?? "–"}</b></div></div>
-    ${d.alive === false ? `<div class="dead">Morto · volta em ${d.respawn ?? "?"} s</div><div class="sub">Buyback: ${d.buyback ?? "–"} de ouro${d.bbcd ? ` · recarga ${d.bbcd}s` : (d.gold ?? 0) >= (d.buyback ?? 1e9) ? " · disponível" : " · falta ouro"}</div>`
-      : `<div class="row"><span>Vida</span><span>${d.hp ?? "–"} / ${d.hpmax ?? "–"}</span></div><div class="bar hpbar ${hp <= 30 ? "bad" : ""}"><i style="width:${hp}%"></i></div>
-    <div class="row"><span>Mana</span><span>${d.mana ?? "–"} / ${d.manamax ?? "–"}</span></div><div class="bar hpbar"><i style="width:${mp}%"></i></div>`}
-    <div class="kda"><div><b>${d.k ?? 0}</b><small>abates</small></div><div><b>${d.d ?? 0}</b><small>mortes</small></div><div><b>${d.a ?? 0}</b><small>assist.</small></div><div><b>${d.lh ?? 0}<small style="font-size:14px">/${d.dn ?? 0}</small></b><small>LH / DN</small></div></div>
-    <div class="row"><span>Ouro</span><span>${d.gold ?? "–"} · ${d.gpm ?? "–"} GPM · ${d.xpm ?? "–"} XPM</span></div>
-    ${ult ? `<div class="row"><span>Ultimate</span><span>${!ult.lvl ? "não aprendida" : ult.cd ? ult.cd + " s" : "pronta"}</span></div>` : ""}
-    ${d.alive !== false && d.buyback ? `<div class="row"><span>Buyback</span><span>${d.bbcd ? "recarga " + clock(d.bbcd) : (d.gold ?? 0) >= d.buyback ? "tem ouro (" + d.buyback + ")" : "falta " + (d.buyback - (d.gold ?? 0))}</span></div>` : ""}
-    ${d.items?.length ? `<div class="items">${d.items.map((it) => `<div class="${it.cd ? "cd" : ""}">${esc(it.name)}${it.cd ? ` ${it.cd}s` : it.charges ? ` x${it.charges}` : ""}</div>`).join("")}</div>` : ""}`;
+  return `<div class="hud"><span class="hclk"><b id="dh-clock">${clock(c)}</b> ${d.day === false ? "noite" : "dia"}${d.paused ? " · pausado" : ""}</span>
+      <span class="hsc">${d.rad ?? 0} <i>×</i> ${d.dire ?? 0}</span><span class="hperf">${perf}</span></div>
+    <div class="hud2"><span><b>${d.k ?? 0}/${d.d ?? 0}/${d.a ?? 0}</b><small>KDA</small></span><span><b>${d.lh ?? 0}/${d.dn ?? 0}</b><small>LH/DN</small></span>
+      <span><b>${d.gold ?? "–"}</b><small>ouro</small></span><span><b>${d.gpm ?? "–"}</b><small>GPM</small></span><span><b>${d.level ?? "–"}</b><small>nível</small></span></div>
+    ${dead ? `<div class="dead">Morto · volta em ${d.respawn ?? "?"} s</div>` : ""}
+    <div class="hud3">${ult ? `<span class="${ult.lvl && !ult.cd ? "up" : ""}">Ultimate: ${!ult.lvl ? "não aprendida" : ult.cd ? ult.cd + " s" : "pronta"}</span>` : ""}${bb ? `<span class="${dead && /tem/.test(bb) ? "up" : ""}">${bb}</span>` : ""}</div>`;
 }
 // avisos: bipe + vibração + aviso na tela, uma vez por acontecimento
 let dotaPrev = null; const dotaFired = new Set();
@@ -312,10 +333,15 @@ document.querySelector(".play").addEventListener("click", (e) => {
   else act("dota.mark", { what: k }, k === "rosh" ? "Roshan: marcado" : "Tormentor: marcado");
 });
 // relógio da partida e contagem da bomba andam no celular entre um dado e outro
+// os avisos rodam em qualquer tela do app (só a lista na tela precisa dela visível)
 setInterval(() => {
-  if (!vis("play")) return;
   const { d } = gsiFresh(); if (!d) return;
-  if (d.g === "dota2" && !d.menu) { const rows = dotaRows(d).slice(0, 8), el = $("dt-rows"); if (el) el.innerHTML = rows.map(ttRow).join(""); dotaAlerts(d); }
+  if (d.g === "dota2" && !d.menu) {
+    dotaAlerts(d); dotaBuyAlert(d);
+    if (!vis("play")) return;
+    const rows = dotaRows(d).slice(0, 8), el = $("dt-rows"); if (el) el.innerHTML = rows.map(ttRow).join("");
+    const ck = $("dh-clock"); if (ck) ck.textContent = clock(dotaClock(d));
+  }
 }, 1000);
 setInterval(() => {
   if (!vis("play")) return;

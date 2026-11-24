@@ -72,13 +72,15 @@ keepVid.innerHTML = '<source src="keepawake.webm" type="video/webm"><source src=
 keepVid.style.cssText = "position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1";
 document.body.appendChild(keepVid);
 async function applyWake() {
+  // jogando, a tela fica acesa mesmo com "manter tela ligada" desligado (os timers precisam da tela)
+  const want = prefs.wake || !!state.games?.game;
   const native = "wakeLock" in navigator && window.isSecureContext;
-  if (!native) { if (prefs.wake && document.visibilityState === "visible") keepVid.play().catch(() => {}); else keepVid.pause(); return; }
+  if (!native) { if (want && document.visibilityState === "visible") keepVid.play().catch(() => {}); else keepVid.pause(); return; }
   try {
-    if (prefs.wake && "wakeLock" in navigator && document.visibilityState === "visible" && !wakeLock) {
+    if (want && document.visibilityState === "visible" && !wakeLock) {
       wakeLock = await navigator.wakeLock.request("screen");
       wakeLock.addEventListener("release", () => (wakeLock = null));
-    } else if (!prefs.wake && wakeLock) { await wakeLock.release(); wakeLock = null; }
+    } else if (!want && wakeLock) { await wakeLock.release(); wakeLock = null; }
   } catch { /* sem HTTPS/localhost o Android não deixa */ }
 }
 function bindSwitch(id, key, onChange) {

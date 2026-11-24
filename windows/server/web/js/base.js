@@ -11,6 +11,8 @@ function idleList() {
   return [...list.filter(Boolean), "clock"];
 }
 function idleStart() {
+  // com um jogo aberto o celular é painel do jogo: não troca de tela sozinho
+  if (state.games?.game) { idleT = Date.now(); return; }
   if (idleOn || prefs.idleMode === "off" || !$("login").classList.contains("hidden") || !state.stats) return;
   if (document.querySelector(".overlay:not(.hidden)")) return;   // diálogo aberto
   idleOn = true; idleFrom = prefs.tab; idleI = -1; $("kbd").blur(); idleStep();

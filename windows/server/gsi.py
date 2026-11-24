@@ -147,12 +147,15 @@ def summarize_dota(d):
     for slot in [f"slot{i}" for i in range(6)] + ["neutral0"]:
         it = (d.get("items") or {}).get(slot) or {}
         if it.get("name") and it["name"] != "empty":
-            items.append({"name": _pretty(it["name"], "item_"), "cd": it.get("cooldown") or 0, "charges": it.get("charges"),
-                          "slot": slot})
+            items.append({"name": _pretty(it["name"], "item_"), "k": it["name"], "cd": it.get("cooldown") or 0,
+                          "charges": it.get("charges"), "slot": slot})
+    # tudo o que você tem (mochila, bolsa e esconderijo também): para marcar os itens da build já comprados
+    inv = sorted({it["name"] for slot, it in (d.get("items") or {}).items()
+                  if isinstance(it, dict) and it.get("name") and it["name"] != "empty"})
     abil = []
     for k, a in sorted((d.get("abilities") or {}).items()):
         if a.get("name") and not a["name"].startswith(("generic_hidden", "plus_")) and a.get("level", 0) >= 0:
-            abil.append({"name": _pretty(a["name"], _hero_prefix(he.get("name"))), "lvl": a.get("level"), "cd": a.get("cooldown") or 0,
+            abil.append({"name": _pretty(a["name"], _hero_prefix(he.get("name"))), "k": a["name"], "lvl": a.get("level"), "cd": a.get("cooldown") or 0,
                          "ult": bool(a.get("ultimate")), "ready": bool(a.get("can_cast"))})
     return {
         "g": "dota2", "state": DOTA_STATES.get(mp.get("game_state"), mp.get("game_state")), "raw_state": mp.get("game_state"),
@@ -163,7 +166,8 @@ def summarize_dota(d):
         "mana": he.get("mana"), "manamax": he.get("max_mana"), "buyback": he.get("buyback_cost"), "bbcd": he.get("buyback_cooldown"),
         "k": pl.get("kills"), "d": pl.get("deaths"), "a": pl.get("assists"), "lh": pl.get("last_hits"), "dn": pl.get("denies"),
         "gold": pl.get("gold"), "gpm": pl.get("gpm"), "xpm": pl.get("xpm"), "streak": pl.get("kill_streak"),
-        "items": items, "abilities": abil[:6],
+        "items": items, "abilities": abil[:6], "inv": inv,
+        "tal": [bool(he.get(f"talent_{i}")) for i in range(1, 9)],
     }
 
 

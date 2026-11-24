@@ -135,7 +135,7 @@ class BuildTest(unittest.TestCase):
         self.b = dd.make_build(RAW, ITEMS, total=800)
 
     def test_itens_iniciais(self):
-        self.assertEqual(self.b["start"], [{"name": "Tango", "q": 1, "pct": 100}, {"name": "Iron Branch", "q": 3, "pct": 95}])
+        self.assertEqual([(x["name"], x["q"], x["pct"], x["c"]) for x in self.b["start"]], [("Tango", 1, 100, 90), ("Iron Branch", 3, 95, 50)])
 
     def test_botas(self):
         self.assertEqual([(x["name"], x["min"], x["pct"]) for x in self.b["boots"]], [("Power Treads", 9, 90), ("Boots of Speed", 5, 10)])
@@ -149,7 +149,7 @@ class BuildTest(unittest.TestCase):
 
     def test_skills_e_talentos(self):
         self.assertEqual([(s["name"], s["max"]) for s in self.b["skills"]], [("Dagger", 7), ("Strike", 12), ("Coup", 18)])
-        self.assertEqual(self.b["talents"][0], {"lvl": 10, "name": "+5 Armadura", "pct": 70, "wr": 55, "alt": "+10 Dano"})
+        self.assertEqual(self.b["talents"][0], {"lvl": 10, "name": "+5 Armadura", "id": 101, "pct": 70, "wr": 55, "alt": "+10 Dano", "alt_id": 100})
         self.assertEqual(self.b["talents"][1]["pct"], 100)   # o outro lado nunca escolhido
         self.assertEqual(len(self.b["talents"]), 2)          # sem dados para 20 e 25
 
@@ -254,6 +254,30 @@ class TurboTest(unittest.TestCase):
         self.assertEqual(set(dd.BRACKET_RANKS), set(dd.BRACKETS))
 
 
+class PortuguesTest(unittest.TestCase):
+    def test_talento_com_numeros_do_ingles(self):
+        self.assertEqual(dd.talent_pt("+{s:bonus_duration}s de duração para Ataque Fantasma", "+0.8s Phantom Strike Duration"),
+                         "+0,8s de duração para Ataque Fantasma")
+        self.assertEqual(dd.talent_pt("Golpe triplo para Adaga Sufocante", "Triple Strike Stifling Dagger"), "Golpe triplo para Adaga Sufocante")
+        # números não batem: fica o inglês (melhor que um texto com buraco)
+        self.assertEqual(dd.talent_pt("+{s:a}/{s:b} de algo", "+10 Damage"), "+10 Damage")
+        self.assertEqual(dd.talent_pt(None, "+10 Damage"), "+10 Damage")
+
+    def test_build_em_portugues(self):
+        b = dd.make_build(RAW, {**ITEMS, 145: {"n": "Battle Fury", "c": 4100, "k": "item_bfury"}}, total=800)
+        dd.localize(b, {"items": {145: "Fúria de Batalha", "63": "Coturnos do Poder"}, "abil": {10: "Adaga", 100: "+{s:x} de Dano", 101: "+{s:x} de Armadura"}})
+        self.assertEqual(b["core"][0]["name"], "Fúria de Batalha")
+        self.assertEqual(b["core"][0]["k"], "item_bfury")   # nome interno continua (para cruzar com o GSI)
+        self.assertEqual(b["boots"][0]["name"], "Coturnos do Poder")
+        self.assertEqual(b["skills"][0]["name"], "Adaga")
+        self.assertEqual((b["talents"][0]["name"], b["talents"][0]["alt"]), ("+5 de Armadura", "+10 de Dano"))
+        self.assertEqual(b["skills"][1]["name"], "Strike")   # sem tradução: fica como veio
+
+    def test_sem_lista_da_valve_fica_em_ingles(self):
+        b = dd.localize(dd.make_build(RAW, ITEMS, 800), {})
+        self.assertEqual(b["core"][0]["name"], "Battle Fury")
+
+
 class PlanTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -292,6 +316,17 @@ class PlanTest(unittest.TestCase):
 
 
 class GsiHeroIdTest(unittest.TestCase):
+    def test_inventario_completo_habilidades_e_talentos(self):
+        s = gsi.summarize_dota({"map": {"game_state": "DOTA_GAMERULES_STATE_GAME_IN_PROGRESS"},
+                                "hero": {"id": 44, "name": "npc_dota_hero_phantom_assassin", "talent_1": True, "talent_4": False},
+                                "items": {"slot0": {"name": "item_bfury"}, "slot1": {"name": "empty"}, "slot6": {"name": "item_magic_wand"},
+                                          "stash0": {"name": "item_ogre_axe"}, "neutral0": {"name": "empty"}},
+                                "abilities": {"ability0": {"name": "phantom_assassin_stifling_dagger", "level": 2}}})
+        self.assertEqual(s["inv"], ["item_bfury", "item_magic_wand", "item_ogre_axe"])
+        self.assertEqual([i["k"] for i in s["items"]], ["item_bfury"])   # na tela: só os 6 slots + neutro
+        self.assertEqual(s["abilities"][0]["k"], "phantom_assassin_stifling_dagger")
+        self.assertEqual(s["tal"], [True] + [False] * 7)
+
     def test_id_do_heroi_vai_para_o_celular(self):
         s = gsi.summarize_dota({"map": {"game_state": "DOTA_GAMERULES_STATE_STRATEGY_TIME"},
                                 "hero": {"id": 44, "name": "npc_dota_hero_phantom_assassin"}})

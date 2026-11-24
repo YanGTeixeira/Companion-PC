@@ -390,8 +390,123 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .dbans small { color: var(--p3); }
 .dbans small.dn { color: var(--alert); }
 .dfrow { width: 100%; text-align: left; }
-/* antes da partida começar (escolha de heróis, estratégia, pré-jogo): partida > Dota (draft/build) > resto */
-.play.pregame .pgsi { order: 3; }
-.play.pregame #pl-gsi { order: 1; }
-.play.pregame #pl-dota { order: 2; }
-.play.pregame .pperf { order: 4; }
+/* ---- Dota: uma tela para cada fase (jogos.js: dotaPhase) ---- */
+/* ordem no celular em pé */
+.play[class*="ph-"] #pl-gsi { order: 1; }
+.play.ph-menu #pl-dota, .play.ph-draft #pl-dota { order: 2; }
+.play.ph-menu #pl-post, .play.ph-post #pl-post { order: 2; }
+.play.ph-strat #pl-now { order: 2; } .play.ph-strat #pl-dota { order: 3; } .play.ph-strat #pl-tact { order: 4; }
+.play.ph-game #pl-now { order: 2; } .play.ph-game #pl-tact { order: 3; } .play.ph-game #pl-dota { order: 4; } .play.ph-game #pl-graph { order: 5; }
+.play[class*="ph-"] .pperf { order: 9; }
+.play.ph-post #pl-dota { order: 3; }
+
+/* cabeçalho da fase: cada uma com um visual */
+.phh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.phn { font: 20px/1 var(--display); letter-spacing: .08em; padding: 4px 9px 3px; border: 1px solid currentColor; border-radius: var(--r); }
+.pht { font: 20px/1.1 var(--display); color: var(--p); min-width: 0; }
+.phs { color: var(--p2); font-size: 13px; margin-top: 6px; white-space: normal; }
+.play.ph-menu #pl-gsi { border-style: dashed; }
+.play.ph-menu .phn { color: var(--p2); }
+.play.ph-draft #pl-gsi { background: var(--on); color: var(--onfg); border-color: var(--p); text-shadow: none; }
+.play.ph-draft #pl-gsi .pht, .play.ph-draft #pl-gsi .phs { color: var(--onfg); }
+.play.ph-draft #pl-dota { border-color: var(--hl); box-shadow: 0 0 0 1px var(--hl) inset; }
+.play.ph-strat #pl-gsi { border-left: 6px solid var(--hl); }
+.play.ph-strat .phn { color: var(--hl); }
+.play.ph-strat #pl-now { border-color: var(--hl); }
+.play.ph-strat .phs b { font: 22px/1 var(--display); color: var(--p); }
+.play.ph-post .phn { color: var(--p); }
+
+/* partida: painel compacto */
+.hud { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.hud .hclk { color: var(--p2); font-size: 14px; }
+.hud .hclk b { font: 34px/1 var(--display); color: var(--p); font-weight: 400; }
+.hud .hsc { font: 22px/1 var(--display); } .hud .hsc i { font-style: normal; color: var(--p3); font-size: 14px; }
+.hud .hperf { margin-left: auto; color: var(--p3); font-size: 12px; }
+.hud2 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; text-align: center; margin: 8px 0 4px; }
+.hud2 span { border: 1px solid var(--p4); padding: 4px 2px; border-radius: var(--r); min-width: 0; }
+.hud2 b { display: block; font: 20px/1.1 var(--display); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hud2 small { color: var(--p3); font-size: 11px; }
+.hud3 { display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--p2); font-size: 13px; }
+.hud3 .up { color: var(--hl); }
+
+/* "Agora": próximo item, skill e talento */
+.pnow .nrow { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.pnow .nitem b { font: 22px/1.15 var(--display); font-weight: 400; color: var(--p); }
+.pnow .nitem .bar { margin: 4px 0; }
+.pnow .nitem small { color: var(--p2); font-size: 12px; }
+.pnow .nitem.can b, .pnow .nsk.can b { color: var(--hl); }
+.pnow .nitem.can { animation: npulse 1.2s ease-in-out 3; }
+@keyframes npulse { 50% { opacity: .55; } }
+.pnow .nafter { color: var(--p2); font-size: 13px; margin-top: 4px; }
+.pnow .nsk { margin-top: 6px; font-size: 14px; color: var(--p2); }
+.pnow .nsk b { color: var(--p); font-weight: 400; }
+.pnow .nlist .nrow { padding: 3px 0; font-size: 15px; border-bottom: 1px solid var(--p4); }
+.pnow .nlist .nrow.ok { color: var(--p3); }
+
+/* deitado / tablet: colunas fixas por fase */
+@container (min-width: 640px) {
+  .play[class*="ph-"] { grid-template-rows: auto auto minmax(0, 1fr) !important; }
+  .play[class*="ph-"] .phero { grid-column: 1 / 3; grid-row: 1; }
+  .play[class*="ph-"] .pperf { grid-column: 3; grid-row: 1; }
+  .play.ph-menu #pl-gsi, .play.ph-draft #pl-gsi, .play.ph-post #pl-gsi { grid-column: 1 / -1; grid-row: 2; }
+  .play.ph-menu #pl-dota, .play.ph-draft #pl-dota { grid-column: 1 / -1; grid-row: 3; }
+  .play.ph-post #pl-post { grid-column: 1 / 3; grid-row: 3; } .play.ph-post #pl-dota { grid-column: 3; grid-row: 3; }
+  .play.ph-menu #pl-post { grid-column: 1 / -1; grid-row: 4; }
+  .play.ph-strat #pl-gsi, .play.ph-game #pl-gsi { grid-column: 1; grid-row: 2; }
+  .play.ph-strat #pl-now, .play.ph-game #pl-now { grid-column: 1; grid-row: 3; }
+  .play.ph-strat #pl-dota { grid-column: 2; grid-row: 2 / 4; } .play.ph-strat #pl-tact { grid-column: 3; grid-row: 2 / 4; }
+  .play.ph-game #pl-tact { grid-column: 2; grid-row: 2 / 4; } .play.ph-game #pl-dota { grid-column: 3; grid-row: 2 / 4; }
+  .play.ph-game #pl-graph { grid-column: 1 / -1; grid-row: 4; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .play.ph-game #pl-graph { display: none; }
+  .hud .hclk b { font-size: 28px; }
+}
+/* na partida, o card do Dota mostra só a build: posição, faixa e Turbo ficam para a fila */
+.play.ph-game .dota .dset, .play.ph-strat .dota .dset { display: none; }
+@container (min-width: 640px) {
+  .play.ph-game, .play.ph-strat { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr) !important; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .hud2 b { font-size: 16px; }
+  .hud2 { gap: 3px; } .hud2 span { padding: 2px 1px; }
+}
+.dota h3 { flex-wrap: wrap; }
+.dota h3 > .chips { flex: 1 1 auto !important; justify-content: flex-end; min-width: 0; flex-wrap: wrap; }
+.dota h3 .chip2 { padding: 5px 10px; }
+.dsec .row span:first-child { white-space: normal; }
+
+/* ---- celular deitado (pouca altura): tudo do Dota cabendo na tela ---- */
+@media (orientation: landscape) and (max-height: 560px) {
+  /* desempenho já aparece no painel (FPS/ping); a barra de atalhos vira uma linha fina */
+  .play[class*="ph-"] .pperf { display: none; }
+  .play[class*="ph-"] .phero { grid-column: 1 / -1 !important; padding: 4px 10px; }
+  .play[class*="ph-"] .phero .gname, .play[class*="ph-"] .phero .gtime { font-size: 16px !important; }
+  .play[class*="ph-"] .pacts .btn { padding: 3px 9px; font-size: 13px; }
+  .play[class*="ph-"] .card { padding: 6px 10px; }
+  .play[class*="ph-"] { gap: 6px; }
+  /* cabeçalho da fase numa linha */
+  .play.ph-menu #pl-gsi, .play.ph-draft #pl-gsi, .play.ph-strat #pl-gsi, .play.ph-post #pl-gsi { display: flex; align-items: center; gap: 10px; }
+  .phn { font-size: 15px; padding: 2px 7px; } .pht { font-size: 15px; white-space: nowrap; }
+  .phs { margin: 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+  /* partida: painel em 2 linhas curtas para o "Agora" caber */
+  .hud { gap: 8px; } .hud .hclk b { font-size: 24px; } .hud .hsc { font-size: 17px; }
+  .hud2 { display: flex; flex-wrap: wrap; gap: 0 10px; margin: 2px 0; text-align: left; }
+  .hud2 span { border: 0; padding: 0; display: flex; align-items: baseline; gap: 3px; }
+  .hud2 b { font-size: 15px; display: inline; }
+  .hud3 { font-size: 12px; }
+  .pnow h3 { margin-bottom: 2px; }
+  .pnow .nitem b { font-size: 17px; }
+  .pnow .nsk { margin-top: 3px; font-size: 13px; }
+  .pnow .nafter { font-size: 12px; margin-top: 2px; }
+  .play.ph-game #pl-dota .dsec h4 { margin-top: 4px; }
+  .play[class*="ph-"] .dota .dpos { flex-wrap: nowrap; }
+  .play[class*="ph-"] .dota .dpos .chip2 { padding: 5px 7px; font-size: 13px; }
+  .play.ph-menu .dota .dleft > .dnote:not(.warn) { display: none; }
+}
+/* fila e draft com largura: duas colunas (entradas | resultados) */
+@container (min-width: 640px) {
+  .play.ph-menu #dota-ui.dtwo, .play.ph-draft #dota-ui.dtwo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 0 16px; align-items: start; }
+  .play.ph-menu #dota-ui.dtwo .dright, .play.ph-draft #dota-ui.dtwo .dright { border-left: 1px solid var(--p4); padding-left: 14px; }
+  .play.ph-draft #dota-ui.dtwo .dsug { grid-template-columns: minmax(0, 1fr); }
+}

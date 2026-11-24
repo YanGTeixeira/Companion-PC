@@ -69,7 +69,13 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
   o draft e a build já abrem com isso, aparecem os seus preferidos na posição e quem banir contra eles, e o plano
   zera quando a partida termina (fica no PC, igual em todos os aparelhos). Botão *Turbo*: meta e winrates do Turbo
   (última semana); itens, skills e talentos vêm das partidas normais (o STRATZ não separa builds por modo) com os
-  minutos multiplicados por 0,53, fator medido em partidas Turbo reais (`TURBO_TIME` em `dota_draft.py`). Estatísticas em cache em `dota-cache\` por horas.
+  minutos multiplicados por 0,53, fator medido em partidas Turbo reais (`TURBO_TIME` em `dota_draft.py`).
+- **Dota 2 por fase (Jogando):** a tela muda com a fase que o GSI informa: *Fila* (menu), *Draft* (escolha de heróis),
+  *Estratégia* (itens iniciais para comprar, marcados quando já estão no inventário, e o primeiro ponto de skill) e
+  *Partida* (painel compacto + card *Agora*: próximo item da build com o ouro que falta e se está no tempo, próximo
+  ponto de skill e talento; aviso quando dá para comprar). Nomes de itens, habilidades e talentos em português, do
+  datafeed oficial do dota2.com. Com um jogo aberto o modo base não troca de tela e a tela fica acesa; os avisos dos
+  timers tocam em qualquer aba. Em tela larga, Jogando fica larga com uma aba ao lado. Estatísticas em cache em `dota-cache\` por horas.
 - Aba nova (como *Hoje*) entra sozinha em menus já salvos; clima usa wttr.in quando o Open-Meteo falha.
 
 **Novidades da 1.9**
