@@ -22,6 +22,13 @@ BRACKETS = ("HERALD_GUARDIAN", "CRUSADER_ARCHON", "LEGEND_ANCIENT", "DIVINE_IMMO
 BRACKET_NAME = {"HERALD_GUARDIAN": "Arauto–Guardião", "CRUSADER_ARCHON": "Cruzado–Arconte",
                 "LEGEND_ANCIENT": "Lenda–Ancestral", "DIVINE_IMMORTAL": "Divino–Imortal"}
 DEFAULT_BRACKET = "LEGEND_ANCIENT"
+# faixas das estatísticas de vitória (winWeek), que usam as medalhas separadas
+BRACKET_RANKS = {"HERALD_GUARDIAN": ["HERALD", "GUARDIAN"], "CRUSADER_ARCHON": ["CRUSADER", "ARCHON"],
+                 "LEGEND_ANCIENT": ["LEGEND", "ANCIENT"], "DIVINE_IMMORTAL": ["DIVINE", "IMMORTAL"]}
+# Turbo: o STRATZ não separa builds por modo. Itens e skills vêm das partidas normais e os minutos são
+# multiplicados por este fator, medido em 40 partidas Turbo analisadas (174 compras de itens >= 1800 de ouro
+# comparadas com a build normal do mesmo herói/posição: mediana 0,53, estável de 8 a 40 min).
+TURBO_TIME = 0.53
 TALENT_LEVELS = (10, 15, 20, 25)
 MIN_SHARE = 0.008        # heróis com menos de 0,8% das partidas na posição ficam fora das sugestões
 MIN_MATCHUP_GAMES = 40   # matchup com menos partidas que isso é ruído: conta como 0
@@ -44,6 +51,14 @@ def median_rank(ranks):
     """Mediana dos ranks (ex.: 22 = Guardião 2) das partidas, ignorando as sem rank (0/None)."""
     r = sorted(int(x) for x in ranks if isinstance(x, (int, float)) and x > 0)
     return r[len(r) // 2] if r else None
+
+
+def turbo_times(build):
+    """Minutos da build normal -> minutos esperados no Turbo."""
+    for key in ("boots", "early", "core", "situ"):
+        for x in build.get(key) or []:
+            x["min"] = max(1, round(x["min"] * TURBO_TIME))
+    return build
 
 
 def check_pos(pos):
@@ -206,8 +221,9 @@ def make_build(raw, items, total):
         aid = r["abilityId"]
         if aid in names and r["matchCount"] > modal.get(aid, (0, 0))[1]:
             modal[aid] = (r["level"], r["matchCount"])
+    # nível < 5: habilidade de um nível só (inata/passiva), não entra na ordem de maximizar
     skills = [{"name": names[a]["name"], "max": lvl, "ult": names[a]["ult"]}
-              for a, (lvl, _) in sorted(modal.items(), key=lambda kv: kv[1][0])]
+              for a, (lvl, _) in sorted(modal.items(), key=lambda kv: kv[1][0]) if lvl >= 5]
 
     tal = {r["abilityId"]: r for r in raw.get("talent") or []}
     talents = []
@@ -231,6 +247,9 @@ def make_build(raw, items, total):
 # --------------------------------------------------------------------------
 HEROES_Q = "{ constants { heroes { id displayName shortName } } }"
 ITEMS_Q = "{ constants { items { id displayName stat { cost } } } }"
+TURBO_POS_Q = "query($b: [RankBracket]) { heroStats { " + " ".join(
+    f"p{p}: winWeek(gameModeIds: [TURBO], take: 1, bracketIds: $b, positionIds: [POSITION_{p}], groupBy: HERO_ID) "
+    "{ heroId winCount matchCount }" for p in range(1, 6)) + " } }"
 POS_Q = """query($b: [RankBracketBasicEnum]) { heroStats {
   stats(bracketBasicIds: $b, groupByPosition: true) { heroId position matchCount winCount } } }"""
 MU_FIELDS = "advantage { heroId vs { heroId2 synergy winsAverage matchCount } with { heroId2 synergy winsAverage matchCount } }"
@@ -304,7 +323,10 @@ class Draft:
             for i in self.sz().gql(ITEMS_Q)["constants"]["items"] if i.get("id")})
         return {int(k): v for k, v in d.items()}
 
-    def pos_stats(self, bracket):
+    def pos_stats(self, bracket, turbo=False):
+        if turbo:
+            return self.turbo_stats(bracket)
+
         def build():
             out = {str(p): {} for p in range(1, 6)}
             for r in self.sz().gql(POS_Q, {"b": [bracket]})["heroStats"]["stats"] or []:
@@ -313,6 +335,14 @@ class Draft:
                     out[str(p)][r["heroId"]] = [r["matchCount"], r["winCount"]]
             return out
         d = self._get(f"pos-{bracket}", "pos", build)
+        return {p: {int(h): v for h, v in rows.items()} for p, rows in d.items()}
+
+    def turbo_stats(self, bracket):
+        """Vitórias no Turbo na última semana, por posição: {pos: {herói: [partidas, vitórias]}}."""
+        def build():
+            d = self.sz().gql(TURBO_POS_Q, {"b": BRACKET_RANKS[bracket]}).get("heroStats") or {}
+            return {str(p): {r["heroId"]: [r["matchCount"], r["winCount"]] for r in d.get(f"p{p}") or []} for p in range(1, 6)}
+        d = self._get(f"pos-turbo-{bracket}", "pos", build)
         return {p: {int(h): v for h, v in rows.items()} for p, rows in d.items()}
 
     def matchups(self, hero_ids, bracket):
@@ -375,28 +405,29 @@ class Draft:
     def hero_list(self):
         return sorted(({"id": h, "n": v["n"]} for h, v in self.heroes().items()), key=lambda x: x["n"])
 
-    def draft(self, pos, enemies, allies, want_bracket, acc, prefer=()):
+    def draft(self, pos, enemies, allies, want_bracket, acc, prefer=(), turbo=False):
         pos = check_pos(pos) if pos else None
         enemies, allies, prefer = check_heroes(enemies, 5), check_heroes(allies, 4), check_heroes(prefer, Plan.MAX_HEROES)
         bracket, auto = self.bracket(want_bracket, acc)
         need = list(dict.fromkeys(enemies + allies + prefer))
         mu = self.matchups(need, bracket) if need else {}
         me = self.player(acc)
-        stats, heroes = self.pos_stats(bracket), self.heroes()
+        stats, heroes = self.pos_stats(bracket, bool(turbo)), self.heroes()
         rows = suggest(pos, enemies, allies, stats, mu, heroes, (me or {}).get("heroes"), prefer) if pos else []
         # banir: só faz sentido antes de ver o time inimigo, e sem tirar quem já está no jogo
         bans = [b for b in ban_suggestions(prefer, stats, mu, heroes, top=8) if b["id"] not in enemies + allies][:5] if prefer else []
-        return {"pos": pos, "bracket": bracket, "bname": BRACKET_NAME[bracket], "auto": auto,
+        return {"pos": pos, "bracket": bracket, "bname": BRACKET_NAME[bracket], "auto": auto, "turbo": bool(turbo),
                 "enemies": enemies, "allies": allies, "prefer": prefer, "list": rows, "bans": bans}
 
-    def build(self, hero, pos, want_bracket, acc, enemies=()):
+    def build(self, hero, pos, want_bracket, acc, enemies=(), turbo=False):
         hero = check_heroes([hero], 1)[0]
         enemies = check_heroes(enemies, 5)
         bracket, auto = self.bracket(want_bracket, acc)
         heroes = self.heroes()
         if hero not in heroes:
             raise ValueError("herói desconhecido")
-        shares = hero_positions(self.pos_stats(bracket), hero)
+        stats = self.pos_stats(bracket, bool(turbo))
+        shares = hero_positions(stats, hero)
         asked = check_pos(pos) if pos else None
         moved = False
         if shares and (asked is None or shares.get(asked, 0) < 0.05):
@@ -427,6 +458,10 @@ class Draft:
                     "talents": [{"slot": t.get("slot"), "abilityId": t["abilityId"], "name": names.get(t["abilityId"])} for t in talents]}
         raw = self._get(f"build-{bracket}-{hero}-{pos}", "build", fetch)
         out = make_build(raw, self.items(), raw.get("total"))
+        games, wins = raw.get("total") or 0, raw.get("wins") or 0
+        if turbo:
+            turbo_times(out)
+            games, wins = (stats.get(pos) or stats.get(str(pos)) or {}).get(hero) or [0, 0]
         vs = []
         if enemies:
             # do ponto de vista de cada inimigo (o mesmo cache e os mesmos números do draft), com o sinal trocado
@@ -439,7 +474,7 @@ class Draft:
         return {"hero": hero, "name": heroes[hero]["n"], "pos": pos, "moved": moved,
                 "pos_share": {p: round(s * 100) for p, s in shares.items()},
                 "bracket": bracket, "bname": BRACKET_NAME[bracket], "auto": auto,
-                "games": raw.get("total") or 0, "wr": round(raw["wins"] / raw["total"] * 100, 1) if raw.get("total") else None,
+                "turbo": bool(turbo), "games": games, "wr": round(wins / games * 100, 1) if games else None,
                 "vs": vs, **out}
 
 
@@ -448,7 +483,8 @@ class _Miss(Exception):
 
 
 class Plan:
-    """O que você combinou consigo mesmo para a próxima partida (escolhido na fila): posição e heróis preferidos.
+    """O que você combinou consigo mesmo para a próxima partida (escolhido na fila): posição, heróis preferidos e
+    se é Turbo (o modo não zera).
 
     Fica no servidor (todos os aparelhos veem o mesmo) e num arquivo (sobrevive a reinício); zera quando a partida
     termina e é salva.
@@ -457,11 +493,12 @@ class Plan:
 
     def __init__(self, path):
         self.path = Path(path)
-        self.d = {"pos": None, "heroes": [], "t": 0}
+        self.d = {"pos": None, "heroes": [], "turbo": False, "t": 0}
         try:
             d = json.loads(self.path.read_text(encoding="utf-8"))
             self.d = {"pos": check_pos(d["pos"]) if d.get("pos") else None,
-                      "heroes": check_heroes(d.get("heroes"), self.MAX_HEROES), "t": float(d.get("t") or 0)}
+                      "heroes": check_heroes(d.get("heroes"), self.MAX_HEROES), "turbo": d.get("turbo") is True,
+                      "t": float(d.get("t") or 0)}
         except (OSError, ValueError, KeyError, TypeError):
             pass
 
@@ -474,13 +511,16 @@ class Plan:
             d["pos"] = check_pos(p["pos"]) if p["pos"] else None
         if "heroes" in p:
             d["heroes"] = check_heroes(p["heroes"], self.MAX_HEROES)
+        if "turbo" in p:
+            d["turbo"] = p["turbo"] is True
         d["t"] = time.time()
         self.d = d
         self._save()
         return self.state()
 
     def reset(self):
-        self.d = {"pos": None, "heroes": [], "t": time.time()}
+        # o modo (Turbo ou normal) continua: costuma ser o mesmo na próxima fila
+        self.d = {"pos": None, "heroes": [], "turbo": self.d.get("turbo", False), "t": time.time()}
         self._save()
         return self.state()
 

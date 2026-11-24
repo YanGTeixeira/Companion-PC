@@ -67,7 +67,9 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
   principais com o minuto médio, situacionais, ordem das skills e talentos mais escolhidos, na sua posição e faixa
   de rank (o rank vem do seu perfil público no STRATZ). *Fila*: antes da partida escolha a posição e até 6 heróis preferidos;
   o draft e a build já abrem com isso, aparecem os seus preferidos na posição e quem banir contra eles, e o plano
-  zera quando a partida termina (fica no PC, igual em todos os aparelhos). Estatísticas em cache em `dota-cache\` por horas.
+  zera quando a partida termina (fica no PC, igual em todos os aparelhos). Botão *Turbo*: meta e winrates do Turbo
+  (última semana); itens, skills e talentos vêm das partidas normais (o STRATZ não separa builds por modo) com os
+  minutos multiplicados por 0,53, fator medido em partidas Turbo reais (`TURBO_TIME` em `dota_draft.py`). Estatísticas em cache em `dota-cache\` por horas.
 - Aba nova (como *Hoje*) entra sozinha em menus já salvos; clima usa wttr.in quando o Open-Meteo falha.
 
 **Novidades da 1.9**

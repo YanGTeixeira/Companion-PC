@@ -390,3 +390,8 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .dbans small { color: var(--p3); }
 .dbans small.dn { color: var(--alert); }
 .dfrow { width: 100%; text-align: left; }
+/* antes da partida começar (escolha de heróis, estratégia, pré-jogo): partida > Dota (draft/build) > resto */
+.play.pregame .pgsi { order: 3; }
+.play.pregame #pl-gsi { order: 1; }
+.play.pregame #pl-dota { order: 2; }
+.play.pregame .pperf { order: 4; }

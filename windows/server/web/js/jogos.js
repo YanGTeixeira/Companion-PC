@@ -109,11 +109,16 @@ function renderGsi() {
   const play = $("pl-gsi").parentElement;
   play.classList.toggle("has-gsi", !!h[0]);
   play.classList.toggle("match", !!(h[1] || h[2]));
+  // escolha de heróis / estratégia / antes da buzina: a build (card do Dota) sobe para logo abaixo da partida
+  play.classList.toggle("pregame", !!d && d.g === "dota2" && DOTA_PREGAME.has(d.raw_state));
   if (state.post) $("pl-post").classList.toggle("hidden", play.classList.contains("match") || Date.now() / 1000 - state.post.t > 1800);
   if (d && d.g === "dota2" && !d.menu) dotaAlerts(d);
   dotaPlace(isDota);
   if (d && d.g === "dota2") dotaGsi(d);
 }
+
+const DOTA_PREGAME = new Set(["DOTA_GAMERULES_STATE_HERO_SELECTION", "DOTA_GAMERULES_STATE_STRATEGY_TIME", "DOTA_GAMERULES_STATE_TEAM_SHOWCASE",
+  "DOTA_GAMERULES_STATE_WAIT_FOR_MAP_TO_LOAD", "DOTA_GAMERULES_STATE_PRE_GAME"]);
 
 // ---- histórico (aba Jogos)
 let histGame = store.get("histGame", "cs2");

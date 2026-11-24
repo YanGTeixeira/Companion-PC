@@ -6,7 +6,7 @@
 const DOTA_POS = [[1, "1 Carry"], [2, "2 Mid"], [3, "3 Off"], [4, "4 Sup"], [5, "5 Sup"]];
 const DOTA_BR = [["auto", "Meu rank"], ["HERALD_GUARDIAN", "Arauto–Guardião"], ["CRUSADER_ARCHON", "Cruzado–Arconte"], ["LEGEND_ANCIENT", "Lenda–Ancestral"], ["DIVINE_IMMORTAL", "Divino–Imortal"]];
 const dota = {
-  mode: store.get("dotaMode", "plan"), pos: null, fav: [], br: store.get("dotaBr", "auto"),
+  mode: store.get("dotaMode", "plan"), pos: null, fav: [], turbo: false, br: store.get("dotaBr", "auto"),
   en: store.get("dotaEn", []), al: store.get("dotaAl", []), onlyMine: store.get("dotaMine", false),
   hero: store.get("dotaHero", null), heroes: store.get("dotaHeroes", null),
   pick: null,        // {side: "en"|"al", i} enquanto escolhe um herói; {side: "build"} para a build; {side: "fav"} preferidos
@@ -54,14 +54,15 @@ function dotaGsi(d) {
 // plano da próxima partida (do PC): chega na conexão e sempre que algum aparelho muda ou a partida termina
 function onDotaPlan(d, reset) {
   if (!d) return;
-  const changed = d.pos !== dota.pos || d.heroes.join() !== dota.fav.join();
-  dota.pos = d.pos; dota.fav = d.heroes.slice();
+  const changed = d.pos !== dota.pos || d.heroes.join() !== dota.fav.join() || !!d.turbo !== dota.turbo;
+  dota.pos = d.pos; dota.fav = d.heroes.slice(); dota.turbo = !!d.turbo;
   if (reset) { dota.en = []; dota.al = []; dota.mode = "plan"; dota.pick = null; dotaSave(); }
   if (changed || reset) { dota.draft = null; dota.build = null; dotaFetch(); }
 }
 function planSet(p) {
   if ("pos" in p) dota.pos = p.pos;
   if ("heroes" in p) dota.fav = p.heroes.slice();
+  if ("turbo" in p) dota.turbo = p.turbo;
   dota.draft = null; dota.build = null; dotaFetch();
   send("dota.plan.set", p).then(onDotaPlan).catch((e) => e.message !== "offline" && toast(e.message, "bad"));
 }
@@ -74,7 +75,7 @@ async function dotaLoad() {
     try { dota.heroes = await send("dota.heroes", {}, true, 30000); store.set("dotaHeroes", dota.heroes); }
     catch (e) { dota.err = e.message; dotaLoaded = false; dotaRender(); return; }
   }
-  try { const pl = await send("dota.plan.get"); dota.pos = pl.pos; dota.fav = pl.heroes; } catch {}
+  try { const pl = await send("dota.plan.get"); dota.pos = pl.pos; dota.fav = pl.heroes; dota.turbo = !!pl.turbo; } catch {}
   dotaFetch();
 }
 
@@ -84,10 +85,10 @@ async function dotaFetch() {
   dota.busy = true; dota.err = ""; dotaRender();
   try {
     if (dota.mode !== "build") {
-      const r = await send("dota.draft", { pos: dota.pos, bracket: dota.br, enemies: dota.en, allies: dota.al, prefer: dota.fav }, true, 45000);
+      const r = await send("dota.draft", { pos: dota.pos, bracket: dota.br, enemies: dota.en, allies: dota.al, prefer: dota.fav, turbo: dota.turbo }, true, 45000);
       if (seq === dota.seq) dota.draft = r;
     } else if (dota.hero) {
-      const r = await send("dota.build", { hero: dota.hero, pos: dota.pos, bracket: dota.br, enemies: dota.en }, true, 45000);
+      const r = await send("dota.build", { hero: dota.hero, pos: dota.pos, bracket: dota.br, enemies: dota.en, turbo: dota.turbo }, true, 45000);
       if (seq === dota.seq) dota.build = r;
     }
   } catch (e) { if (seq === dota.seq) dota.err = e.message === "offline" ? "Sem conexão com o PC" : e.message; }
@@ -100,7 +101,7 @@ function dotaRender() {
   let h = `<h3><span>Dota 2</span><span class="chips" style="flex:none">${[["plan", "Fila"], ["draft", "Draft"], ["build", "Build"]].map(([m, l]) => chip("dm", m, l, dota.mode === m)).join("")}</span></h3>
     <div class="chips dpos${dota.pos ? "" : " ask"}">${DOTA_POS.map(([p, l]) => chip("dp", p, l, dota.pos === p)).join("")}</div>
     ${dota.pos ? "" : `<div class="dnote warn">Qual posição você vai jogar? Escolha aqui (vale até a partida acabar).</div>`}
-    <div class="dbar"><select class="sel" id="dota-br">${DOTA_BR.map(([v, l]) => `<option value="${v}"${dota.br === v ? " selected" : ""}>${l}</option>`).join("")}</select>
+    <div class="dbar"><button class="chip2${dota.turbo ? " on" : ""}" data-dx="turbo">Turbo</button><select class="sel" id="dota-br">${DOTA_BR.map(([v, l]) => `<option value="${v}"${dota.br === v ? " selected" : ""}>${l}</option>`).join("")}</select>
       <span class="sub">${dota.busy ? "carregando…" : esc(dotaBrNote())}</span></div>`;
   if (dota.pick) h += dotaPicker();
   else if (!dota.heroes) h += `<div class="empty">${esc(dota.err || "Carregando heróis…")}</div>`;
@@ -127,7 +128,7 @@ function dotaDraftHtml() {
   let list = r.list || [];
   if (dota.onlyMine) list = list.filter((x) => x.mine);
   const what = r.enemies.length ? "vantagem contra os inimigos" + (r.allies.length ? " e sinergia com aliados" : "") + " + força no meta" : "força no meta (marque os inimigos para ver counters)";
-  h += `<div class="dnote">Pos ${r.pos} · ordenado por ${what}. Toque num herói para ver a build.</div>`;
+  h += `<div class="dnote">Pos ${r.pos} · ordenado por ${what}${r.turbo ? " (meta do Turbo; counters das partidas normais)" : ""}. Toque num herói para ver a build.</div>`;
   if (!list.length) return h + `<div class="empty">${dota.onlyMine ? "Nenhum herói seu nesta posição (pelas suas partidas públicas no STRATZ)." : "Sem dados."}</div>`;
   const favs = list.filter((x) => x.fav), rest = list.filter((x) => !x.fav);
   if (favs.length) h += `<h4 class="dh">Seus preferidos</h4>` + sugList(favs);
@@ -174,7 +175,8 @@ function dotaBuildHtml() {
   const b = dota.build; if (!b || b.hero !== dota.hero) return h + `<div class="empty">${dota.busy ? "Carregando a build…" : ""}</div>`;
   const it = (x, extra) => `<div class="row"><span>${esc(x.name)}</span><span>${extra}</span></div>`;
   const sec = (title, body) => body ? `<div class="dsec"><h4>${title}</h4>${body}</div>` : "";
-  h += `<div class="dnote">${esc(b.name)} · pos ${b.pos} · ${b.bname} · ${b.games.toLocaleString("pt-BR")} partidas${b.wr != null ? ` · ${b.wr}% de vitórias` : ""}</div>`;
+  h += `<div class="dnote">${esc(b.name)} · pos ${b.pos} · ${b.bname} · ${b.turbo ? "Turbo, última semana: " : ""}${b.games.toLocaleString("pt-BR")} partidas${b.wr != null ? ` · ${b.wr}% de vitórias` : ""}</div>`;
+  if (b.turbo) h += `<div class="dnote">Turbo: itens, skills e talentos vêm das partidas normais (o STRATZ não separa por modo); os minutos já estão ajustados para o Turbo (cerca da metade).</div>`;
   if (b.moved) h += `<div class="dnote warn">${esc(b.name)} quase não joga na pos ${dota.pos}: mostrando a pos ${b.pos} (${b.pos_share[b.pos]}% dos jogos dele).</div>`;
   if (b.vs?.length) h += `<div class="dvs">${b.vs.map((v) => `<span class="chip3 ${v.adv > 0 ? "up" : v.adv < 0 ? "dn" : ""}">vs ${esc(v.n)} ${v.adv == null ? "–" : sgn(v.adv)}${v.wr != null ? ` · ${Math.round(v.wr)}%` : ""}</span>`).join("")}</div>`;
   h += `<div class="dgrid">`;
@@ -237,6 +239,7 @@ $("dota-ui").addEventListener("click", (e) => {
   else if (d.dx === "clear") { dota.en = []; dota.al = []; dota.draft = null; dotaSave(); dotaFetch(); }
   else if (d.dx === "hero") { dota.pick = { side: "build" }; dota.q = ""; dotaRender(); }
   else if (d.dx === "mine-hero") { dota.hero = dota.gsiHero; dota.build = null; dotaSave(); dotaFetch(); }
+  else if (d.dx === "turbo") planSet({ turbo: !dota.turbo });
   else if (d.dx === "fav") { dota.pick = { side: "fav", before: dota.fav.join() }; dota.q = ""; dotaRender(); }
   else if (d.dx === "cancel") {
     const p = dota.pick; dota.pick = null; dota.q = "";

@@ -117,10 +117,12 @@ RAW = {
              {"itemId": 112, "time": 38, "matchCount": 80, "winsAverage": .8},
              {"itemId": 29, "time": 4, "matchCount": 999, "winsAverage": .5}],   # botas não entram nos itens
     "abilities": [{"abilityId": 10, "name": "Dagger", "ult": False}, {"abilityId": 11, "name": "Strike", "ult": False},
-                  {"abilityId": 12, "name": "Coup", "ult": True}],
+                  {"abilityId": 12, "name": "Coup", "ult": True},
+                  {"abilityId": 13, "name": "Inata", "ult": False}],
     "maxlvl": [{"abilityId": 10, "level": 7, "matchCount": 900}, {"abilityId": 10, "level": 9, "matchCount": 50},
                {"abilityId": 11, "level": 12, "matchCount": 800}, {"abilityId": 12, "level": 18, "matchCount": 700},
-               {"abilityId": 99, "level": 1, "matchCount": 999}],   # habilidade que não é do herói
+               {"abilityId": 99, "level": 1, "matchCount": 999},   # habilidade que não é do herói
+               {"abilityId": 13, "level": 1, "matchCount": 999}],  # inata de um nível só
     "talents": [{"slot": 0, "abilityId": 100, "name": "+10 Dano"}, {"slot": 1, "abilityId": 101, "name": "+5 Armadura"},
                 {"slot": 2, "abilityId": 102, "name": "+20% Crítico"}, {"slot": 3, "abilityId": 103, "name": "+300 Vida"}],
     "talent": [{"abilityId": 100, "matchCount": 300, "winsAverage": .5}, {"abilityId": 101, "matchCount": 700, "winsAverage": .55},
@@ -183,6 +185,9 @@ class DraftCacheTest(unittest.TestCase):
             assert variables["b"] == ["DIVINE_IMMORTAL"]
             return {"heroStats": {"stats": [{"heroId": SK, "position": "POSITION_2", "matchCount": 100, "winCount": 55},
                                             {"heroId": RIKI, "position": "POSITION_2", "matchCount": 100, "winCount": 52}]}}
+        if "winWeek" in query:
+            assert variables["b"] == ["DIVINE", "IMMORTAL"]
+            return {"heroStats": {"p2": [{"heroId": SK, "matchCount": 100, "winCount": 70}, {"heroId": RIKI, "matchCount": 100, "winCount": 45}]}}
         if "heroVsHeroMatchup" in query:
             assert f"h{AM}:" in query
             return {"heroStats": {f"h{AM}": {"advantage": [{"heroId": AM, "vs": [{"heroId2": RIKI, "synergy": -5, "winsAverage": .4, "matchCount": 500}], "with": []}]}}}
@@ -196,6 +201,12 @@ class DraftCacheTest(unittest.TestCase):
         self.d.mem.clear()   # servidor reiniciado: vem do disco
         self.d.draft(2, [AM], [], "auto", 123)
         self.assertEqual(len(self.calls), n)
+
+    def test_draft_turbo_usa_o_meta_do_turbo(self):
+        r = self.d.draft(2, [AM], [], "DIVINE_IMMORTAL", None, turbo=True)
+        self.assertTrue(r["turbo"])
+        self.assertEqual([x["n"] for x in r["list"]], ["Sand King", "Riki"])   # no Turbo, SK 70% passa o Riki
+        self.assertEqual(next(x for x in r["list"] if x["id"] == RIKI)["vs"], [[AM, 5.0, 60.0]])   # counters normais
 
     def test_sem_posicao_so_bans(self):
         r = self.d.draft(None, [], [], "DIVINE_IMMORTAL", None, prefer=[AM])
@@ -233,6 +244,16 @@ class DraftCacheTest(unittest.TestCase):
         self.assertEqual(data[str(AM)]["n"], "Anti-Mage")
 
 
+class TurboTest(unittest.TestCase):
+    def test_minutos_do_turbo(self):
+        b = dd.turbo_times({"boots": [{"min": 9}], "core": [{"min": 15}, {"min": 1}], "early": [], "start": [{"q": 1}]})
+        self.assertEqual((b["boots"][0]["min"], b["core"][0]["min"], b["core"][1]["min"]), (5, 8, 1))
+        self.assertEqual(b["start"], [{"q": 1}])   # iniciais não têm minuto
+
+    def test_faixas_do_winweek_cobrem_todas(self):
+        self.assertEqual(set(dd.BRACKET_RANKS), set(dd.BRACKETS))
+
+
 class PlanTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -248,6 +269,12 @@ class PlanTest(unittest.TestCase):
         self.assertEqual((q.state()["pos"], q.state()["heroes"]), (2, [SK, RIKI]))
         q.reset()
         self.assertEqual((dd.Plan(self.path).state()["pos"], dd.Plan(self.path).state()["heroes"]), (None, []))
+
+    def test_turbo_nao_zera(self):
+        p = dd.Plan(self.path)
+        p.set({"turbo": True, "pos": 1})
+        self.assertEqual((p.reset()["turbo"], dd.Plan(self.path).state()["turbo"]), (True, True))
+        self.assertFalse(p.set({"turbo": "sim"})["turbo"])   # só true liga
 
     def test_tirar_a_posicao_e_validar(self):
         p = dd.Plan(self.path)

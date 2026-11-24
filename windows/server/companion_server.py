@@ -465,10 +465,10 @@ ASYNC_ACTIONS = {
     "stratz.set": lambda p: stratz_set(p),
     "dota.report": lambda p: dota_report_now(p),
     "dota.heroes": lambda p: dota_draft_call(DRAFT.hero_list),
-    "dota.draft": lambda p: dota_draft_call(DRAFT.draft, p.get("pos"), p.get("enemies"), p.get("allies"), p.get("bracket"), dota_acc(), p.get("prefer") or ()),
+    "dota.draft": lambda p: dota_draft_call(DRAFT.draft, p.get("pos"), p.get("enemies"), p.get("allies"), p.get("bracket"), dota_acc(), p.get("prefer") or (), p.get("turbo") is True),
     "dota.plan.get": lambda p: _async(DOTA_PLAN.state()),
     "dota.plan.set": lambda p: dota_plan_set(p),
-    "dota.build": lambda p: dota_draft_call(DRAFT.build, p.get("hero"), p.get("pos"), p.get("bracket"), dota_acc(), p.get("enemies") or ()),
+    "dota.build": lambda p: dota_draft_call(DRAFT.build, p.get("hero"), p.get("pos"), p.get("bracket"), dota_acc(), p.get("enemies") or (), p.get("turbo") is True),
     "daily.set": lambda p: daily_set(p),
     "daily.open": lambda p: _async(daily_open(p)),
     "focus.start": lambda p: focus_start(p),
@@ -1424,7 +1424,7 @@ async def dota_plan_warm():
     st = DOTA_PLAN.state()
     for h in st["heroes"]:
         try:
-            await asyncio.to_thread(DRAFT.build, h, st["pos"], "auto", dota_acc())
+            await asyncio.to_thread(DRAFT.build, h, st["pos"], "auto", dota_acc(), (), st.get("turbo", False))
         except (ValueError, dota_stats.ApiError) as e:
             log.info("plano do Dota: build de %s não veio (%s)", h, e)
             return
