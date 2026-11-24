@@ -33,6 +33,7 @@ import gsi
 import https_cert
 import matches
 import daily
+import dota_stats
 import steam
 import overlay
 import pc_info
@@ -53,6 +54,8 @@ DEFAULT_CFG = {
     "web": {"host": "0.0.0.0", "port": 8770, "adb_reverse": True, "adb_path": ""},
     # HTTPS na porta 8771 com o certificado do Tailscale (ou cert_file/key_file, ex.: mkcert; "host" = nome do link)
     "https": dict(https_cert.DEFAULT),
+    # Relatório do Dota depois da partida (nota, lanes, placar): chave grátis em stratz.com/api
+    "stratz": {"token": ""},
     "upload_dir": "%USERPROFILE%\\Downloads\\Companion PC",  # arquivos enviados pelo celular
     "downloads_dir": "%USERPROFILE%\\Downloads",               # avisa no celular quando um download termina
     # Teclas que o servidor aperta para o Discord. Configure as MESMAS como
@@ -457,6 +460,9 @@ ASYNC_ACTIONS = {
     "day.summary": lambda p: asyncio.to_thread(day_summary, p),
     "steam.set": lambda p: steam_set(p),
     "steam.get": lambda p: _async({**STEAM_STATE, "steamid": STEAM.steamid()}),
+    "stratz.get": lambda p: _async(stratz_public()),
+    "stratz.set": lambda p: stratz_set(p),
+    "dota.report": lambda p: dota_report_now(p),
     "daily.set": lambda p: daily_set(p),
     "daily.open": lambda p: _async(daily_open(p)),
     "focus.start": lambda p: focus_start(p),
@@ -815,7 +821,7 @@ async def meet_cmd(p):
         raise ValueError("não consegui trazer o Meet para a frente")
     await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"layout.get", "day.summary", "steam.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"layout.get", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -1301,10 +1307,106 @@ LAST_MATCH = {"d": None}
 
 def match_saved(pm):
     LAST_MATCH["d"] = pm
-    asyncio.get_running_loop().create_task(broadcast({"t": "match_end", "d": pm}))
+    loop = asyncio.get_running_loop()
+    loop.create_task(broadcast({"t": "match_end", "d": pm}))
+    if pm.get("game") == "dota2" and pm.get("key"):
+        loop.create_task(dota_report_job(pm["key"], pm.get("data") or {}))
 
 
 MATCHES.on_saved = match_saved
+
+
+# --------------------------------------------------------------------------
+# Dota 2: relatório depois da partida (STRATZ, ou OpenDota sem chave) - dota_stats.py
+# --------------------------------------------------------------------------
+DOTA_JOBS = {}       # chave da partida -> task
+STRATZ_STATE = {"err": None, "last": None}
+
+
+def stratz_token():
+    return str((CFG.get("stratz") or {}).get("token") or "").strip()
+
+
+def stratz_public():
+    return {"has_key": bool(stratz_token()), **STRATZ_STATE}
+
+
+def stratz_import_file():
+    """Chave colada em stratz-token.txt (antes do campo em Personalizar): passa para o config.json."""
+    f = BASE / "stratz-token.txt"
+    if stratz_token() or not f.is_file():
+        return
+    try:
+        tok = f.read_text(encoding="utf-8-sig").strip()
+    except OSError:
+        return
+    tok = tok[7:].strip() if tok.lower().startswith("bearer ") else tok
+    if tok:
+        save_cfg_key("stratz", {**(CFG.get("stratz") or {}), "token": tok})
+        log.info("STRATZ: chave importada de stratz-token.txt (pode apagar o arquivo)")
+
+
+async def stratz_set(p):
+    tok = str(p.get("token") or "").strip()
+    tok = tok[7:].strip() if tok.lower().startswith("bearer ") else tok
+    if tok:   # testa antes de salvar
+        try:
+            await asyncio.to_thread(dota_stats.Stratz(tok, BASE).gql, "{ constants { gameVersions { id } } }")
+        except dota_stats.ApiError as e:
+            raise ValueError(str(e)) from e
+    save_cfg_key("stratz", {**(CFG.get("stratz") or {}), "token": tok})
+    STRATZ_STATE["err"] = None
+    return stratz_public()
+
+
+def dota_me(data):
+    """(conta, herói) para achar você no relatório: a conta do GSI ou a do login da Steam."""
+    acc = dota_stats.account_id(data.get("acc")) or dota_stats.account_id(STEAM.steamid())
+    return acc, data.get("hero_id")
+
+
+async def dota_report_push(key, rep):
+    MATCHES.attach(key, "report", rep)
+    if LAST_MATCH["d"] and LAST_MATCH["d"].get("key") == key:
+        LAST_MATCH["d"]["report"] = rep
+    await broadcast({"t": "match_report", "d": {"key": key, "report": rep}})
+
+
+async def dota_report_job(key, data, delays=None):
+    """Busca o relatório em segundo plano (uma tarefa por partida); cada versão melhor vai para o celular."""
+    if key in DOTA_JOBS and not DOTA_JOBS[key].done():
+        return
+    DOTA_JOBS[key] = asyncio.current_task()
+    mid, (acc, hero) = key.split(":", 1)[1], dota_me(data)
+
+    async def push(rep, err):
+        STRATZ_STATE["err"] = err if err and "STRATZ" in err else None
+        STRATZ_STATE["last"] = {"match": mid, "src": rep["src"], "complete": rep["complete"], "t": rep["t"]}
+        await dota_report_push(key, rep)
+    try:
+        await dota_stats.report_job(mid, stratz_token, BASE, acc, hero, push, delays)
+    finally:
+        DOTA_JOBS.pop(key, None)
+
+
+async def dota_report_resume():
+    """Servidor reiniciou no meio da espera: retoma as partidas das últimas 2 h sem relatório completo."""
+    for key, data in MATCHES.pending("dota2", "report", time.time() - 7200):
+        asyncio.create_task(dota_report_job(key, data, dota_stats.DELAYS[1:]))
+
+
+async def dota_report_now(p):
+    """Busca agora (botão no celular). key = "dota2:<id da partida>"."""
+    key = str(p.get("key") or "")
+    if not key.startswith("dota2:") or not key[6:].isdigit():
+        raise ValueError("partida inválida")
+    rows = [d for k, d in MATCHES.pending("dota2", "report", 0) if k == key]
+    acc, hero = dota_me(rows[0] if rows else {})
+    rep, err = await asyncio.to_thread(dota_stats.fetch, key[6:], stratz_token(), BASE, acc, hero, {})
+    if not rep:
+        raise ValueError(err or "a partida ainda não apareceu; tente daqui a alguns minutos")
+    await dota_report_push(key, rep)
+    return rep
 
 
 # --------------------------------------------------------------------------
@@ -1624,6 +1726,8 @@ async def main():
     asyncio.create_task(daily_loop())
     asyncio.create_task(focus_loop())
     asyncio.create_task(steam_loop())
+    stratz_import_file()
+    asyncio.create_task(dota_report_resume())
     asyncio.create_task(GSI.serve())
     asyncio.create_task(adb_loop())
     asyncio.create_task(downloads_loop())

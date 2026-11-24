@@ -67,9 +67,33 @@ class Store:
             if r is None or r != win:
                 break
             streak += 1
-        return {"game": game, "title": title, "win": win, "data": data, "n_same": len(same), "avg_same": avg(same),
+        return {"game": game, "key": key, "title": title, "win": win, "data": data, "n_same": len(same), "avg_same": avg(same),
                 "n_all": len(prev), "avg_all": avg(prev), "streak": streak if win is not None else 0,
                 "winrate_same": round(100 * sum(1 for x in same if x[1]) / len(same)) if same else None, "t": time.time()}
+
+    def attach(self, key, field, value):
+        """Acrescenta um campo aos dados de uma partida já salva (ex.: o relatório do STRATZ). False se não existe."""
+        with self.lock:
+            row = self.db.execute("SELECT data FROM matches WHERE key=?", (key,)).fetchone()
+            if not row:
+                return False
+            d = json.loads(row[0])
+            d[field] = value
+            self.db.execute("UPDATE matches SET data=? WHERE key=?", (json.dumps(d, ensure_ascii=False), key))
+            self.db.commit()
+        return True
+
+    def pending(self, game, field, since):
+        """Partidas desde `since` (epoch) cujo campo ainda não está completo: [(key, data)]."""
+        with self.lock:
+            rows = self.db.execute("SELECT key, data FROM matches WHERE game=? AND ended>=? ORDER BY ended",
+                                   (game, since)).fetchall()
+        out = []
+        for key, data in rows:
+            d = json.loads(data)
+            if not (d.get(field) or {}).get("complete"):
+                out.append((key, d))
+        return out
 
     def report(self, game, limit=15):
         with self.lock:
@@ -79,6 +103,10 @@ class Store:
         for ended, title, win, data in rows:
             d = json.loads(data)
             d.update(ended=ended, title=title, win=None if win is None else bool(win))
+            rp = d.pop("report", None)
+            if rp and rp.get("me") is not None:
+                me = rp["players"][rp["me"]]
+                d["rp"] = {k: me.get(k) for k in ("imp", "award", "pos", "lane_res")}
             if len(recent) < limit:
                 recent.append(d)
             g = by.setdefault(title, {"name": title, "n": 0, "wins": 0, "k": 0, "d": 0, "a": 0, "x": 0.0, "xn": 0, "y": 0.0, "yn": 0})
@@ -267,7 +295,8 @@ class DotaTracker:
     def _save(self, mp, pl, he, s):
         win_team, team = mp.get("win_team"), pl.get("team_name")
         win = None if win_team in (None, "none", "") or not team else win_team == team
-        data = {"hero": s.get("hero"), "k": pl.get("kills"), "d": pl.get("deaths"), "a": pl.get("assists"),
+        data = {"hero": s.get("hero"), "hero_id": he.get("id"), "acc": pl.get("accountid") or pl.get("steamid"),
+                "k": pl.get("kills"), "d": pl.get("deaths"), "a": pl.get("assists"),
                 "lh": pl.get("last_hits"), "dn": pl.get("denies"), "gpm": pl.get("gpm"), "xpm": pl.get("xpm"),
                 "lvl": he.get("level"), "dur": mp.get("clock_time"), "team": team,
                 "items": [it["name"] for it in s.get("items") or [] if it.get("slot", "").startswith("slot")]}

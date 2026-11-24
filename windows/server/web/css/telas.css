@@ -254,7 +254,8 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .frow.play small { color: var(--hl); } .frow.off { opacity: .45; }
 .dlrow { padding: 4px 0; } .dlrow .bar { margin-top: 4px; height: 8px; }
 .post .res { font: 44px/1 var(--display); } .post .res.l { color: var(--alert); }
-.cmp { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 2px 12px; font-size: 14px; margin-top: 8px; }
+.cmp { display: grid; grid-template-columns: minmax(min-content, 1fr) auto auto; gap: 2px 12px; font-size: 14px; margin-top: 8px; }
+.cmp .h { white-space: normal; }   /* coluna estreita (tablet): "vs média geral" quebra, o rótulo não encolhe */
 .cmp .up { color: var(--p); } .cmp .dn { color: var(--alert); } .cmp .h { color: var(--p3); font-size: 12px; }
 .dayg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .dayg div { border: 1px solid var(--p4); padding: 6px 8px; border-radius: var(--r); }
@@ -333,3 +334,17 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* relatório do Dota (STRATZ/OpenDota) no pós-partida */
+.chips3 { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip3 { padding: 2px 8px; border: 1px solid var(--p4); border-radius: var(--r); font-size: 13px; color: var(--p2); }
+.chip3.up, .drep .up, .hist .up { color: var(--p); border-color: var(--p3); }
+.chip3.dn, .drep .dn, .hist .dn { color: var(--alert); }
+.drep-wait { margin-top: 8px; }
+.dteams { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 6px 16px; margin-top: 8px; }
+.dth { display: flex; justify-content: space-between; font-size: 12px; color: var(--p3); border-bottom: 1px solid var(--p4); padding-bottom: 2px; margin-bottom: 2px; }
+.dpl { display: grid; grid-template-columns: minmax(0, 1fr) auto 3.4em 2.6em; gap: 8px; font-size: 13px; padding: 1px 0; }
+.dpl span:not(.dh) { text-align: right; }
+.dpl .dh { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dpl .dh small { color: var(--p3); }
+.dpl.me { color: var(--p); font-weight: 600; }

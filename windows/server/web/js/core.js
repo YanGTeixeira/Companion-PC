@@ -151,6 +151,7 @@ function onMsg(m) {
     case "daily": state.daily = m.d; renderToday(); break;
     case "steam": onSteam(m.d); break;
     case "match_end": onMatchEnd(m.d); break;
+    case "match_report": onMatchReport(m.d); break;
     case "meet_soon": onMeetSoon(m.d); break;
     case "focus": onFocus(m.d); break;
     case "games": state.games = m.d; state.gamesT = performance.now(); renderGames(); onGameState(); break;

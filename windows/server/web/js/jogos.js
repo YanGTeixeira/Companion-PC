@@ -125,7 +125,7 @@ async function loadHist() {
     <table><tr><th>${cs ? "Mapa" : "Herói"}</th><th>jogos</th><th>vit.</th><th>K/D/A</th><th>${cs ? "HS%" : "GPM"}</th><th>${cs ? "ADR" : "XPM"}</th></tr>
     ${r.groups.map((g) => `<tr><td>${esc(g.name)}</td><td>${g.n}</td><td>${g.winrate}%</td><td>${g.k}/${g.d}/${g.a}</td><td>${g.x ?? "–"}</td><td>${g.y ?? "–"}</td></tr>`).join("")}</table>
     <div style="margin-top:8px">${r.recent.map((m) => `<div class="hrow"><span class="wl ${m.win === false ? "l" : ""}">${m.win === true ? "V" : m.win === false ? "D" : "E"}</span>
-      <span>${esc(m.title)}${cs ? ` <small>${m.mine}x${m.theirs}</small>` : ` <small>nível ${m.lvl ?? "–"} · ${clock(m.dur)}</small>`}<br><small>${when(m.ended)}</small></span>
+      <span>${esc(m.title)}${cs ? ` <small>${m.mine}x${m.theirs}</small>` : ` <small>nível ${m.lvl ?? "–"} · ${clock(m.dur)}</small>`}<br><small>${when(m.ended)}${m.rp?.imp != null ? ` · <b class="${m.rp.imp >= 0 ? "up" : "dn"}">nota ${fmtImp(m.rp.imp)}</b>` : ""}${m.rp?.award ? " · " + esc(m.rp.award) : ""}</small></span>
       <span>${m.k ?? 0}/${m.d ?? 0}/${m.a ?? 0}<br><small>${cs ? `HS ${m.hs_pct ?? "–"}% · ADR ${m.adr ?? "–"}` : `${m.gpm ?? "–"} GPM · ${m.lh ?? 0} LH`}</small></span></div>`).join("")}</div>`;
 }
 $("hist-g").addEventListener("click", (e) => { const b = e.target.closest("[data-hg]"); if (!b) return; buzz(8); histGame = b.dataset.hg; store.set("histGame", histGame); loadHist(); });

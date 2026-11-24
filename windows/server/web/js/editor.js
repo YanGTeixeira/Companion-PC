@@ -70,7 +70,7 @@ function send(a, p) {
   return new Promise((res, rej) => {
     if (!ws || ws.readyState !== 1) return rej(new Error("desconectado"));
     const id = ++rid; pending.set(id, { res, rej }); ws.send(JSON.stringify({ t: "req", id, a, p }));
-    setTimeout(() => pending.delete(id) && rej(new Error("sem resposta")), a === "daily.set" || a === "steam.set" ? 45000 : 8000);
+    setTimeout(() => pending.delete(id) && rej(new Error("sem resposta")), a === "daily.set" || a === "steam.set" || a === "stratz.set" ? 45000 : 8000);
   });
 }
 function connect() {
@@ -79,7 +79,7 @@ function connect() {
   ws.onopen = () => ws.send(JSON.stringify({ t: "hello", token: TOKEN, role: "editor" }));
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    if (msg.t === "welcome") { LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); loadDaily(); loadSteam(); mountPreviews(); }
+    if (msg.t === "welcome") { LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); loadDaily(); loadSteam(); loadStratz(); mountPreviews(); }
     else if (msg.t === "res") { const p = pending.get(msg.id); if (p) { pending.delete(msg.id); msg.ok ? p.res(msg.d) : p.rej(new Error(msg.e)); } }
     else if (msg.t === "layout" && !saveT) { LAY = msg.d || {}; renderAll(); }
     else if (msg.t === "deck" && msg.d) { DECK = msg.d.deck; renderDeck(); }
@@ -358,6 +358,21 @@ $("st-save").onclick = async () => {
     $("st-st").textContent = !r.has_key ? "Chave removida: só downloads" : r.err ? "Erro: " + r.err : `Funcionou: ${r.friends} amigo(s)`;
   }
   catch (e) { $("st-st").textContent = "Erro: " + e.message; }
+};
+
+// ------------------------------------------------------------ STRATZ (relatório do Dota)
+function stratzStatus(d) {
+  const last = d.last ? ` · última partida: ${d.last.src === "stratz" ? "STRATZ" : "OpenDota"}${d.last.complete ? "" : " (parcial)"}` : "";
+  $("sz-st").textContent = (!d.has_key ? "Sem chave: placar pelo OpenDota" : d.err ? "Erro: " + d.err : "Chave ok") + last;
+  if (d.has_key) $("sz-key").placeholder = "token salvo (cole outro para trocar)";
+}
+async function loadStratz() { try { stratzStatus(await send("stratz.get")); } catch {} }
+$("sz-save").onclick = async () => {
+  const token = $("sz-key").value.trim();
+  if (!token && !confirm("Tirar o token do STRATZ?")) return;
+  $("sz-st").textContent = "Testando…";
+  try { const r = await send("stratz.set", { token }); $("sz-key").value = ""; stratzStatus(r); if (r.has_key) $("sz-st").textContent = "Funcionou: token salvo"; }
+  catch (e) { $("sz-st").textContent = "Erro: " + e.message; }
 };
 
 // ------------------------------------------------------------ botões (deck)

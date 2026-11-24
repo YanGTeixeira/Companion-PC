@@ -46,9 +46,49 @@ function postLine(pm) {
   const d = pm.data || {};
   return pm.game === "cs2" ? `${d.k ?? 0}/${d.d ?? 0}/${d.a ?? 0} · ADR ${d.adr ?? "-"} · HS ${d.hs_pct ?? "-"}%` : `${d.k ?? 0}/${d.d ?? 0}/${d.a ?? 0} · GPM ${d.gpm ?? "-"} · XPM ${d.xpm ?? "-"}`;
 }
+// relatório do Dota (STRATZ/OpenDota): chega minutos depois do fim, por match_report
+const LANE_RES = { stomp_win: ["Atropelou a lane", "up"], win: ["Ganhou a lane", "up"], tie: ["Lane empatada", ""], loss: ["Perdeu a lane", "dn"], stomp_loss: ["Atropelado na lane", "dn"] };
+const LANE_NAME = { safe: "safe", mid: "mid", off: "off", jungle: "jungle", roam: "roaming" };
+const fmtNw = (v) => v == null ? "–" : v >= 1000 ? (v / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(v);
+const fmtImp = (v) => v == null ? "" : (v > 0 ? "+" : "") + v;
+function onMatchReport(d) {
+  if (!state.post || state.post.key !== d.key) { if (vis("games")) loadHist(); return; }
+  const before = state.post.report;
+  state.post.report = d.report; renderPost();
+  if (vis("games")) loadHist();
+  const me = d.report.me != null ? d.report.players[d.report.me] : null;
+  // avisa uma vez, quando a nota sai (ou quando só o OpenDota tem a partida e não virá mais nada)
+  if (!PREVIEW && me && d.report.complete && !before?.complete) {
+    snd("note");
+    notify("Relatório da partida", [me.imp != null ? `Nota ${fmtImp(me.imp)}` : "", me.award || "", me.lane_res ? LANE_RES[me.lane_res][0] : ""].filter(Boolean).join(" · ") || "Placar completo", "post");
+  }
+}
+function reportHtml(pm) {
+  const rp = pm.report;
+  if (!rp) return '<div class="sub drep-wait">Placar dos 10 e nota chegam alguns minutos depois do fim…</div>';
+  const me = rp.me != null ? rp.players[rp.me] : null;
+  const chips = me ? [
+    me.imp != null ? `<span class="chip3 ${me.imp >= 0 ? "up" : "dn"}" title="Desempenho vs. quem joga o mesmo herói no seu rank">Nota ${fmtImp(me.imp)}</span>` : "",
+    me.award ? `<span class="chip3 up">${esc(me.award)}</span>` : "",
+    me.pos || me.lane ? `<span class="chip3">${me.pos ? "Pos " + me.pos : ""}${me.pos && me.lane ? " · " : ""}${me.lane ? LANE_NAME[me.lane] : ""}</span>` : "",
+    me.lane_res ? `<span class="chip3 ${LANE_RES[me.lane_res][1]}">${LANE_RES[me.lane_res][0]}</span>` : "",
+  ].join("") : "";
+  const note = [rp.outcome ? rp.outcome[0].toUpperCase() + rp.outcome.slice(1) : "", rp.src === "stratz" ? "STRATZ" : "OpenDota",
+    rp.complete ? "" : rp.src === "opendota" ? "a nota chega quando o STRATZ analisar" : "análise do STRATZ em andamento"].filter(Boolean).join(" · ");
+  const team = (rad) => {
+    const won = rp.radiant_win === rad;
+    return `<div class="dteam"><div class="dth"><span>${rad ? "Radiant" : "Dire"}</span><span class="${won ? "up" : "dn"}">${won ? "vitória" : "derrota"}</span></div>`
+      + rp.players.filter((p) => p.r === rad).map((p) => `<div class="dpl${p.me ? " me" : ""}"><span class="dh">${esc(p.hero)}${p.pos ? ` <small>${p.pos}</small>` : ""}</span>`
+        + `<span>${p.k}/${p.d}/${p.a}</span><span>${fmtNw(p.nw)}</span><span class="${p.imp == null ? "" : p.imp >= 0 ? "up" : "dn"}">${fmtImp(p.imp)}</span></div>`).join("") + "</div>";
+  };
+  return `<div class="drep">${chips ? `<div class="chips3">${chips}</div>` : ""}
+    ${me && me.items.length ? `<div class="sub">${me.items.map(esc).join(" · ")}${me.neutral ? " · <i>" + esc(me.neutral) + "</i>" : ""}</div>` : ""}
+    <div class="sub">${note}</div><div class="dteams">${team(true)}${team(false)}</div></div>`;
+}
 function renderPost() {
-  const pm = state.post;
-  const show = pm && Date.now() / 1000 - pm.t < 1800;
+  const pm = state.post, now = Date.now() / 1000;
+  // fica 30 min depois do fim, ou 30 min depois que o relatório chegou
+  const show = pm && (now - pm.t < 1800 || (pm.report && now - pm.report.t < 1800));
   $("g-post").classList.toggle("hidden", !show);
   $("pl-post").classList.toggle("hidden", !show || $("pl-gsi").parentElement.classList.contains("match"));
   if (!show) return;
@@ -65,7 +105,8 @@ function renderPost() {
   const html = `<h3><span>Fim de partida · ${cs ? "CS2" : "Dota 2"}</span><span>${humanAgo(Date.now() / 1000 - pm.t)}</span></h3>
     <div class="res${pm.win === false ? " l" : ""}">${res}</div><div class="sub">${esc(pm.title)}${extra ? " · " + extra : ""}</div>
     ${rows ? `<div class="cmp"><span class="h"></span><span class="h">agora</span><span class="h">${refLabel ? "vs " + refLabel : ""}</span>${rows}</div>` : ""}
-    ${!refN ? '<div class="sub">Primeira partida salva: a comparação aparece a partir da próxima.</div>' : ""}`;
+    ${!refN ? '<div class="sub">Primeira partida salva: a comparação aparece a partir da próxima.</div>' : ""}
+    ${cs ? "" : reportHtml(pm)}`;
   setBox("g-post", html); setBox("pl-post", html);
 }
 setInterval(() => { if (state.post) renderPost(); }, 60000);
