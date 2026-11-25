@@ -268,7 +268,8 @@ com a CA instalada no celular) em `config.json`:
 - Arquivos do PC só ficam acessíveis ao aparelho quando você os copia e toca em
   "Pegar o que está copiado", por um link aleatório que expira em 15 min.
 - Só executa ações de uma lista fechada (`ACTIONS` no servidor); programas
-  só abrem se estiverem em `"shortcuts"` do `config.json`. Não há execução
+  só abrem se estiverem em `"shortcuts"` do `config.json` ou no Menu Iniciar do Windows
+  (a voz acha apps da Microsoft Store, como o Spotify, por lá). Não há execução
   de comandos arbitrários.
 - Desligar/reiniciar usam atraso de 30 s (`shutdown_delay_s`) e podem ser
   cancelados em **PC › Energia**. `"allow_power": false` desativa a energia.

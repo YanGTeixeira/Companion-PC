@@ -165,8 +165,9 @@ def _sim(a: str, b: str) -> float:
 class Catalog:
     """O que dá para abrir/apertar por voz. Preenchido pelo servidor."""
 
-    def __init__(self, apps=(), games=(), deck=()):
+    def __init__(self, apps=(), games=(), deck=(), start=()):
         self.apps = list(apps)    # [(id, nome)]
+        self.start = list(start)  # [(AppID, nome)] do Menu Iniciar (Store etc.); perde empate para os atalhos
         self.games = list(games)  # [(gid, nome)]
         self.deck = list(deck)    # [(page, index, rótulo)]
 
@@ -184,6 +185,10 @@ class Catalog:
             sc = max(_sim(t, c) for c in cands) - (0.04 if prefer_games else 0)
             if not best or sc > best[0]:
                 best = (sc, "app", sid, name)
+        for appid, name in self.start:
+            sc = _sim(t, norm(name)) - 0.02 - (0.04 if prefer_games else 0)
+            if not best or sc > best[0]:
+                best = (sc, "app", "start:" + appid, name)
         for gid, name in self.games:
             n = norm(name)
             words = [w for w in n.split() if w not in ("of", "the", "de", "do", "da")]

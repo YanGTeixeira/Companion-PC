@@ -40,6 +40,7 @@ import overlay
 import pc_info
 import screentime
 import soundboard
+import startapps
 import updater
 import voice
 import watchers
@@ -145,7 +146,17 @@ def power(action):
         raise ValueError(f"ação de energia inválida: {action}")
 
 
+START_APPS = startapps.StartApps()
+
+
 def launch(shortcut_id):
+    if str(shortcut_id).startswith("start:"):  # app do Menu Iniciar (voz): só o que está na lista do Windows
+        appid = shortcut_id[6:]
+        name = START_APPS.name_of(appid)
+        if not name:
+            raise ValueError("app não encontrado no Menu Iniciar")
+        os.startfile("shell:AppsFolder\\" + appid)
+        return name
     sc = next((s for s in CFG["shortcuts"] if s.get("id") == shortcut_id), None)
     if not sc:
         raise ValueError("atalho não configurado")
@@ -953,7 +964,7 @@ def voice_catalog():
                     deck.append((pi, bi, b["label"]))
     except Exception:  # noqa: BLE001
         log.exception("voz: deck")
-    return voice.Catalog([(s["id"], s["name"]) for s in CFG["shortcuts"]], _voice_games[1], deck)
+    return voice.Catalog([(s["id"], s["name"]) for s in CFG["shortcuts"]], _voice_games[1], deck, START_APPS.get())
 
 
 async def voice_run(it):
@@ -1843,6 +1854,7 @@ async def main():
     loop = asyncio.get_running_loop()
     UPD.on_change = lambda st: asyncio.run_coroutine_threadsafe(broadcast({"t": "update", "d": st}), loop)
     updater.run_detached_check(UPD)
+    asyncio.create_task(asyncio.to_thread(START_APPS.get))  # já deixa a lista do Menu Iniciar pronta para a voz
     VOICE.start(asyncio.get_running_loop())
     BOARD.start(asyncio.get_running_loop())
     asyncio.create_task(https_main())
