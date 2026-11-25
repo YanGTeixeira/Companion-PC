@@ -85,11 +85,12 @@ def make_icon(color):
 # --------------------------------------------------------------------------
 class TrayApp:
     def __init__(self, status_fn, log_path: Path, base: Path, version: str, stop_server, open_on_phone=None,
-                 voice_set=None):
+                 voice_set=None, updater=None):
         """status_fn() -> dict(state='ok'|'wait'|'off', text=str, game=str|None, phone=dict)."""
         self.status_fn = status_fn
         self.open_on_phone_fn = open_on_phone
         self.voice_set = voice_set
+        self.updater = updater
         self.log_path = log_path
         self.base = base
         self.version = version
@@ -98,6 +99,7 @@ class TrayApp:
         self.panel_q = queue.Queue()
         self.panel_open = False
         self._last_state = None
+        self._last_update = None
 
     # -- ações --
     def open_panel(self, *_):
@@ -116,6 +118,28 @@ class TrayApp:
         url = links.get("cabo")  # http://localhost:<porta>/#t=TOKEN
         if url:
             os.startfile(url.replace("/#t=", "/editor#t=", 1))
+
+    def update(self, *_):
+        """Baixa e instala a versão nova (o instalador reinicia o servidor)."""
+        def run():
+            try:
+                self.updater.install()
+                if self.icon:
+                    self.icon.notify("Instalando a atualização. O Companion PC reinicia sozinho em instantes.",
+                                     "Companion PC")
+            except Exception as e:  # noqa: BLE001
+                if self.icon:
+                    self.icon.notify(str(e)[:200], "Companion PC")
+        threading.Thread(target=run, daemon=True, name="update").start()
+
+    def check_update(self, *_):
+        def run():
+            st = self.updater.check()
+            if self.icon:
+                msg = (f"Versão {st['latest']} disponível — use \"Atualizar\" no menu." if st["latest"]
+                       else st["err"] or f"Você já está na versão mais nova ({st['current']}).")
+                self.icon.notify(msg[:200], "Companion PC")
+        threading.Thread(target=run, daemon=True, name="update-check").start()
 
     def open_log(self, *_):
         os.startfile(self.log_path)
@@ -164,6 +188,10 @@ class TrayApp:
                         self._last_state = key
                         self.icon.icon = make_icon(COLORS[st["state"]])
                         self.icon.title = f"Companion PC – {st['text']}"[:127]
+                    upd = self.updater and self.updater.latest
+                    if upd != self._last_update:  # o menu do Windows só reavalia "visible" assim
+                        self._last_update = upd
+                        self.icon.update_menu()
             except Exception:  # noqa: BLE001
                 log.exception("tray status")
             time.sleep(1.5)
@@ -186,6 +214,8 @@ class TrayApp:
             menu=Menu(
                 Item(lambda _: f"Companion PC {self.version}", None, enabled=False),
                 Item(lambda _: self.status_fn()["text"], None, enabled=False),
+                Item(lambda _: f"Atualizar para a versão {(self.updater.latest or {}).get('version', '')}",
+                     self.update, visible=lambda _: bool(self.updater and self.updater.latest)),
                 Menu.SEPARATOR,
                 Item("Abrir painel", self.open_panel, default=True),
                 Item("Personalizar (tema e layout)", self.open_editor),
@@ -194,6 +224,7 @@ class TrayApp:
                 Item("Ver log", self.open_log),
                 Item("Abrir pasta (config.json)", self.open_folder),
                 Menu.SEPARATOR,
+                Item("Procurar atualização", self.check_update, visible=lambda _: bool(self.updater)),
                 Item("Reiniciar servidor", self.restart),
                 Item("Sair", self.quit),
             ),

@@ -40,6 +40,7 @@ import overlay
 import pc_info
 import screentime
 import soundboard
+import updater
 import voice
 import watchers
 
@@ -58,6 +59,8 @@ DEFAULT_CFG = {
     "https": dict(https_cert.DEFAULT),
     # Relatório do Dota depois da partida (nota, lanes, placar): chave grátis em stratz.com/api
     "stratz": {"token": ""},
+    # Atualização automática: confere o release.json do repositório a cada 6 h ("check": false desliga)
+    "update": dict(updater.DEFAULT),
     "upload_dir": "%USERPROFILE%\\Downloads\\Companion PC",  # arquivos enviados pelo celular
     "downloads_dir": "%USERPROFILE%\\Downloads",               # avisa no celular quando um download termina
     # Teclas que o servidor aperta para o Discord. Configure as MESMAS como
@@ -73,6 +76,13 @@ DEFAULT_CFG = {
         {"id": "taskmgr", "name": "Gerenciador de Tarefas", "open": "taskmgr.exe"},
         {"id": "settings", "name": "Configurações do Windows", "open": "ms-settings:"},
         {"id": "youtube", "name": "YouTube", "open": "https://www.youtube.com"},
+        # usados pelas macros da página padrão "Macros" (caminhos da instalação padrão de cada um)
+        {"id": "vscode", "name": "VS Code", "open": "%LOCALAPPDATA%\\Programs\\Microsoft VS Code\\Code.exe"},
+        {"id": "terminal", "name": "Terminal", "open": "wt.exe"},
+        {"id": "opera", "name": "Opera", "open": "%LOCALAPPDATA%\\Programs\\Opera\\launcher.exe"},
+        {"id": "discord", "name": "Discord", "open": "%LOCALAPPDATA%\\Discord\\Update.exe",
+         "args": "--processStart Discord.exe"},
+        {"id": "steam", "name": "Steam", "open": "steam://open/main"},
     ],
 }
 
@@ -99,6 +109,7 @@ def load_config():
 
 
 CFG = load_config()
+UPD = updater.Updater(VERSION, CFG.get("update"), BASE)
 WEB = {**DEFAULT_CFG["web"], **(CFG.get("web") or {})}
 
 # --------------------------------------------------------------------------
@@ -479,6 +490,9 @@ ASYNC_ACTIONS = {
     "steam.set": lambda p: steam_set(p),
     "steam.get": lambda p: _async({**STEAM_STATE, "steamid": STEAM.steamid()}),
     "stratz.get": lambda p: _async(stratz_public()),
+    "update.get": lambda p: _async(UPD.state()),
+    "update.check": lambda p: asyncio.to_thread(UPD.check),
+    "update.install": lambda p: asyncio.to_thread(UPD.install),
     "stratz.set": lambda p: stratz_set(p),
     "dota.report": lambda p: dota_report_now(p),
     "dota.heroes": lambda p: dota_draft_call(DRAFT.hero_list),
@@ -688,7 +702,7 @@ async def session(ws, peer, kind):
         "t": "welcome", "version": VERSION, "web": web_build(), "host": socket.gethostname(), "https": https_url(),
         "os": f"{platform.system()} {platform.release()}",
         "shortcuts": [{"id": s["id"], "name": s["name"]} for s in CFG["shortcuts"]],
-        "power": bool(CFG.get("allow_power")), "layout": layout_get(),
+        "power": bool(CFG.get("allow_power")), "layout": layout_get(), "update": UPD.state(),
         "features": {"media": pc_info.HAS_MEDIA, "volume": pc_info.HAS_VOLUME, "mixer": pc_info.HAS_VOLUME,
                      "screen": True, "clipboard": True, "files": True, "deck": True,
                      "mic": pc_info.HAS_VOLUME, "timer": True, "deck_auto": True, "macro": True,
@@ -1826,6 +1840,9 @@ async def main():
     asyncio.create_task(adb_loop())
     asyncio.create_task(downloads_loop())
     asyncio.create_task(web_watch())
+    loop = asyncio.get_running_loop()
+    UPD.on_change = lambda st: asyncio.run_coroutine_threadsafe(broadcast({"t": "update", "d": st}), loop)
+    updater.run_detached_check(UPD)
     VOICE.start(asyncio.get_running_loop())
     BOARD.start(asyncio.get_running_loop())
     asyncio.create_task(https_main())
@@ -1858,7 +1875,7 @@ def run_with_tray():
             log.exception("servidor parou")
     threading.Thread(target=server_thread, daemon=True, name="server").start()
     tray.TrayApp(status, LOG_PATH, BASE, VERSION, stop_server, open_on_phone=adb_open_on_phone,
-                 voice_set=VOICE.set).run()
+                 voice_set=VOICE.set, updater=UPD).run()
 
 
 if __name__ == "__main__":

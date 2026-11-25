@@ -119,3 +119,31 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") { applyWake(); if (!ws) { retry = 0; connect(); } else if (vis("screen")) screenLoop(); }
 });
 
+
+// ---- Atualização do Companion PC (o servidor confere o GitHub a cada 6 h) ----
+let updState = null, updToldFor = null;
+function onUpdate(d, fromWelcome) {
+  if (!d) return;
+  updState = d;
+  const info = $("upd-info"), b = $("b-upd");
+  if (d.busy) { info.textContent = d.busy; b.disabled = true; b.textContent = "…"; return; }
+  b.disabled = false;
+  if (d.latest) {
+    info.textContent = `Versão ${d.latest} disponível (instalada: ${d.current})` + (d.notes ? ` · ${d.notes}` : "");
+    b.textContent = "Atualizar";
+    if (updToldFor !== d.latest) { updToldFor = d.latest; toast(`Companion PC ${d.latest} disponível · Ajustes › Atualização`, "ok"); }
+  } else {
+    info.textContent = d.err && !fromWelcome ? d.err : `Versão ${d.current}` + (d.checked ? " · é a mais nova" : "");
+    b.textContent = "Procurar";
+  }
+}
+$("b-upd").onclick = () => {
+  if (updState?.latest) {
+    if (!confirm(`Atualizar o Companion PC para a versão ${updState.latest}? O servidor reinicia sozinho e o app reconecta.`)) return;
+    send("update.install", {}, true, 180000).then(() => toast("Instalando… o app reconecta sozinho", "ok")).catch((e) => { if (e.message !== "offline") toast(e.message, "bad"); });
+  } else {
+    $("b-upd").disabled = true;
+    send("update.check", {}, true, 30000).then((d) => { onUpdate(d); if (!d.latest && !d.err) toast("Já está na versão mais nova", "ok"); })
+      .catch((e) => { $("b-upd").disabled = false; if (e.message !== "offline") toast(e.message, "bad"); });
+  }
+};

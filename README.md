@@ -225,6 +225,17 @@ rodam na ordem do `index.html`; código que roda ao carregar só pode chamar fun
 anteriores. Cada arquivo começa com `"use strict";`. Antes de instalar, rode os testes em
 `windows/server`: `py -3 -m unittest`.
 
+## Atualizações
+
+O servidor confere a cada 6 h o `release.json` deste repositório. Se a versão publicada for maior que a
+instalada, o app mostra um aviso e **Ajustes › Atualização › Atualizar**; a bandeja ganha
+**Atualizar para a versão X** (e tem **Procurar atualização**). Atualizar baixa o zip da tag `vX`, roda o
+`install-server.ps1` dele e reinicia o servidor; `config.json`, `deck.json`, sons e histórico ficam.
+O que o instalador escreveu vai para `update.log`. Para desligar: `"update": {"check": false}` no `config.json`.
+
+Para publicar (na `main`, sem mudanças pendentes): `tools/release.sh 1.10 "o que mudou"`. Ele roda os testes,
+troca o `VERSION`, grava o `release.json`, cria a tag e manda tudo para o GitHub.
+
 ## HTTPS e acesso fora de casa (Tailscale)
 
 Com HTTPS o navegador trata o app como seguro também sem cabo: instala como app (inclusive no iPhone),

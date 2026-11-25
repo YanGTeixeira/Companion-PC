@@ -191,7 +191,8 @@ def _ms(arg):
 
 
 def parse_macro(src, valid_combo, shortcuts):
-    """shortcuts: {id_ou_nome_minúsculo: id}. Devolve [(tipo, valor)] ou ValueError com a linha."""
+    """shortcuts: {id_ou_nome_minúsculo: id}, ou None para não conferir os programas (só na hora de rodar).
+    Devolve [(tipo, valor)] ou ValueError com a linha."""
     steps, waited = [], 0.0
     for n, line in enumerate(str(src).splitlines(), 1):
         line = line.strip()
@@ -211,7 +212,7 @@ def parse_macro(src, valid_combo, shortcuts):
                 arg = max(0.0, _ms(arg))
                 waited += arg
             elif kind == "open":
-                sid = shortcuts.get(arg.lower())
+                sid = arg if shortcuts is None else shortcuts.get(arg.lower())
                 if not sid:
                     raise ValueError(f"programa '{arg}' não está no config.json")
                 arg = sid
@@ -265,6 +266,10 @@ class Deck:
         pages = deck.get("pages") if isinstance(deck, dict) else None
         if not isinstance(pages, list) or not 1 <= len(pages) <= 20:
             raise ValueError("deck precisa de 1 a 20 páginas")
+        # macros que já estavam salvas (ou vêm do deck padrão) não travam o salvamento se citarem um
+        # programa que não está no config.json: o erro aparece só quando rodar
+        old = {str(b.get("value")) for p in (self.get().get("pages") or []) + DEFAULT_DECK["pages"]
+               for b in (p.get("buttons") or []) if b.get("type") == "macro"}
         clean = []
         for pg in pages:
             name = str(pg.get("name") or "Página")[:24]
@@ -286,7 +291,7 @@ class Deck:
                     v = v[:64]
                 elif t == "macro":
                     v = v[:4000]
-                    parse_macro(v, valid_combo, shortcuts or {})
+                    parse_macro(v, valid_combo, None if v in old else (shortcuts or {}))
                 elif t == "sound":
                     if not re.fullmatch(r"[0-9a-f]{12}", v):
                         raise ValueError("botão de som sem áudio")

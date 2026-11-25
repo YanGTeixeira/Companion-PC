@@ -137,6 +137,7 @@ function onMsg(m) {
       vozHelpT = 0; vozDevs = false; if (vis("voz")) loadVoiceHelp();
       CONN = `${m.host} · servidor ${m.version} · ${location.host}`; showConn();
       $("b-secure").classList.toggle("hidden", !m.https || window.isSecureContext);
+      onUpdate(m.update, true);
       break;
     case "res": {
       const p = pending.get(m.id); if (!p) return; pending.delete(m.id);
@@ -158,6 +159,7 @@ function onMsg(m) {
     case "snd": onSb(m.d); break;
     case "meet_soon": onMeetSoon(m.d); break;
     case "focus": onFocus(m.d); break;
+    case "update": onUpdate(m.d); break;
     case "games": state.games = m.d; state.gamesT = performance.now(); renderGames(); onGameState(); break;
     case "gameart": state.gameart = { [m.id]: "data:image/jpeg;base64," + m.jpg }; renderGames(); renderPlay(); break;
     case "event":
