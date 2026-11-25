@@ -1,4 +1,4 @@
 {
-  "version": "1.11",
-  "notes": "Versão de teste do botão Atualizar"
+  "version": "1.12",
+  "notes": "A voz agora acha apps da Microsoft Store e do Menu Iniciar (ex.: \"PC, abre o Spotify\")"
 }
