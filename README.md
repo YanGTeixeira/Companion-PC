@@ -40,7 +40,7 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
 | **Status** | *Sistema*: CPU, memória, GPU (consumo, ventoinha) e rede com gráfico do último minuto, processos, discos, **bateria** do mouse, teclado, fone e controle; temperatura da CPU e ventoinhas se o LibreHardwareMonitor estiver rodando. *Jogos*: jogo aberto, tempo jogado, recentes e biblioteca. *Tempo*: tempo de tela por app e categoria (hoje, semana, mês). Com um jogo aberto aparece *Jogando*; numa chamada do Meet, *Reunião*. |
 | **Rádio** | *Tocando*: capa, faixa, progresso (arraste para pular), volume e saída de áudio (toque para alternar). *Mixer*: volume e mudo por aplicativo e escolha da saída (fone, caixa, monitor). |
 | **Controle** | *Mouse e teclado*: touchpad (toque = clique; 2 dedos: toque = direito, arrastar = rolar; toque duplo e arraste = segurar), teclas especiais e o teclado do Android digitando no PC. *Tela do PC*: a tela ao vivo; toque = clique, segurar = botão direito, pinça = zoom, faixa da direita = rolar. |
-| **Botões** | Páginas de botões estilo Stream Deck. **Editar** cria/edita botões (atalho de teclado, texto, ação pronta ou programa do config.json), com ícone, cor e confirmação. Ficam salvos em `deck.json` no PC. |
+| **Botões** | Páginas de botões estilo Stream Deck. **Editar** cria/edita botões (atalho de teclado, texto, ação pronta ou programa do config.json), com ícone, cor e confirmação. Ficam salvos em `deck.json` no PC. Tipo **Tocar som**: escolha um áudio no celular e ele sai no microfone (Discord etc.); veja *Sons no microfone*. |
 | **PC** | *Arquivos*: texto/link para a área de transferência do PC (ou já colar), fotos e arquivos para `Downloads\Companion PC`, e "Pegar o que está copiado no PC". *Energia*: bloquear, monitor, suspender, reiniciar, desligar. *Ajustes*: alertas (download concluído, GPU/CPU quente, memória cheia), cor do terminal e ajustes do aparelho. |
 
 **Depois da 1.9**
@@ -129,6 +129,14 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
 
 **Extras**
 
+- **Sons no microfone (soundboard):** botões do tipo **Tocar som** no deck. O celular converte o
+  áudio (MP3, OGG, WAV, M4A…, até 20 s) para WAV, corta o silêncio das pontas e iguala o volume; o PC guarda
+  em `sons/`. No editor do PC (bandeja › editor, seção Botões) dá para arrastar vários arquivos de uma vez
+  e editar nome, ícone, cor, volume e trocar o áudio de cada botão de som. Tocar de novo no botão para o som; **Parar sons** para todos. Para sair no microfone é preciso
+  um cabo virtual: instale o **VB-CABLE** (grátis, vb-audio.com/Cable) e reinicie o PC. O servidor toca no
+  `CABLE Input` o seu microfone de verdade misturado com os sons, e no Discord o dispositivo de entrada
+  vira `CABLE Output` (supressão de ruído em Nenhuma/Padrão; o Krisp corta música). O botão **Som** escolhe o
+  microfone que vai junto, os volumes, "um som por vez" e se você também ouve. Sem cabo, os sons tocam só no PC.
 - **Botões que seguem o programa:** cada página pode ter uma lista de programas (`code.exe`,
   `spotify.exe`...; `@jogo` = qualquer jogo detectado). Quando um deles entra em foco no PC, a página
   abre sozinha. Já vêm páginas para navegador, VS Code, Terminal, Discord, Spotify, WhatsApp e jogos.
@@ -189,6 +197,7 @@ os arquivos do celular) e `"downloads_dir"` (a pasta vigiada para o alerta de do
 | `windows/server/dota_stats.py` | Relatório do Dota depois da partida (STRATZ / OpenDota) |
 | `windows/server/dota_draft.py` | Draft (counters) e builds do Dota com as estatísticas do STRATZ |
 | `windows/server/matches.py` | Acompanha rounds/minutos das partidas e guarda o histórico |
+| `windows/server/soundboard.py` | Sons no microfone: mistura os sons do deck com o microfone no cabo virtual |
 | `windows/server/daily.py` | Clima (Open-Meteo) e agenda (iCal) |
 | `windows/server/steam.py` | Steam: downloads (appmanifest) e amigos (Web API com a chave do usuário) |
 | `windows/server/web/editor.html` | Editor de tema e layout (abra pela bandeja) |

@@ -39,6 +39,7 @@ import steam
 import overlay
 import pc_info
 import screentime
+import soundboard
 import voice
 import watchers
 
@@ -365,7 +366,15 @@ def layout_set(p):
     return clean
 
 
+def deck_sounds(deck):
+    return {b["value"] for pg in deck.get("pages", []) for b in pg.get("buttons") or [] if b and b.get("type") == "sound"}
+
+
 def deck_saved(data):
+    try:
+        BOARD.cleanup(deck_sounds(data))
+    except Exception:  # noqa: BLE001
+        log.exception("sons: limpeza")
     payload = deck_payload(data)
     asyncio.get_running_loop().create_task(broadcast({"t": "deck", "d": payload}))
     return payload
@@ -438,6 +447,14 @@ ASYNC_ACTIONS = {
     "audio.set_output": lambda p: output_action(p.get("id")),
     "audio.cycle": lambda p: output_action(cycle=True),
     "deck.press": lambda p: deck_press(p),
+    "snd.state": lambda p: _async(BOARD.state()),
+    "snd.mics": lambda p: asyncio.to_thread(BOARD.mics),
+    "snd.set": lambda p: asyncio.to_thread(BOARD.set, p),
+    "snd.add": lambda p: asyncio.to_thread(BOARD.add, str(p["data"])),
+    "snd.info": lambda p: asyncio.to_thread(BOARD.info, str(p["id"])),
+    "snd.get": lambda p: asyncio.to_thread(BOARD.raw, str(p["id"])),
+    "snd.play": lambda p: asyncio.to_thread(BOARD.play, str(p["id"]), int(p.get("vol", 100))),
+    "snd.stop": lambda p: asyncio.to_thread(BOARD.stop),
     "clip.get": lambda p: asyncio.to_thread(extras.clip_get),
     "screen.shot": lambda p: asyncio.to_thread(extras.screen_shot, p.get("mon", 0), p.get("w", 1280),
                                                p.get("q", 60), p.get("sid")),
@@ -574,6 +591,8 @@ async def deck_press(p):
         return launch(v)
     elif t == "action":
         return await run_deck_action(v)
+    elif t == "sound":
+        await asyncio.to_thread(BOARD.play, v, b.get("vol", 100))
     elif t == "macro":
         for kind, arg in extras.parse_macro(v, valid_combo, shortcut_map()):
             if kind == "keys":
@@ -673,7 +692,7 @@ async def session(ws, peer, kind):
         "features": {"media": pc_info.HAS_MEDIA, "volume": pc_info.HAS_VOLUME, "mixer": pc_info.HAS_VOLUME,
                      "screen": True, "clipboard": True, "files": True, "deck": True,
                      "mic": pc_info.HAS_VOLUME, "timer": True, "deck_auto": True, "macro": True,
-                     "library": True, "ping": True, "notif": True, "fps": True, "voice": VOICE.available,
+                     "library": True, "ping": True, "notif": True, "fps": True, "voice": VOICE.available, "sounds": BOARD.available,
                      "battery": devices.hid is not None, "usage": True, "meet": True},
     }))
     if hello.get("role") in ("editor", "preview") and peer == "cabo USB":
@@ -827,7 +846,7 @@ async def meet_cmd(p):
         raise ValueError("não consegui trazer o Meet para a frente")
     await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"layout.get", "dota.plan.get", "dota.heroes", "dota.draft", "dota.build", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"snd.get", "snd.state", "snd.mics", "snd.add", "snd.info", "snd.play", "snd.stop", "layout.get", "dota.plan.get", "dota.heroes", "dota.draft", "dota.build", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -996,6 +1015,11 @@ async def voice_event(ev):
             clients.discard(ws)
 
 
+async def board_event(st):
+    await broadcast({"t": "snd", "d": st})
+
+
+BOARD = soundboard.Board(BASE, CFG.get("sounds"), lambda c: save_cfg_key("sounds", c), board_event)
 VOICE = voice.Voice(CFG.get("voice"), BASE, voice_save_cfg, voice_catalog, voice_run, voice_event,
                     mic_fn=lambda: pc_info.mic_get())
 
@@ -1787,6 +1811,7 @@ async def main():
     asyncio.create_task(downloads_loop())
     asyncio.create_task(web_watch())
     VOICE.start(asyncio.get_running_loop())
+    BOARD.start(asyncio.get_running_loop())
     asyncio.create_task(https_main())
     await web_main()
 

@@ -63,14 +63,14 @@ const THEMES = [
 const m = location.hash.match(/[#&]t=([^&]+)/);
 if (m) { try { localStorage.setItem("pcc.token", JSON.stringify(decodeURIComponent(m[1]))); } catch {} history.replaceState(null, "", location.pathname); }
 let TOKEN = ""; try { TOKEN = JSON.parse(localStorage.getItem("pcc.token") || '""'); } catch {}
-let ws = null, rid = 0, LAY = {}, DECK = null, O = "portrait", page = 0;
+let WEB = null, ws = null, rid = 0, LAY = {}, DECK = null, O = "portrait", page = 0;
 const pending = new Map();
 function status(cls, text) { $("status").className = cls; $("status").lastElementChild.textContent = text; }
-function send(a, p) {
+function send(a, p, timeout) {
   return new Promise((res, rej) => {
     if (!ws || ws.readyState !== 1) return rej(new Error("desconectado"));
     const id = ++rid; pending.set(id, { res, rej }); ws.send(JSON.stringify({ t: "req", id, a, p }));
-    setTimeout(() => pending.delete(id) && rej(new Error("sem resposta")), a === "daily.set" || a === "steam.set" || a === "stratz.set" ? 45000 : 8000);
+    setTimeout(() => pending.delete(id) && rej(new Error("sem resposta")), timeout || (a === "daily.set" || a === "steam.set" || a === "stratz.set" ? 45000 : 8000));
   });
 }
 function connect() {
@@ -79,7 +79,8 @@ function connect() {
   ws.onopen = () => ws.send(JSON.stringify({ t: "hello", token: TOKEN, role: "editor" }));
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    if (msg.t === "welcome") { LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); loadDaily(); loadSteam(); loadStratz(); mountPreviews(); }
+    if (msg.t === "welcome" && msg.web && WEB && msg.web !== WEB) { location.reload(); return; }   // servidor atualizado: pega o editor novo
+    if (msg.t === "welcome") { WEB = WEB || msg.web; LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); loadDaily(); loadSteam(); loadStratz(); mountPreviews(); }
     else if (msg.t === "res") { const p = pending.get(msg.id); if (p) { pending.delete(msg.id); msg.ok ? p.res(msg.d) : p.rej(new Error(msg.e)); } }
     else if (msg.t === "layout" && !saveT) { LAY = msg.d || {}; renderAll(); }
     else if (msg.t === "deck" && msg.d) { DECK = msg.d.deck; renderDeck(); }
@@ -386,8 +387,9 @@ function renderDeck() {
   $("pg-name").value = pg.name;
   $("pg-auto").hidden = pg.auto !== "shortcuts";
   $("btns").dataset.drop = "btn";
-  $("btns").innerHTML = pg.auto === "shortcuts" ? "" : (pg.buttons || []).map((b, i) => `<div class="dbtn" draggable="true" data-drag="btn:${i}" style="--c:${esc(b.color || "transparent")}">
+  $("btns").innerHTML = pg.auto === "shortcuts" ? "" : (pg.buttons || []).map((b, i) => `<div class="dbtn${b.type === "sound" ? " snd" : ""}" draggable="true" data-drag="btn:${i}" style="--c:${esc(b.color || "transparent")}">
     <b>${esc(b.icon || "")}</b><span>${esc(b.label)}</span></div>`).join("") || '<div class="empty">Página vazia</div>';
+  sndRender();
 }
 $("pages").addEventListener("click", (e) => { const b = e.target.closest(".pg"); if (!b) return; page = +b.dataset.i; renderDeck(); preview("deck"); });
 $("pg-name").addEventListener("change", () => { DECK.pages[page].name = $("pg-name").value.trim().slice(0, 24) || "Página"; saveDeck(); });
@@ -404,6 +406,125 @@ function saveDeck() {
     try { DECK = (await send("deck.save", { deck: DECK })).deck; renderDeck(); status("ok", "Conectado · tudo salvo"); }
     catch (e) { status("bad", "Erro ao salvar botões: " + e.message); loadDeck(); }
   }, 300);
+}
+
+// ------------------------------------------------------------ botões de som (mesa de som: soundboard.py)
+let sndSel = -1, sndBusy = false, sndPage = null;   // sndPage: índice da página do deck (null = escolhe sozinho; -1 = criar "Sons")
+const SND_COLORS = ["", "#58a6ff", "#50c878", "#f0b446", "#eb5757", "#aa82ff", "#5865f2", "#ff7ab6", "#3dd6d0"];
+const sndBtn = () => (sndPage >= 0 ? DECK?.pages[sndPage]?.buttons?.[sndSel] : null);
+const sndErr = (e) => (e.name === "EncodingError" ? "não consegui abrir esse áudio" : e.message);
+function sndPickPage() {
+  const ps = DECK.pages, ok = (i) => ps[i] && !ps[i].auto;
+  if (sndPage !== null && (sndPage === -1 || ok(sndPage))) return;
+  let i = ps.findIndex((p) => !p.auto && /^sons?\b/i.test(p.name));
+  if (i < 0) i = ps.findIndex((p) => !p.auto && (p.buttons || []).some((b) => b.type === "sound"));
+  sndPage = i;
+}
+$("snd-page").onchange = () => { sndPage = +$("snd-page").value; sndSel = -1; sndRender(); };
+$("snd-btns").addEventListener("click", (e) => {
+  const el = e.target.closest(".dbtn.snd"); if (!el) return;
+  sndSel = +el.dataset.i === sndSel ? -1 : +el.dataset.i; sndRender();
+});
+function sndRender() {
+  if (!DECK) return;
+  sndPickPage();
+  $("snd-page").innerHTML = DECK.pages.map((p, i) => (p.auto ? "" : `<option value="${i}">${esc(p.name)}</option>`)).join("")
+    + (DECK.pages.some((p) => /^sons?\b/i.test(p.name)) ? "" : '<option value="-1">+ Página nova "Sons"</option>');
+  $("snd-page").value = String(sndPage);
+  const list = sndPage >= 0 ? (DECK.pages[sndPage].buttons || []).map((b, i) => [b, i]).filter(([b]) => b.type === "sound") : [];
+  $("snd-btns").innerHTML = list.map(([b, i]) => `<div class="dbtn snd${i === sndSel ? " sel" : ""}" data-i="${i}" style="--c:${esc(b.color || "transparent")}">
+    <b>${esc(b.icon || "")}</b><span>${esc(b.label)}</span></div>`).join("") || '<div class="empty">Nenhum som nesta página ainda.</div>';
+  const b = sndBtn();
+  if (!b || b.type !== "sound") { sndSel = -1; $("snd-ed").hidden = true; return; }
+  $("snd-ed").hidden = false;
+  if (document.activeElement !== $("se-name")) $("se-name").value = b.label;
+  if (document.activeElement !== $("se-icon")) $("se-icon").value = b.icon || "";
+  $("se-vol").value = b.vol ?? 100; $("se-vv").textContent = (b.vol ?? 100) + "%";
+  $("se-colors").innerHTML = SND_COLORS.map((c) => `<button type="button" data-c="${c}" class="${(b.color || "") === c ? "on" : ""}" style="background:${c || "var(--bg)"}" aria-label="${c || "sem cor"}"></button>`).join("");
+}
+$("se-name").addEventListener("change", () => { const b = sndBtn(); if (b) { b.label = $("se-name").value.trim().slice(0, 40) || "Som"; saveDeck(); } });
+$("se-icon").addEventListener("change", () => { const b = sndBtn(); if (!b) return; const v = $("se-icon").value.trim().slice(0, 8); v ? (b.icon = v) : delete b.icon; saveDeck(); });
+$("se-vol").addEventListener("input", () => { $("se-vv").textContent = $("se-vol").value + "%"; });
+$("se-vol").addEventListener("change", () => { const b = sndBtn(); if (b) { b.vol = +$("se-vol").value; saveDeck(); } });
+$("se-colors").addEventListener("click", (e) => { const x = e.target.closest("[data-c]"), b = sndBtn(); if (!x || !b) return; x.dataset.c ? (b.color = x.dataset.c) : delete b.color; saveDeck(); });
+$("se-test").onclick = async () => {
+  const b = sndBtn(); if (!b) return;
+  try { const ok = await send("snd.play", { id: b.value, vol: b.vol ?? 100 }); $("se-st").className = "sst"; $("se-st").textContent = ok ? "Tocando…" : "Parado"; }
+  catch (e) { $("se-st").className = "sst bad"; $("se-st").textContent = e.message; }
+};
+$("se-del").onclick = () => {
+  const b = sndBtn(); if (!b || !confirm(`Excluir o botão "${b.label}"?`)) return;
+  DECK.pages[sndPage].buttons.splice(sndSel, 1); sndSel = -1; saveDeck();
+};
+$("se-close").onclick = () => { sndSel = -1; sndRender(); };
+$("se-swap").onclick = () => $("se-file").click();
+// cortar o áudio atual (só dá para encurtar: o PC guarda o trecho, não o arquivo original) ou trocar por outro arquivo
+async function sndReplace(idx, getX, title, whole) {
+  $("se-st").className = "sst"; $("se-st").textContent = "Abrindo…";
+  try {
+    const cut = await sbTrim(await getX(), title, whole);
+    if (!cut) { $("se-st").textContent = ""; return; }
+    const { wav, secs } = cut;
+    $("se-st").textContent = "Enviando…";
+    const r = await send("snd.add", { data: sbB64(wav) }, 90000);
+    const b = DECK.pages[sndPage]?.buttons?.[idx]; if (!b || b.type !== "sound") return;
+    b.value = r.id; await saveDeckNow(); $("se-st").textContent = `Salvo (${secs.toFixed(1)} s)`;
+  } catch (err) { $("se-st").className = "sst bad"; $("se-st").textContent = "Falhou: " + sndErr(err); }
+}
+$("se-file").onchange = (e) => {
+  const f = e.target.files[0]; e.target.value = ""; const idx = sndSel; if (!f || idx < 0) return;
+  sndReplace(idx, () => sbDecode(f), f.name);
+};
+$("se-cut").onclick = () => {
+  const b = sndBtn(), idx = sndSel; if (!b) return;
+  sndReplace(idx, async () => sbDecode(sbUnB64((await send("snd.get", { id: b.value }, 30000)).data)), b.label, true);
+};
+$("snd-pick").onclick = () => $("snd-files").click();
+$("snd-files").onchange = (e) => { addSounds([...e.target.files]); e.target.value = ""; };
+const isFileDrag = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
+$("sons-box").addEventListener("dragover", (e) => { if (!isFileDrag(e)) return; e.preventDefault(); $("snd-drop").classList.add("over"); });
+$("sons-box").addEventListener("dragleave", (e) => { if (!e.currentTarget.contains(e.relatedTarget)) $("snd-drop").classList.remove("over"); });
+$("sons-box").addEventListener("drop", (e) => {
+  if (!isFileDrag(e)) return; e.preventDefault(); $("snd-drop").classList.remove("over");
+  addSounds([...e.dataTransfer.files]);
+});
+async function addSounds(files) {
+  if (!DECK || !files.length) return;
+  if (sndBusy) return alert("Espere os sons anteriores terminarem de enviar.");
+  sndBusy = true; const st = $("snd-st"), done = [], fail = [];
+  if (sndPage === -1) {   // primeira vez: cria a página "Sons"
+    DECK.pages.push({ name: "Sons", buttons: [] }); sndPage = DECK.pages.length - 1;
+    try { await saveDeckNow(); } catch (e) { sndBusy = false; st.className = "sst bad"; st.textContent = "Falhou: " + e.message; return; }
+  }
+  const pg0 = sndPage;
+  st.className = "sst";
+  for (const [n, f] of files.entries()) {
+    const pre = files.length > 1 ? `(${n + 1}/${files.length}) ` : "";
+    try {
+      if ((DECK.pages[pg0].buttons || []).length >= 48) throw new Error("a página já tem 48 botões");
+      st.textContent = `${pre}Abrindo ${f.name}…`;
+      let wav;
+      if (files.length === 1) {   // um arquivo: escolhe o trecho no cortador
+        const cut = await sbTrim(await sbDecode(f), f.name);
+        if (!cut) { st.textContent = "Cancelado."; continue; }
+        wav = cut.wav;
+      } else wav = (await sbConvert(f)).wav;
+      st.textContent = `${pre}Enviando ${f.name}…`;
+      const r = await send("snd.add", { data: sbB64(wav) }, 90000);
+      const pg = DECK.pages[pg0]; (pg.buttons = pg.buttons || []).push({ label: sbName(f), type: "sound", value: r.id, vol: 100 });
+      await saveDeckNow(); done.push(sbName(f));
+    } catch (err) { fail.push(`${f.name}: ${sndErr(err)}`); }
+  }
+  sndBusy = false;
+  if (!done.length && !fail.length) { sndBusy = false; return; }
+  st.className = fail.length ? "sst bad" : "sst";
+  st.textContent = [done.length ? `${done.length} som(ns) adicionado(s) na página "${DECK.pages[pg0]?.name}".` : "", ...fail.map((x) => "Falhou: " + x)].filter(Boolean).join("\n");
+}
+
+// salva já (sem esperar os 300 ms) e só volta depois: quem adiciona botão no meio de um envio não perde nada
+async function saveDeckNow() {
+  clearTimeout(deckT); status("saving", "Salvando botões…");
+  DECK = (await send("deck.save", { deck: DECK })).deck; renderDeck(); status("ok", "Conectado · tudo salvo");
 }
 
 // ------------------------------------------------------------ prévias (o próprio app em iframes)

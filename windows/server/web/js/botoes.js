@@ -20,8 +20,8 @@ function renderDeck() {
   $("deck-pages").innerHTML = pages.map((pg, i) => `<button class="chip2${i === prefs.deckPage ? " on" : ""}" data-page="${i}">${esc(pg.name)}</button>`).join("")
     + (deckEdit ? '<button class="chip2 add" data-page="new">+ Página</button>' : "");
   const pg = pages[prefs.deckPage], btns = pageButtons(pg);
-  let html = btns.map((b, i) => `<button class="dbtn${b.confirm ? " warn" : ""}" data-i="${i}"${b.color ? ` style="--c:${b.color}"` : ""}>
-    <span class="di">${esc(deckIcon(b))}</span><span class="dl">${esc(b.label)}</span></button>`).join("");
+  let html = btns.map((b, i) => `<button class="dbtn${b.confirm ? " warn" : ""}${b.type === "sound" ? " sb" : ""}" data-i="${i}"${b.type === "sound" ? ` data-snd="${esc(b.value)}"` : ""}${b.color ? ` style="--c:${b.color}"` : ""}>
+    <span class="di">${esc(deckIcon(b))}</span><span class="dl">${esc(b.label)}</span>${b.type === "sound" ? '<i class="sbbar"></i>' : ""}</button>`).join("");
   if (deckEdit && !pg.auto) html += '<button class="dbtn add" data-i="new"><span class="di">+</span><span class="dl">Novo botão</span></button>';
   if (deckEdit && pg.auto) html += '<div class="empty full">Esta página mostra os programas do config.json do PC — edite lá.</div>';
   if (!btns.length && !deckEdit) html = `<div class="empty full">${pg.auto ? "Nenhum programa no config.json do PC" : "Página vazia. Toque em Editar para adicionar botões."}</div>`;
@@ -29,6 +29,7 @@ function renderDeck() {
   $("deck-grid").classList.toggle("editing", deckEdit);
   $("deck-edit").textContent = deckEdit ? "Pronto" : "Editar";
   $("deck-editbar").classList.toggle("hidden", !deckEdit);
+  if (typeof sbMark === "function") sbMark();
 }
 $("deck-pages").onclick = (e) => {
   const b = e.target.closest("[data-page]"); if (!b) return; buzz(8);
@@ -67,12 +68,13 @@ function editButton(i) {
   if (b.type === "action") $("bed-action").value = b.value;
   if (b.type === "shortcut") $("bed-shortcut").value = b.value;
   $("bed-macro").value = b.type === "macro" ? b.value : "";
+  sbEdit(b);
   $("bed-macro-progs").textContent = "Programas: " + (welcome.shortcuts || []).map((x) => x.id).join(", ");
   $("bed-confirm").checked = !!b.confirm; bedColor = b.color || ""; renderColors();
   ["bed-del", "bed-left", "bed-right"].forEach((id) => $(id).classList.toggle("hidden", i < 0));
   bedType(); $("bed").classList.remove("hidden");
 }
-function bedType() { const t = $("bed-type").value; for (const k of ["keys", "text", "action", "shortcut", "macro"]) $("bed-v-" + k).classList.toggle("hidden", k !== t); }
+function bedType() { const t = $("bed-type").value; for (const k of ["keys", "text", "action", "shortcut", "macro", "sound"]) $("bed-v-" + k).classList.toggle("hidden", k !== t); }
 $("bed-type").onchange = bedType;
 function renderColors() {
   $("bed-colors").innerHTML = DECK_COLORS.map((c) => `<button type="button" class="sw${c === bedColor ? " on" : ""}" data-c="${c}" style="background:${c || "var(--bg)"}" aria-label="${c || "sem cor"}"></button>`).join("");
@@ -82,12 +84,14 @@ $("bed-cancel").onclick = () => $("bed").classList.add("hidden");
 $("bed-form").onsubmit = async (e) => {
   e.preventDefault();
   const t = $("bed-type").value;
-  const v = { keys: $("bed-keys").value.trim().toLowerCase().replace(/\s+/g, ""), text: $("bed-text").value, action: $("bed-action").value, shortcut: $("bed-shortcut").value, macro: $("bed-macro").value.trim() }[t];
-  if (!v) return toast("Preencha o que o botão faz", "bad");
+  const v = { keys: $("bed-keys").value.trim().toLowerCase().replace(/\s+/g, ""), text: $("bed-text").value, action: $("bed-action").value, shortcut: $("bed-shortcut").value, macro: $("bed-macro").value.trim(), sound: sbSel?.id }[t];
+  if (t === "sound" && sbBusy) return toast("Espere o áudio terminar de enviar", "bad");
+  if (!v) return toast(t === "sound" ? "Escolha um arquivo de áudio" : "Preencha o que o botão faz", "bad");
   if (t === "keys") { const bad = v.split("+").filter((k) => !deckData.keys.includes(k)); if (bad.length) return toast("Tecla desconhecida: " + bad.join(", "), "bad"); }
   let label = $("bed-label").value.trim();
-  if (!label) label = t === "action" ? deckData.actions[v] : t === "shortcut" ? $("bed-shortcut").selectedOptions[0]?.text || v : t === "macro" ? "Macro" : v.slice(0, 24);
+  if (!label) label = t === "action" ? deckData.actions[v] : t === "shortcut" ? $("bed-shortcut").selectedOptions[0]?.text || v : t === "macro" ? "Macro" : t === "sound" ? (sbSel.name || "Som").slice(0, 40) : v.slice(0, 24);
   const b = { label, type: t, value: v };
+  if (t === "sound") b.vol = +$("bed-snd-vol").value;
   const ic = $("bed-icon").value.replace(NO_EMOJI, "").trim(); if (ic) b.icon = ic;
   if (bedColor) b.color = bedColor;
   if ($("bed-confirm").checked) b.confirm = true;

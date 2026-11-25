@@ -267,6 +267,16 @@ input[type=range]:disabled { opacity: .35; }
 .deckgrid.editing .dbtn { border-style: dashed; }
 .deckgrid.editing .dbtn:not(.add)::before { content: "editar"; position: absolute; top: 4px; left: 8px; font-size: 11px; color: var(--p3); }
 .dbtn.add { color: var(--p3); }
+.dbtn.sb .sbbar { position: absolute; left: 8px; right: 8px; bottom: 6px; height: 3px; border-radius: 2px; background: var(--p3); opacity: .35; }
+.dbtn.sb.playing { border-color: var(--p); box-shadow: inset 4px 0 0 var(--c, transparent), 0 0 0 1px var(--p), 0 0 14px -2px var(--p); }
+.dbtn.sb.playing .sbbar { opacity: 1; background: var(--p); animation: sbpulse .6s ease-in-out infinite alternate; }
+@keyframes sbpulse { from { transform: scaleX(.35); } to { transform: scaleX(1); } }
+.sbrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.sbrow .ell { flex: 1; min-width: 0; color: var(--p2); font-size: 13px; }
+.sbst { margin-bottom: 10px; } .sbst .ok { color: var(--p); margin-bottom: 4px; } .sbst .warn { color: var(--alert); }
+.sbhelp { font-size: 13px; line-height: 1.45; color: var(--p2); border-top: 1px dashed var(--p3); padding-top: 8px; margin-top: 4px; }
+.sbhelp ol { margin: 6px 0 0; padding-left: 20px; } .sbhelp li { margin-bottom: 4px; }
+#deck-stop { border-color: var(--alert); color: var(--alert); }
 @container (min-width: 820px) {
   .deckgrid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
   .dbtn { min-height: 140px; } .dbtn .di { font-size: 48px; } .dbtn .dl { font-size: 15px; }
@@ -293,6 +303,7 @@ input[type=range]:disabled { opacity: .35; }
 .dialog small { display: block; color: var(--p3); margin-top: 4px; font-size: 12px; }
 .dialog .acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; align-items: center; }
 .frow { display: grid; grid-template-columns: 1fr 96px; gap: 10px; }
+.dialog .frow { grid-template-columns: minmax(0, 1fr) 96px; align-items: start; padding: 0; font-size: inherit; }  /* .frow dos amigos (telas.css) não vale aqui */
 .colors { display: flex; gap: 8px; margin: 2px 0 12px; flex-wrap: wrap; }
 .sw { width: 30px; height: 30px; border: 1px solid var(--p3); border-radius: var(--r); }
 .sw.on { outline: 2px solid var(--p); outline-offset: 2px; }

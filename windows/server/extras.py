@@ -287,6 +287,9 @@ class Deck:
                 elif t == "macro":
                     v = v[:4000]
                     parse_macro(v, valid_combo, shortcuts or {})
+                elif t == "sound":
+                    if not re.fullmatch(r"[0-9a-f]{12}", v):
+                        raise ValueError("botão de som sem áudio")
                 else:
                     raise ValueError(f"tipo de botão inválido: {t}")
                 nb = {"label": str(b.get("label") or "?")[:40], "type": t, "value": v}
@@ -296,6 +299,11 @@ class Deck:
                     nb["color"] = b["color"]
                 if b.get("confirm"):
                     nb["confirm"] = True
+                if t == "sound":
+                    try:
+                        nb["vol"] = max(0, min(200, int(b.get("vol", 100))))
+                    except (TypeError, ValueError):
+                        nb["vol"] = 100
                 buttons.append(nb)
             clean.append({"name": name, "buttons": buttons, **({"apps": apps} if apps else {})})
         data = {"pages": clean}

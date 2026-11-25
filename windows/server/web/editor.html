@@ -34,6 +34,27 @@
         <span>CS2</span><select id="au-cs" class="au-sel"></select></div>
     </section>
 
+    <section class="box" id="sons-box">
+      <h2>Sons no microfone</h2>
+      <p class="hint">Botões que tocam um áudio no seu microfone (Discord, jogos) — no app ficam em <b>Botões</b>. Clique num som para mudar nome, ícone, cor, volume ou trocar o áudio.
+        Para sair no microfone o PC precisa do cabo virtual VB-CABLE (veja o botão <b>Som</b> na aba Botões do app); sem ele os sons tocam só no PC.</p>
+      <div class="row" style="margin-bottom:10px"><label style="width:110px">Página do deck</label><select id="snd-page" style="max-width:260px"></select></div>
+      <div class="btns" id="snd-btns"></div>
+      <div class="sdrop" id="snd-drop">
+        <div><b>Arraste arquivos de áudio para cá</b> (vários de uma vez) ou <button type="button" id="snd-pick">escolha os arquivos</button>.
+          MP3, OGG, WAV, M4A… (até 10 min). Com um arquivo só, abre o <b>cortador</b> para escolher o trecho (até 20 s); com vários, cada um entra cortando só o silêncio — dá para cortar depois em <b>Cortar…</b>.</div>
+        <div id="snd-st" class="sst"></div>
+        <input type="file" id="snd-files" multiple hidden accept="audio/*,video/*,.mp3,.ogg,.opus,.wav,.m4a,.aac,.flac,.webm">
+      </div>
+      <div class="sed" id="snd-ed" hidden>
+        <div class="row"><label style="width:110px">Nome</label><input type="text" id="se-name" maxlength="40" style="max-width:260px"><label style="width:50px;text-align:right">Ícone</label><input type="text" id="se-icon" maxlength="8" style="max-width:90px" placeholder="auto"></div>
+        <div class="row"><label style="width:110px">Volume</label><input type="range" id="se-vol" min="0" max="200" step="5" style="max-width:260px"><span id="se-vv"></span></div>
+        <div class="row"><label style="width:110px">Cor</label><span id="se-colors" class="secolors"></span></div>
+        <div class="row"><span style="width:110px"></span><button type="button" id="se-test">Testar no PC</button><button type="button" id="se-cut">Cortar…</button><button type="button" id="se-swap">Trocar o áudio…</button><button type="button" id="se-del" class="danger">Excluir</button><span id="se-st" class="sst"></span><button type="button" id="se-close" style="margin-left:auto">Fechar</button></div>
+        <input type="file" id="se-file" hidden accept="audio/*,video/*,.mp3,.ogg,.opus,.wav,.m4a,.aac,.flac,.webm">
+      </div>
+    </section>
+
     <section class="box">
       <h2>Layout</h2>
       <p class="hint">Em pé e deitado são separados. No <b>Menu</b>, arraste as abas entre as seções, reordene as seções pelo <b>::</b> e esconda o que não usa. Em <b>Telas</b>, arrume o que aparece dentro de cada aba.</p>
@@ -79,7 +100,7 @@
 
     <section class="box">
       <h2>Botões</h2>
-      <p class="hint">Arraste para reordenar. Solte um botão em cima de outra página para mover. Para criar ou editar o que cada botão faz, use o app (Botões &gt; Editar).</p>
+      <p class="hint">Arraste para reordenar. Solte um botão em cima de outra página para mover. Os outros tipos de botão se criam no app (Botões &gt; Editar); os de <b>som</b>, na seção <b>Sons no microfone</b> lá em cima.</p>
       <div class="pages" id="pages"></div>
       <div class="row" style="margin-bottom:10px"><input type="text" id="pg-name" style="max-width:240px" placeholder="nome da página"><span id="pg-auto" class="empty" hidden>Página automática (seus atalhos)</span></div>
       <div class="btns" id="btns"></div>
@@ -92,6 +113,7 @@
   </div>
 </div>
 
+<script src="/js/audioconv.js"></script>
 <script src="/js/editor.js"></script>
 </body>
 </html>

@@ -129,6 +129,7 @@ function onMsg(m) {
       if (vis("screen")) screenLoop();
       bootLine(`${m.host} conectado.`); bootDone();
       if (typeof dotaShown === "function") dotaShown();
+      if (m.features?.sounds) sbLoad(); else sbMark();
       snd("on"); wasOnline = true;
       if (m.features?.notif) subNotif();
       libT = 0; if (vis("games")) loadGamesExtra();
@@ -154,6 +155,7 @@ function onMsg(m) {
     case "match_end": onMatchEnd(m.d); break;
     case "match_report": onMatchReport(m.d); break;
     case "dota_plan": onDotaPlan(m.d, m.reset); break;
+    case "snd": onSb(m.d); break;
     case "meet_soon": onMeetSoon(m.d); break;
     case "focus": onFocus(m.d); break;
     case "games": state.games = m.d; state.gamesT = performance.now(); renderGames(); onGameState(); break;

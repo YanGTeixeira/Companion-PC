@@ -254,7 +254,7 @@
 
   <!-- BOTÕES -->
   <section class="tab" id="t-deck">
-    <div class="deckbar"><div class="chips" id="deck-pages"></div><button class="btn sm" id="deck-edit">Editar</button></div>
+    <div class="deckbar"><div class="chips" id="deck-pages"></div><button class="btn sm hidden" id="deck-stop">Parar sons</button><button class="btn sm" id="deck-snd">Som</button><button class="btn sm" id="deck-edit">Editar</button></div>
     <div class="deckgrid" id="deck-grid"><div class="empty">Carregando…</div></div>
     <div class="deck-editbar hidden" id="deck-editbar"><span>Toque num botão para editar. Toque na página atual para renomear.</span><button class="btn sm" id="deck-reset">Restaurar padrão</button></div>
   </section>
@@ -406,13 +406,20 @@
     <h1 id="bed-title">Botão</h1>
     <div class="frow"><label>Nome<input class="fi" id="bed-label" maxlength="40" placeholder="ex.: Gravar"></label><label>Ícone<input class="fi" id="bed-icon" maxlength="8" placeholder="REC"></label></div>
     <small style="margin:-4px 0 10px">Ícone: até 8 letras ou símbolos simples. Vazio usa as iniciais do nome.</small>
-    <label>O que faz<select id="bed-type"><option value="keys">Atalho de teclado</option><option value="text">Digitar um texto</option><option value="action">Ação pronta</option><option value="shortcut">Abrir programa</option><option value="macro">Sequência (macro)</option></select></label>
+    <label>O que faz<select id="bed-type"><option value="keys">Atalho de teclado</option><option value="text">Digitar um texto</option><option value="action">Ação pronta</option><option value="shortcut">Abrir programa</option><option value="macro">Sequência (macro)</option><option value="sound">Tocar som (sai no microfone)</option></select></label>
     <label id="bed-v-keys">Teclas<input class="fi" id="bed-keys" placeholder="ctrl+shift+s" autocapitalize="off" autocorrect="off" spellcheck="false"><small>Junte com +: ctrl, shift, alt, win, a–z, 0–9, f1–f12, enter, esc, tab, space, up, down, left, right, home, end, delete, plus, minus, play_pause, vol_up…</small></label>
     <label id="bed-v-text">Texto<textarea class="ta" id="bed-text" rows="3"></textarea><small>Quebra de linha vira Enter no PC.</small></label>
     <label id="bed-v-action">Ação<select id="bed-action"></select></label>
     <label id="bed-v-macro">Passos (um por linha)<textarea class="ta" id="bed-macro" rows="6" spellcheck="false" autocapitalize="off" placeholder="abrir vscode&#10;esperar 2s&#10;teclas ctrl+shift+p&#10;texto Terminal"></textarea>
       <small>teclas ctrl+t &nbsp; texto olá &nbsp; esperar 500 (ms) ou esperar 2s &nbsp; abrir nome-do-programa &nbsp; acao media.next</small>
       <small id="bed-macro-progs"></small></label>
+    <div id="bed-v-sound" class="sbpick">
+      <label>Áudio</label>
+      <div class="sbrow"><button type="button" class="btn" id="bed-snd-pick">Escolher arquivo</button><span id="bed-snd-info" class="ell">nenhum</span><button type="button" class="btn sm" id="bed-snd-cut">Cortar</button><button type="button" class="btn sm" id="bed-snd-test">Testar</button></div>
+      <input type="file" id="bed-snd-file" accept="audio/*,video/*,.mp3,.ogg,.opus,.wav,.m4a,.aac,.flac,.webm" hidden>
+      <label>Volume deste botão <small id="bed-snd-vv">100%</small><input type="range" id="bed-snd-vol" min="0" max="200" step="5" value="100" aria-label="Volume deste botão"></label>
+      <small>MP3, OGG, WAV, M4A… Ao escolher o arquivo abre o cortador: marque o trecho (até 20 s), ouça e salve.</small>
+    </div>
     <label id="bed-v-shortcut">Programa<select id="bed-shortcut"></select><small>A lista vem dos "shortcuts" do config.json do PC.</small></label>
     <label>Cor da marca</label><div class="colors" id="bed-colors"></div>
     <label class="chk"><input type="checkbox" id="bed-confirm"> Pedir confirmação antes</label>
@@ -428,6 +435,19 @@
     <button type="button" class="btn sm" id="ped-cur">Adicionar o programa em foco no PC</button>
     <div class="acts"><button type="button" class="btn danger" id="ped-del">Excluir</button><button type="button" class="btn" id="ped-left" aria-label="Mover para trás">&lt;</button><button type="button" class="btn" id="ped-right" aria-label="Mover para frente">&gt;</button><span style="flex:1"></span><button type="button" class="btn" id="ped-cancel">Cancelar</button><button class="btn primary">Salvar</button></div>
   </form>
+</div>
+<div class="overlay hidden" id="sbx">
+  <div class="dialog wide">
+    <h1>Sons no microfone</h1>
+    <div id="sbx-st" class="sbst"></div>
+    <label>Meu microfone (vai junto com os sons)<select id="sbx-mic"></select></label>
+    <div class="set"><label>Eu também ouço os sons<small id="sbx-mon"></small></label><button class="switch" id="sbx-monsw" aria-label="Eu também ouço os sons"></button></div>
+    <div class="set"><label>Um som por vez<small>Um som novo corta o que está tocando</small></label><button class="switch" id="sbx-one" aria-label="Um som por vez"></button></div>
+    <label>Volume dos sons <small id="sbx-vv"></small><input type="range" id="sbx-vol" min="0" max="100" aria-label="Volume dos sons"></label>
+    <label id="sbx-mvl">Volume do microfone <small id="sbx-mv"></small><input type="range" id="sbx-mvol" min="0" max="150" aria-label="Volume do microfone"></label>
+    <div id="sbx-help" class="sbhelp"></div>
+    <div class="acts"><button type="button" class="btn" id="sbx-close">Fechar</button></div>
+  </div>
 </div>
 <div class="overlay hidden" id="confirm">
   <div class="dialog"><h1 id="confirm-q"></h1><p id="confirm-sub">Confirme para executar no PC.</p>
@@ -461,6 +481,8 @@
 <script src="js/tempo.js"></script>
 <script src="js/controle.js"></script>
 <script src="js/botoes.js"></script>
+<script src="js/audioconv.js"></script>
+<script src="js/sons.js"></script>
 <script src="js/voz.js"></script>
 <script src="js/base.js"></script>
 <script src="js/mixer.js"></script>

@@ -88,6 +88,21 @@ label.chk { display: inline-flex; gap: 8px; align-items: center; cursor: pointer
 .dbtn b { display: block; font-size: 18px; color: var(--dim); font-weight: 600; min-height: 22px; }
 .dbtn span { font-size: 12.5px; }
 .empty { color: var(--faint); font-size: 13px; padding: 10px; }
+.dbtn.snd { cursor: pointer; position: relative; }
+.dbtn.snd::after { content: "som"; position: absolute; top: 4px; right: 7px; font-size: 10px; color: var(--acc); letter-spacing: .04em; }
+.dbtn.snd.sel { border-color: var(--acc); background: var(--acc2); }
+.sdrop { margin-top: 12px; border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; color: var(--dim); font-size: 13px; transition: .15s; }
+.sdrop b { color: var(--text); }
+.sdrop button { padding: 2px 8px; }
+.sdrop.over { border-color: var(--acc); background: var(--acc2); color: var(--text); }
+.sst { color: var(--dim); font-size: 13px; }
+.sst.bad { color: var(--bad); }
+.sdrop .sst:not(:empty) { margin-top: 8px; white-space: pre-line; }
+.sed { margin-top: 12px; border: 1px solid var(--acc); border-radius: 10px; padding: 12px 14px; display: grid; gap: 10px; }
+button.danger { border-color: var(--bad); color: var(--bad); }
+.secolors { display: inline-flex; gap: 6px; }
+.secolors button { width: 24px; height: 24px; padding: 0; border-radius: 6px; }
+.secolors button.on { outline: 2px solid var(--text); outline-offset: 1px; }
 
 /* prévias */
 .previews { position: sticky; top: 70px; display: flex; flex-direction: column; gap: 14px; }
