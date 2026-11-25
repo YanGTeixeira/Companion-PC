@@ -182,6 +182,26 @@ class Dispositivos(unittest.TestCase):
         self.assertTrue(sb.Board._virtual_in("Microfone (Steam Streaming Microphone)"))
         self.assertFalse(sb.Board._virtual_in("Microfone (NVIDIA RTX Voice)"))
         self.assertFalse(sb.Board._virtual_in("Microfone (2- fifine Microphone)"))
+        self.assertTrue(sb.Board._is_cable("CABLE In 16ch (VB-Audio Virtual Cable)"))
+
+    def test_fone_e_o_padrao_atual_do_windows(self):
+        """O padrão do PortAudio é o da hora em que ele iniciou (ex.: antes do fone Bluetooth conectar)."""
+        devs = [{"name": "CABLE Input (VB-Audio Virtual Cable)", "hostapi": 0, "max_input_channels": 0, "max_output_channels": 2},
+                {"name": "Fones de ouvido (Fuxi-H5B)", "hostapi": 0, "max_input_channels": 0, "max_output_channels": 2},
+                {"name": "Microfone (2- fifine Microphone)", "hostapi": 0, "max_input_channels": 2, "max_output_channels": 0}]
+
+        class FakeSd:
+            query_hostapis = staticmethod(lambda i=None: [{"name": "Windows WASAPI"}] if i is None else
+                                          {"default_output_device": 0, "default_input_device": 2})
+            query_devices = staticmethod(lambda i=None: devs if i is None else devs[i])
+
+        with tempfile.TemporaryDirectory() as tmp:
+            b = board(tmp)[0]
+            cable, mic, mon = b._devices(FakeSd, "Fones de ouvido (Fuxi-H5B)")
+            self.assertEqual((cable[0], mic[0], mon[0]), (0, 2, 1))
+            self.assertIsNone(b._devices(FakeSd, "CABLE Input (VB-Audio Virtual Cable)")[2])  # cabo não é fone
+            self.assertIsNone(b._devices(FakeSd, "")[2])                                       # sem saída nenhuma
+            self.assertIsNone(b._devices(FakeSd, None)[2])  # sem pycaw: usa o do PortAudio (aqui, o cabo)
 
 
 class DeckSomTest(unittest.TestCase):

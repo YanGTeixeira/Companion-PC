@@ -1019,7 +1019,23 @@ async def board_event(st):
     await broadcast({"t": "snd", "d": st})
 
 
-BOARD = soundboard.Board(BASE, CFG.get("sounds"), lambda c: save_cfg_key("sounds", c), board_event)
+def audio_refresh():
+    """Reinicia o PortAudio (só assim ele vê um fone que conectou depois). A voz usa o PortAudio também:
+    fecha o microfone dela antes e reabre depois. Chamado pela thread da mesa de som, já sem streams abertos."""
+    import sounddevice as sd
+    was = VOICE.pause()
+    try:
+        if was is False:  # a voz não soltou o microfone: reiniciar agora derrubaria o processo
+            return False
+        sd._terminate()
+        sd._initialize()
+        return True
+    finally:
+        if was is not None:
+            VOICE._spawn()
+
+
+BOARD = soundboard.Board(BASE, CFG.get("sounds"), lambda c: save_cfg_key("sounds", c), board_event, audio_refresh)
 VOICE = voice.Voice(CFG.get("voice"), BASE, voice_save_cfg, voice_catalog, voice_run, voice_event,
                     mic_fn=lambda: pc_info.mic_get())
 

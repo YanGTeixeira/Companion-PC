@@ -399,6 +399,15 @@ class Voice:
         self._thread = threading.Thread(target=self._worker, args=(self._stop,), daemon=True, name="voz")
         self._thread.start()
 
+    def pause(self, timeout=5):
+        """Fecha o microfone (o PortAudio vai reiniciar). None se não estava ouvindo; False se não parou a tempo."""
+        t = self._thread
+        if not t or not t.is_alive():
+            return None
+        self._stop.set()
+        t.join(timeout)
+        return not t.is_alive()
+
     def set(self, p):
         restart = False
         if "on" in p:

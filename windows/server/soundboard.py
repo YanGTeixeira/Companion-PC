@@ -28,11 +28,13 @@ MAX_SECS = 30
 MIC_MAX = BLOCK * 6          # atraso máximo do microfone dentro do cabo (60 ms)
 SOUND_ID = re.compile(r"^[0-9a-f]{12}$")
 # saídas que são "cabo virtual" (o que tocar nelas vira microfone), em ordem de preferência
-CABLES = ("cable input", "cable-a input", "cable-b input", "voicemeeter input", "voicemeeter aux input")
+CABLES = ("cable input", "cable-a input", "cable-b input", "voicemeeter input", "voicemeeter aux input", "cable in 16ch")
 # entradas que são a outra ponta de um cabo: nunca servem como "meu microfone" (daria eco infinito)
 NOT_MIC = ("cable output", "cable-a output", "cable-b output", "voicemeeter out", "steam streaming", "mapeador", "mapper",
            "driver de captura", "primary sound")
 DEFAULTS = {"mic": "", "monitor": True, "vol": 80, "mic_vol": 100, "overlap": True}
+CHECK_S = 2                  # de quanto em quanto tempo olha se a saída padrão do Windows mudou
+REFRESH_MIN_S = 20           # intervalo mínimo entre reinícios do PortAudio
 
 
 def wav_to_array(raw: bytes):
@@ -54,11 +56,15 @@ def wav_to_array(raw: bytes):
 
 
 class Board:
-    def __init__(self, base: Path, cfg, save_cfg, event_fn):
+    def __init__(self, base: Path, cfg, save_cfg, event_fn, refresh_fn=None):
         self.dir = base / "sons"
         self.cfg = {**DEFAULTS, **(cfg or {})}
         self._save_cfg = save_cfg
         self._event = event_fn          # async (dict) -> None, avisa os celulares
+        # O PortAudio só enxerga os dispositivos que existiam quando ele iniciou (fone Bluetooth que conecta
+        # depois do boot fica de fora). refresh_fn() reinicia o PortAudio com segurança (pausa a voz antes).
+        self._refresh = refresh_fn
+        self._refreshed = 0.0
         self.loop = None
         self._lock = threading.Lock()
         self._voices = []               # {"id", "a", "pos": {"c": i, "m": i}, "gain", "t"}
@@ -222,7 +228,34 @@ class Board:
         n = name.lower()
         return any(n.startswith(c) for c in CABLES)
 
-    def _devices(self, sd):
+    @staticmethod
+    def _default_out():
+        """Nome da saída padrão do Windows agora ("" se não há nenhuma; None se não dá para saber)."""
+        try:
+            from pycaw.pycaw import AudioUtilities
+        except Exception:  # noqa: BLE001
+            return None
+        try:
+            d = AudioUtilities.GetDeviceEnumerator().GetDefaultAudioEndpoint(0, 1)  # eRender, eMultimedia
+            return AudioUtilities.CreateDevice(d).FriendlyName or ""
+        except Exception:  # noqa: BLE001  (nenhuma saída ativa)
+            return ""
+
+    def _try_refresh(self, sd):
+        """Reinicia o PortAudio para enxergar dispositivos novos (no máximo a cada REFRESH_MIN_S)."""
+        if not self._refresh or time.monotonic() - self._refreshed < REFRESH_MIN_S:
+            return False
+        self._refreshed = time.monotonic()
+        try:
+            ok = self._refresh()
+        except Exception as e:  # noqa: BLE001
+            log.warning("sons: não deu para atualizar a lista de dispositivos: %s", e)
+            return False
+        if ok:
+            log.info("sons: lista de dispositivos de áudio atualizada")
+        return ok
+
+    def _devices(self, sd, win_out=None):
         api = self._wasapi(sd)
         devs = [(i, d) for i, d in enumerate(sd.query_devices()) if d["hostapi"] == api]
         outs = [(i, d) for i, d in devs if d["max_output_channels"] > 0]
@@ -233,9 +266,14 @@ class Board:
                 break
         h = sd.query_hostapis(api) if api is not None else {}
         mon = None
-        di = h.get("default_output_device", -1)
-        if di is not None and di >= 0 and not self._is_cable(sd.query_devices(di)["name"]):
-            mon = (di, sd.query_devices(di))
+        if win_out is not None:   # o padrão de agora no Windows (o do PortAudio é o da hora em que ele iniciou)
+            mon = next(((i, d) for i, d in outs if d["name"] == win_out), None)
+        else:
+            di = h.get("default_output_device", -1)
+            if di is not None and di >= 0:
+                mon = (di, sd.query_devices(di))
+        if mon and self._is_cable(mon[1]["name"]):
+            mon = None
         mic = None
         if cable and self.cfg["mic"] != "nenhum":
             ins = [(i, d) for i, d in devs if d["max_input_channels"] > 0 and not self._virtual_in(d["name"])]
@@ -272,10 +310,17 @@ class Board:
         except (AttributeError, OSError):
             pass
         extra = sd.WasapiSettings(auto_convert=True)
+        failed = False
         while not stop.is_set():
             streams = []
             try:
-                cable, mic, mon = self._devices(sd)
+                win_out = self._default_out()
+                names = {d["name"] for d in sd.query_devices() if d["max_output_channels"] > 0}
+                if failed or (self.cfg["monitor"] and win_out and win_out not in names):
+                    if self._try_refresh(sd):   # dispositivo novo (fone que conectou depois) ou um que sumiu
+                        extra = sd.WasapiSettings(auto_convert=True)
+                failed = False
+                cable, mic, mon = self._devices(sd, win_out)
                 self.cable = cable[1]["name"] if cable else ""
                 self.mic_name = mic[1]["name"] if mic else ""
                 self.mon_name = mon[1]["name"] if mon and self.cfg["monitor"] else ""
@@ -304,6 +349,8 @@ class Board:
                         outdata[:] = out[:, None]
                     streams.append(sd.OutputStream(device=cable[0], channels=ch, samplerate=SR, blocksize=BLOCK,
                                                    dtype="float32", latency="low", extra_settings=extra, callback=cb_cable))
+                for s in streams:
+                    s.start()
                 if mon and self.cfg["monitor"]:
                     ch = min(2, mon[1]["max_output_channels"])
 
@@ -311,24 +358,37 @@ class Board:
                         out = self._mix(np, frames, "m")
                         np.clip(out, -1, 1, out=out)
                         outdata[:] = out[:, None]
-                    streams.append(sd.OutputStream(device=mon[0], channels=ch, samplerate=SR, blocksize=BLOCK,
-                                                   dtype="float32", latency="low", extra_settings=extra, callback=cb_mon))
-                for s in streams:
-                    s.start()
+                    try:  # se o fone falhar, o cabo (microfone) segue funcionando
+                        s = sd.OutputStream(device=mon[0], channels=ch, samplerate=SR, blocksize=BLOCK, dtype="float32",
+                                            latency="low", extra_settings=extra, callback=cb_mon)
+                        s.start()
+                        streams.append(s)
+                    except Exception as e:  # noqa: BLE001
+                        log.warning("sons: fone %s: %s", mon[1]["name"], e)
+                        mon, self.mon_name = None, ""
                 self._out_c, self._out_m = bool(cable), bool(mon and self.cfg["monitor"])
                 self.status = "on" if cable else "nocable" if self._out_m else "error"
                 self.error = "" if cable or self._out_m else "sem cabo virtual e com \"eu também ouço\" desligado: os sons não tocam em lugar nenhum"
                 log.info("sons: cabo=%s | microfone=%s | fone=%s", self.cable or "-", self.mic_name or "-", self.mon_name or "-")
                 self._notify(force=True)
+                next_check = time.monotonic() + CHECK_S
+                changed = False
                 while not stop.is_set() and all(s.active for s in streams):
                     stop.wait(0.1)
                     self._expire()
                     self._notify()
-                if not stop.is_set():
+                    if time.monotonic() > next_check:   # trocou o fone/caixa padrão no Windows: reabre
+                        next_check = time.monotonic() + CHECK_S
+                        if self._default_out() != win_out:
+                            log.info("sons: a saída padrão do Windows mudou")
+                            changed = True
+                            break
+                if not stop.is_set() and not changed:
                     raise RuntimeError("o dispositivo de áudio parou (desconectado?)")
             except Exception as e:  # noqa: BLE001
                 if stop.is_set():
                     break
+                failed = True
                 log.warning("sons: %s", e)
                 self.status, self.error = "error", str(e)[:160]
                 self._notify(force=True)
