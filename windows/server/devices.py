@@ -4,8 +4,9 @@
   enquanto está acordado, o relatório 03 55 40 <estado> <%>.
 - Teclado AULA F75 (receptor Compx 3554:fa09): pergunta 13 4A 00.. <soma> na coleção
   FF02 e a resposta traz o % no byte 5 e o estado no byte 6 (01 bateria, 10 no cabo).
-- Fone/aparelhos Bluetooth: propriedade DEVPKEY_Bluetooth_Battery do Windows.
-- Controle (8BitDo e outros no modo XInput): XInputGetBatteryInformation (só 4 níveis).
+- Fone/aparelhos Bluetooth (clássico e BLE): propriedade DEVPKEY_Bluetooth_Battery do Windows.
+- Controles: Windows.Gaming.Input (% de verdade: Xbox e outros que informam) e, para o resto,
+  XInputGetBatteryInformation (8BitDo no modo X etc.; só 4 níveis).
 """
 import ctypes
 import logging
@@ -211,6 +212,8 @@ def _guid(s):
 
 
 BT_BATTERY = _DEVPROPKEY(_guid("104EA319-6EE2-4701-BD47-8DDBF425BBE5"), 2)
+FRIENDLY_NAME = _DEVPROPKEY(_guid("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 14)
+IS_CONNECTED = _DEVPROPKEY(_guid("83DA6326-97A6-4088-9453-A1923F573B29"), 15)   # aparelho BLE ligado agora
 
 
 def _bt_kind(cod):
@@ -245,6 +248,64 @@ def bt_devices():
                 break
     finally:
         bt.BluetoothFindDeviceClose(wintypes.HANDLE(h))
+    return out
+
+
+def _name_kind(name):
+    """Tipo de um aparelho BLE pelo nome (o BLE não tem a "classe" do Bluetooth clássico)."""
+    n = name.lower()
+    for kind, words in (("mouse", ("mouse", "mx ", "mx-", "trackball")), ("keyboard", ("keyboard", "teclado", "keys")),
+                        ("headset", ("headset", "headphone", "fone", "buds", "earbuds", "airpods", "wh-", "wf-")),
+                        ("gamepad", ("controller", "gamepad", "controle", "joy-con", "8bitdo"))):
+        if any(w in n for w in words):
+            return kind
+    return "other"
+
+
+def ble_parse_id(iid):
+    """Endereço (12 hex) de um id BTHLE\\DEV_<endereço>\\..., ou None."""
+    iid = iid.upper()
+    if not iid.startswith("BTHLE\\DEV_"):
+        return None
+    addr = iid[10:22]
+    return addr if len(addr) == 12 and all(c in "0123456789ABCDEF" for c in addr) else None
+
+
+def ble_devices():
+    """[(endereço hex, nome, conectado, tipo)] dos aparelhos Bluetooth LE pareados (mouse, teclado, fone BLE...).
+    O BluetoothFindFirstDevice só enxerga o Bluetooth clássico; o BLE fica nos nós BTHLE\\DEV_ do Windows."""
+    sa = ctypes.WinDLL("setupapi")
+    sa.SetupDiGetClassDevsW.restype = wintypes.HANDLE
+    hdev = sa.SetupDiGetClassDevsW(None, "BTHLE", None, 0x2 | 0x4)  # PRESENT | ALLCLASSES
+    out = []
+    if not hdev or hdev == wintypes.HANDLE(-1).value:
+        return out
+    try:
+        i = 0
+        dd = _SP_DEVINFO_DATA()
+        dd.cbSize = ctypes.sizeof(dd)
+        buf = ctypes.create_unicode_buffer(512)
+        while sa.SetupDiEnumDeviceInfo(wintypes.HANDLE(hdev), i, ctypes.byref(dd)):
+            i += 1
+            if not sa.SetupDiGetDeviceInstanceIdW(wintypes.HANDLE(hdev), ctypes.byref(dd), buf, 512, None):
+                continue
+            addr = ble_parse_id(buf.value)
+            if not addr:
+                continue
+            ptype = wintypes.ULONG()
+            if not sa.SetupDiGetDevicePropertyW(wintypes.HANDLE(hdev), ctypes.byref(dd), ctypes.byref(FRIENDLY_NAME),
+                                                ctypes.byref(ptype), buf, 1024, None, 0):
+                continue
+            name = buf.value or addr
+            conn = ctypes.c_ubyte()
+            if sa.SetupDiGetDevicePropertyW(wintypes.HANDLE(hdev), ctypes.byref(dd), ctypes.byref(IS_CONNECTED),
+                                            ctypes.byref(ptype), ctypes.byref(conn), 1, None, 0):
+                connected = conn.value != 0
+            else:  # sem a propriedade: presente = conectado
+                connected = True
+            out.append((addr, name, connected, _name_kind(name)))
+    finally:
+        sa.SetupDiDestroyDeviceInfoList(wintypes.HANDLE(hdev))
     return out
 
 
@@ -311,6 +372,63 @@ def xinput_pads():
 
 
 # --------------------------------------------------------------------------
+# Controles pelo Windows.Gaming.Input: % de verdade, para quem informa (Xbox sem fio e afins)
+# --------------------------------------------------------------------------
+_wgi = None   # a classe RawGameController (a lista enche sozinha alguns instantes depois do 1º acesso)
+
+
+def wgi_pads():
+    global _wgi
+    if _wgi is None:
+        try:
+            from winrt.windows.gaming.input import RawGameController
+            _wgi = RawGameController
+        except Exception as e:  # noqa: BLE001
+            log.info("bateria dos controles pelo Windows.Gaming.Input indisponível: %s", e)
+            _wgi = False
+    if not _wgi:
+        return []
+    out = []
+    for c in list(_wgi.raw_game_controllers):
+        r = c.try_get_battery_report()
+        if r is None:
+            continue
+        out.append(wgi_entry(c, r))
+    return [d for d in out if d]
+
+
+def wgi_entry(c, r):
+    """Um controle + seu BatteryReport -> item da lista (None se não tem bateria)."""
+    status = int(r.status)                     # 0 sem bateria, 1 descarregando, 2 parado (cheio no cabo), 3 carregando
+    full, left = r.full_charge_capacity_in_milliwatt_hours, r.remaining_capacity_in_milliwatt_hours
+    if status == 0 or not full or left is None:
+        return None
+    pct = max(0, min(100, round(left * 100 / full)))
+    name = (c.display_name or "").strip() or "Controle"
+    return {"id": f"wgi-{c.hardware_vendor_id:04x}{c.hardware_product_id:04x}-{c.non_roamable_id[-8:] if c.non_roamable_id else ''}",
+            "name": name, "kind": "gamepad", "pct": pct, "charging": status == 3, "full": status == 2 and pct >= 99,
+            "wired": not c.is_wireless, "status": "ok", "seen": int(_now())}
+
+
+def merge_pads(wgi, xinput):
+    """O mesmo controle Xbox aparece nos dois: cada um com % do Windows.Gaming.Input tira um do XInput
+    (que só tem 4 níveis). Não dá para casar um com o outro com certeza, então tira na ordem."""
+    return wgi + xinput[len(wgi):]
+
+
+def bt_list(classic, ble, bats):
+    """Clássicos + BLE (sem repetir quem é os dois), só os conectados ou que têm bateria conhecida."""
+    seen, out = set(), []
+    for addr, name, conn, kind in [*classic, *ble]:
+        if addr in seen or not (conn or addr in bats):
+            continue
+        seen.add(addr)
+        out.append({"id": "bt-" + addr, "name": name, "kind": kind, "pct": bats.get(addr),
+                    "charging": False, "full": False, "status": "ok" if conn else "off", "seen": int(_now())})
+    return out
+
+
+# --------------------------------------------------------------------------
 class Batteries:
     def __init__(self, cfg=None):
         self.cfg = cfg or {}
@@ -330,15 +448,19 @@ class Batteries:
             self.bt_next = _now() + 30
             try:
                 bats = bt_batteries()
-                self.bt = [{"id": "bt-" + addr, "name": name, "kind": kind, "pct": bats.get(addr),
-                            "charging": False, "full": False, "status": "ok" if conn else "off", "seen": int(_now())}
-                           for addr, name, conn, kind in bt_devices() if conn or addr in bats]
+                self.bt = bt_list(bt_devices(), ble_devices(), bats)
             except Exception:  # noqa: BLE001
                 log.exception("bateria bluetooth")
         try:
-            self.pads = xinput_pads()
+            xi = xinput_pads()
         except Exception:  # noqa: BLE001
-            self.pads = []
+            xi = []
+        try:
+            wg = wgi_pads()
+        except Exception:  # noqa: BLE001
+            log.exception("bateria dos controles")
+            wg = []
+        self.pads = merge_pads(wg, xi)
 
     def refresh(self):
         if self.keyb:
@@ -367,3 +489,4 @@ if __name__ == "__main__":
     import json
     print(json.dumps(b.state(), indent=1, ensure_ascii=False))
     print(bt_devices())
+    print(ble_devices())

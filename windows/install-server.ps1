@@ -26,6 +26,7 @@ py -3 -m pip install --user --disable-pip-version-check -q --no-warn-script-loca
     winrt-runtime winrt-Windows.Media.Control winrt-Windows.Foundation `
     winrt-Windows.Foundation.Collections winrt-Windows.Storage.Streams `
     winrt-Windows.UI.Notifications winrt-Windows.UI.Notifications.Management winrt-Windows.ApplicationModel `
+    winrt-Windows.Gaming.Input `
     faster-whisper sounddevice numpy  # comandos de voz ("PC, ..."); o modelo (~75 MB) baixa no 1º uso
 
 # pythonw = sem janela de console

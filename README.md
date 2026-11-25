@@ -109,8 +109,9 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
   Em pé e deitado têm layouts separados. Fica salvo em `layout.json` e muda na hora em todos os aparelhos
   (as prévias do editor são o próprio app).
 - **Bateria:** mouse Attack Shark X11 (receptor 1d57:fa60, o mouse avisa sozinho a cada ~2 s enquanto
-  está acordado), teclado AULA F75 no 2.4G (receptor 3554:fa09, perguntado a cada 5 min), fones e outros
-  aparelhos Bluetooth (o que o Windows informa) e controles XInput (8BitDo no modo X; só 4 níveis).
+  está acordado), teclado AULA F75 no 2.4G (receptor 3554:fa09, perguntado a cada 5 min), fones, mouses,
+  teclados e outros aparelhos Bluetooth, clássicos e BLE (o que o Windows informa), e controles: % exata pelo
+  Windows.Gaming.Input quando o controle informa (Xbox sem fio e afins), senão XInput (8BitDo no modo X; só 4 níveis).
   Toque no cartão para atualizar. Precisa do pacote `hidapi` (o instalador já põe).
 - **Tempo de tela:** soma o programa em foco; para depois de 2 min sem mexer em mouse/teclado, a não ser
   que haja jogo, tela cheia ou mídia tocando. Categorias automáticas; troque a de um app tocando nela
