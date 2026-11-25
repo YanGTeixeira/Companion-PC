@@ -28,7 +28,17 @@ python3 -c 'import json,sys; print(json.dumps({"version": sys.argv[1], "notes": 
 git add "$SRV" release.json
 git commit -q -m "versão $V" -m "$NOTES"
 git tag -a "v$V" -m "Companion PC $V"
+# envia; no WSL sem login no GitHub, tenta pelo git do Windows (que usa o login salvo no Windows)
+push() {
+  git push -q origin "$1" 2>/dev/null && return 0
+  if command -v git.exe >/dev/null; then
+    echo "git do WSL sem login no GitHub; enviando $1 pelo git do Windows..."
+    git.exe -c safe.directory='*' push -q origin "$1" && { git fetch -q origin 2>/dev/null || true; return 0; }
+  fi
+  echo "não deu para enviar $1. O commit e a tag v$V já estão feitos; envie com: git push origin v$V && git push origin main"
+  exit 1
+}
 # a tag sobe antes: quando o release.json novo aparecer no main, o zip da tag já existe
-git push -q origin "v$V"
-git push -q origin main
+push "v$V"
+push main
 echo "Publicado: v$V. Os PCs instalados oferecem a atualização em até 6 h (ou em \"Procurar atualização\")."
