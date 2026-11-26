@@ -75,13 +75,16 @@ function sbRender(mics) {
   $("sbx-mic").value = opts.some(([v]) => v === d.pick) ? d.pick : "";
   $("sbx-monsw").classList.toggle("on", d.monitor); $("sbx-mon").textContent = d.monitor_dev || "";
   $("sbx-one").classList.toggle("on", !d.overlap);
+  $("sbx-nr").classList.toggle("on", d.nr && d.nr_ok);
+  $("sbx-nrl").classList.toggle("hidden", !cab || !d.mic || !d.nr_ok);
   $("sbx-vol").value = d.vol; $("sbx-vv").textContent = d.vol + "%";
   $("sbx-mvol").value = d.mic_vol; $("sbx-mv").textContent = d.mic_vol + "%";
   $("sbx-mvl").classList.toggle("hidden", !cab);
   $("sbx-mic").parentElement.classList.toggle("hidden", !cab);
   $("sbx-help").innerHTML = cab
     ? `<b>No Discord:</b> Configurações &gt; Voz e vídeo &gt; Dispositivo de entrada: <b>CABLE Output</b>.
-       Em Supressão de ruído use <b>Nenhuma</b> ou <b>Padrão</b> (o Krisp corta música e efeitos); para limpar o ruído do seu microfone, escolha acima o <b>NVIDIA RTX Voice</b>.`
+       Em <b>Supressão de ruído</b> escolha <b>Nenhuma</b> e desligue o <b>cancelamento de eco</b>: eles agem em tudo o que sai pelo cabo e cortam música e efeitos.
+       ${d.nr_ok ? "O ruído do seu microfone é tirado aqui mesmo (opção acima), sem encostar nos sons." : "Para tirar o ruído só do microfone, atualize o servidor (instala o RNNoise) ou escolha acima um microfone já limpo, como o <b>NVIDIA Broadcast</b>."}`
     : `<b>Para sair no microfone (uma vez só):</b><ol><li>Instale o <b>VB-CABLE</b> (grátis, vb-audio.com/Cable): extraia o zip, rode <b>VBCABLE_Setup_x64</b> como administrador e reinicie o PC.</li>
        <li>Se o som do PC sumir depois, volte a saída padrão para o seu fone (aba Mixer).</li>
        <li>No Discord: Voz e vídeo &gt; Dispositivo de entrada: <b>CABLE Output</b>.</li></ol>`;
@@ -90,6 +93,7 @@ const sbSet = (p) => send("snd.set", p).then((d) => { sbState = d; sbRender(); }
 $("sbx-mic").onchange = () => { buzz(8); sbSet({ mic: $("sbx-mic").value }); };
 $("sbx-monsw").onclick = () => { buzz(8); sbSet({ monitor: !sbState?.monitor }); };
 $("sbx-one").onclick = () => { buzz(8); sbSet({ overlap: !sbState?.overlap }); };
+$("sbx-nr").onclick = () => { buzz(8); sbSet({ nr: !sbState?.nr }); };
 for (const [id, key, lab] of [["sbx-vol", "vol", "sbx-vv"], ["sbx-mvol", "mic_vol", "sbx-mv"]]) {
   $(id).oninput = () => { $(lab).textContent = $(id).value + "%"; };
   $(id).onchange = () => sbSet({ [key]: +$(id).value });

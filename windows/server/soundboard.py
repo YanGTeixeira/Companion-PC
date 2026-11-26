@@ -5,13 +5,21 @@ O Windows não deixa um programa falar dentro de um microfone. O jeito padrão �
 sons, e no Discord o dispositivo de entrada vira "CABLE Output". Os sons também tocam no seu fone
 (dá para desligar). Sem cabo, os sons tocam só no PC.
 
+Supressão de ruído: a do Discord (Krisp) age em tudo o que chega pelo cabo e corta música e efeitos.
+Por isso o servidor limpa só o microfone (RNNoise, pacote pyrnnoise) antes de misturar com os sons;
+no Discord a supressão fica desligada.
+
 Os áudios chegam do celular já convertidos (WAV 16 bits, mono, 48 kHz, normalizado) e ficam em
 sons/<id>.wav. O deck guarda só o id e o volume do botão.
 """
 import asyncio
 import base64
+import ctypes
+import importlib.util
 import io
 import logging
+import os
+import sys
 import re
 import secrets
 import threading
@@ -32,7 +40,7 @@ CABLES = ("cable input", "cable-a input", "cable-b input", "voicemeeter input", 
 # entradas que são a outra ponta de um cabo: nunca servem como "meu microfone" (daria eco infinito)
 NOT_MIC = ("cable output", "cable-a output", "cable-b output", "voicemeeter out", "steam streaming", "mapeador", "mapper",
            "driver de captura", "primary sound")
-DEFAULTS = {"mic": "", "monitor": True, "vol": 80, "mic_vol": 100, "overlap": True}
+DEFAULTS = {"mic": "", "monitor": True, "vol": 80, "mic_vol": 100, "overlap": True, "nr": True}
 CHECK_S = 2                  # de quanto em quanto tempo olha se a saída padrão do Windows mudou
 REFRESH_MIN_S = 20           # intervalo mínimo entre reinícios do PortAudio
 
@@ -53,6 +61,70 @@ def wav_to_array(raw: bytes):
         m = int(round(len(a) * SR / rate))
         a = np.interp(np.linspace(0, len(a) - 1, m), np.arange(len(a)), a).astype(np.float32)
     return a
+
+
+_RNN = None
+
+
+def _rnnoise_lib():
+    """A DLL do RNNoise que vem no pacote pyrnnoise (None se não instalado). Não importa o pacote:
+    o __init__ dele puxa audiolab/matplotlib, que não usamos (instalamos com --no-deps)."""
+    global _RNN
+    if _RNN is None:
+        _RNN = False
+        try:
+            spec = importlib.util.find_spec("pyrnnoise")
+            if spec and spec.submodule_search_locations:
+                name = {"win32": "rnnoise.dll", "darwin": "librnnoise.dylib"}.get(sys.platform, "librnnoise.so")
+                lib = ctypes.CDLL(os.path.join(list(spec.submodule_search_locations)[0], name))
+                lib.rnnoise_create.argtypes = [ctypes.c_void_p]
+                lib.rnnoise_create.restype = ctypes.c_void_p
+                lib.rnnoise_destroy.argtypes = [ctypes.c_void_p]
+                lib.rnnoise_process_frame.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_float),
+                                                      ctypes.POINTER(ctypes.c_float)]
+                lib.rnnoise_process_frame.restype = ctypes.c_float
+                lib.rnnoise_get_frame_size.restype = ctypes.c_int
+                if lib.rnnoise_get_frame_size() == BLOCK:
+                    _RNN = lib
+        except Exception as e:  # noqa: BLE001
+            log.warning("sons: RNNoise indisponível: %s", e)
+    return _RNN or None
+
+
+class Denoiser:
+    """Supressão de ruído do microfone (RNNoise, quadros de 10 ms a 48 kHz)."""
+
+    def __init__(self):
+        import numpy as np
+        self.np = np
+        self.lib = _rnnoise_lib()
+        self.st = self.lib.rnnoise_create(None) if self.lib else None
+        self.buf = np.zeros(0, dtype=np.float32)
+        self.frame = np.zeros(BLOCK, dtype=np.float32)
+
+    def __call__(self, a):
+        """float32 [-1, 1] -> o mesmo áudio limpo (pode atrasar até 10 ms se os blocos não forem de 480)."""
+        np = self.np
+        if not self.st:
+            return a
+        if not len(self.buf) and len(a) == BLOCK:
+            todo = a
+        else:
+            todo = np.concatenate((self.buf, a))
+        n = len(todo) // BLOCK * BLOCK
+        self.buf = todo[n:].copy()
+        out = np.empty(n, dtype=np.float32)
+        ptr = self.frame.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+        for i in range(0, n, BLOCK):
+            self.frame[:] = todo[i:i + BLOCK] * 32768.0   # o RNNoise trabalha na escala de 16 bits
+            self.lib.rnnoise_process_frame(self.st, ptr, ptr)
+            out[i:i + BLOCK] = self.frame / 32768.0
+        return out
+
+    def close(self):
+        if self.st:
+            self.lib.rnnoise_destroy(self.st)
+            self.st = None
 
 
 class Board:
@@ -88,7 +160,8 @@ class Board:
         return {"available": self.available, "status": self.status, "error": self.error, "cable": self.cable,
                 "mic": self.mic_name, "monitor_dev": self.mon_name, "pick": self.cfg["mic"],
                 "monitor": bool(self.cfg["monitor"]), "vol": self.cfg["vol"], "mic_vol": self.cfg["mic_vol"],
-                "overlap": bool(self.cfg["overlap"]), "playing": playing}
+                "overlap": bool(self.cfg["overlap"]), "nr": bool(self.cfg["nr"]),
+                "nr_ok": _rnnoise_lib() is not None, "playing": playing}
 
     def mics(self):
         """Microfones físicos (WASAPI) para escolher qual vai junto com os sons."""
@@ -110,8 +183,9 @@ class Board:
         for k in ("vol", "mic_vol"):
             if k in p:
                 self.cfg[k] = max(0, min(150 if k == "mic_vol" else 100, int(p[k])))
-        if "overlap" in p:
-            self.cfg["overlap"] = bool(p["overlap"])
+        for k in ("overlap", "nr"):
+            if k in p:
+                self.cfg[k] = bool(p[k])
         self._save_cfg(dict(self.cfg))
         if restart:
             self._spawn()
@@ -312,7 +386,7 @@ class Board:
         extra = sd.WasapiSettings(auto_convert=True)
         failed = False
         while not stop.is_set():
-            streams = []
+            streams, nr = [], None
             try:
                 win_out = self._default_out()
                 names = {d["name"] for d in sd.query_devices() if d["max_output_channels"] > 0}
@@ -328,8 +402,12 @@ class Board:
                     self._mic.clear()
                     self._mic_n = 0
                 if mic:
+                    nr = Denoiser()
+
                     def cb_in(indata, frames, _t, _s):
                         a = indata[:, 0].copy()
+                        if self.cfg["nr"]:
+                            a = nr(a)
                         with self._lock:
                             self._mic.append(a)
                             self._mic_n += len(a)
@@ -400,6 +478,8 @@ class Board:
                         s.close()
                     except Exception:  # noqa: BLE001
                         pass
+                if nr:
+                    nr.close()
         self.status = "off"
 
     def _pull_mic(self, np, frames):

@@ -28,6 +28,8 @@ py -3 -m pip install --user --disable-pip-version-check -q --no-warn-script-loca
     winrt-Windows.UI.Notifications winrt-Windows.UI.Notifications.Management winrt-Windows.ApplicationModel `
     winrt-Windows.Gaming.Input `
     faster-whisper sounddevice numpy  # comandos de voz ("PC, ..."); o modelo (~75 MB) baixa no 1º uso
+# RNNoise (supressão de ruído só do microfone na mesa de som): só a DLL; as dependências dele não são usadas
+py -3 -m pip install --user --disable-pip-version-check -q --no-warn-script-location --no-deps pyrnnoise
 
 # pythonw = sem janela de console
 $pyw = (py -3 -c "import sys, pathlib; print(pathlib.Path(sys.executable).with_name('pythonw.exe'))").Trim()

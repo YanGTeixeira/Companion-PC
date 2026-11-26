@@ -163,6 +163,30 @@ class BoardTest(unittest.TestCase):
         st = self.b.set({"vol": 500, "mic_vol": -3, "overlap": False, "mic": "fifine"})
         self.assertEqual((st["vol"], st["mic_vol"], st["overlap"], st["pick"]), (100, 0, False, "fifine"))
         self.assertEqual(self.saved[-1]["vol"], 100)
+        self.assertTrue(st["nr"])                       # supressão de ruído ligada por padrão
+        self.assertFalse(self.b.set({"nr": False})["nr"])
+        self.assertFalse(self.saved[-1]["nr"])
+
+    def test_supressao_sem_rnnoise_deixa_passar(self):
+        old, sb._RNN = sb._RNN, False
+        try:
+            d = sb.Denoiser()
+            a = np.linspace(-1, 1, 480, dtype=np.float32)
+            self.assertIs(d(a), a)
+            d.close()
+        finally:
+            sb._RNN = old
+
+    @unittest.skipUnless(sb._rnnoise_lib(), "precisa do pyrnnoise")
+    def test_supressao_tira_ruido_e_junta_blocos_quebrados(self):
+        rng = np.random.default_rng(1)
+        noise = (rng.standard_normal(48000) * 0.05).astype(np.float32)
+        d = sb.Denoiser()
+        out = np.concatenate([d(noise[i:i + 300]) for i in range(0, len(noise), 300)])
+        d.close()
+        self.assertEqual(len(out), len(noise) // 480 * 480)   # blocos de 300 viram quadros de 480
+        tail = out[len(out) // 2:]                              # depois de o modelo se ajustar
+        self.assertLess(np.sqrt(np.mean(tail ** 2)), 0.05 / 4)
 
     def test_limpeza_apaga_so_os_sem_botao_e_antigos(self):
         keep, old, new = self.add()["id"], self.add()["id"], self.add()["id"]
