@@ -70,7 +70,7 @@ const THEMES = [
 const m = location.hash.match(/[#&]t=([^&]+)/);
 if (m) { try { localStorage.setItem("pcc.token", JSON.stringify(decodeURIComponent(m[1]))); } catch {} history.replaceState(null, "", location.pathname); }
 let TOKEN = ""; try { TOKEN = JSON.parse(localStorage.getItem("pcc.token") || '""'); } catch {}
-let WEB = null, ws = null, rid = 0, LAY = {}, DECK = null, O = "portrait", page = 0;
+let WEB = +(document.querySelector('meta[name="build"]')?.content || 0) || null, ws = null, rid = 0, LAY = {}, DECK = null, O = "portrait", page = 0;
 const pending = new Map();
 function status(cls, text) { $("status").className = cls; $("status").lastElementChild.textContent = text; }
 function send(a, p, timeout) {

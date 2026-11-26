@@ -43,6 +43,10 @@ def serve_static(connection, request):
     if WEB_DIR.resolve() not in f.parents or not f.is_file() or f.suffix not in MIME:
         return connection.respond(HTTPStatus.NOT_FOUND, "não encontrado\n")
     body = f.read_bytes()
+    if f.suffix == ".html":
+        # a página leva a versão do app: uma cópia velha (guardada pelo service worker enquanto o PC reiniciava)
+        # percebe que está desatualizada no "welcome" e recarrega
+        body = body.replace(b"</head>", f'<meta name="build" content="{web_build()}">\n</head>'.encode(), 1)
     headers = Headers([("Content-Type", MIME[f.suffix]), ("Content-Length", str(len(body))),
                        ("Cache-Control", "no-cache"), ("X-Content-Type-Options", "nosniff")])
     return Response(200, "OK", headers, body)

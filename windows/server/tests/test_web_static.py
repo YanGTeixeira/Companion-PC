@@ -28,6 +28,13 @@ class ServeStaticTest(unittest.TestCase):
         self.assertIn(b"Personalizar", get("/editor").body)
         self.assertIn(b"Personalizar", get("/editor/").body)
 
+    def test_pagina_leva_a_versao_do_app(self):
+        # sem isso, uma cópia velha guardada pelo service worker nunca percebia a atualização
+        meta = f'<meta name="build" content="{web_static.web_build()}">'.encode()
+        self.assertIn(meta, get("/").body)
+        self.assertIn(meta, get("/editor").body)
+        self.assertEqual(get("/").headers["Content-Length"], str(len(get("/").body)))
+
     def test_query_string_e_hash_ignorados(self):
         self.assertEqual(get("/?preview=1#t=abc").status_code, 200)
 

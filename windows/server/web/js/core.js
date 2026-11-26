@@ -72,7 +72,8 @@ function toast(msg, kind = "", sound = true) {
 // ---------------------------------------------------------------- conexão
 let ws = null, welcome = {}, nextId = 1, retry = 0, retryT = null, wasOnline = false;
 const pending = new Map();
-let pageBuild = 0;
+// versão do app desta página (o PC põe no HTML); 0 = página sem carimbo (aceita a primeira que o PC disser)
+let pageBuild = +(document.querySelector('meta[name="build"]')?.content || 0);
 const state = { stats: null, now: null, games: null, art: {}, gameart: {}, nowT: 0, gamesT: 0 };
 
 function wsUrl() { return (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws"; }
@@ -115,11 +116,18 @@ function act(a, p, label) {
   return send(a, p).then((d) => { if (label) toast(label, "ok"); return d; }).catch((e) => { if (e.message !== "offline") toast(e.message, "bad"); });
 }
 
+// página velha: recarrega (no máximo 1 vez a cada 30 s, para não ficar em loop se o PC ainda estiver reiniciando)
+function staleReload() {
+  let last = 0; try { last = +sessionStorage.getItem("pcc.reload") || 0; } catch {}
+  if (Date.now() - last < 30000) return false;
+  try { sessionStorage.setItem("pcc.reload", Date.now()); } catch {}
+  location.reload(); return true;
+}
 function onMsg(m) {
   switch (m.t) {
     case "welcome":
       // página nova no PC: recarrega (o app reconecta sozinho e nunca baixaria o HTML de novo)
-      if (m.web && pageBuild && m.web !== pageBuild) { location.reload(); return; }
+      if (m.web && pageBuild && m.web !== pageBuild && staleReload()) return;
       pageBuild = pageBuild || m.web;
       welcome = m; retry = 0;
       if (m.layout) applyLayout(m.layout, true);
