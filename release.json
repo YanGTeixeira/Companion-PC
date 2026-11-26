@@ -1,4 +1,4 @@
 {
-  "version": "1.13",
-  "notes": "Sons no microfone: o ruído agora é tirado só da sua voz (deixe a supressão do Discord em Nenhuma) e os sons passam inteiros"
+  "version": "1.14",
+  "notes": "Mesa de som: chip NO AR mostra quando você fala e muta só a sua voz, aviso se falar no mudo, efeitos de voz (robô, rádio, grossa, fina, eco) e tempo falando no Hoje"
 }
