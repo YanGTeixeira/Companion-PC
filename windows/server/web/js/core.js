@@ -169,6 +169,7 @@ function onMsg(m) {
       if (m.kind === "voice") { voiceEvent(m); break; }
       if (m.kind === "talkwarn") { onTalkWarn(m); break; }
       if (m.kind === "conq") { onConqEvent(m.d); break; }
+      if (m.kind === "retro") { onRetroEvent(m); break; }
       if (m.kind === "steam_done" && prefs.alerts.steam) notify("Steam: pronto para jogar", m.name, "steam-dl");
       if (m.kind === "download" && prefs.alerts.download) notify("Download concluído", m.name + (m.size ? ` · ${fmtBytes(m.size)}` : ""), "dl");
       break;

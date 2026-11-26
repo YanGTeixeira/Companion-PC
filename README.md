@@ -49,10 +49,17 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
   e tempo falando) em **XP e nível**. Todo dia aparecem **3 metas** que se ajustam à sua média dos últimos 14 dias
   (o foco sempre entra; as outras são sorteadas entre tela, redes/vídeos, trabalho, tempo de jogo, vitórias e KDA).
   Metas de "no máximo" só valem quando o dia acaba. Cumprir 2 metas por dia mantém a **sequência**. São 23
-  **conquistas** (bronze, prata e ouro), como *Maratona de foco*, *Imortal* (vencer sem morrer), *Fazendeiro*,
+  **conquistas** numa galeria de troféus na cor da raridade (bronze, prata e ouro; as que faltam ficam apagadas).
+  Toque num troféu para ver como ganhar e o progresso, e passe pelos outros com as setas ou arrastando. Exemplos: *Maratona de foco*, *Imortal* (vencer sem morrer), *Fazendeiro*,
   *Coruja* e *Semana firme*. O celular avisa ao cumprir uma meta, ganhar uma conquista ou subir de nível. Na
   primeira vez, o que você já tinha feito é liberado sem avisos. Fica em `conquistas.db`, com um resumo de cada dia
-  (que também vai servir para a retrospectiva do mês e para um ranking no futuro).
+  (que também serve para a retrospectiva e para um ranking no futuro).
+- **Retrospectiva do mês (Status › Conquistas):** o mês em "stories" (toque à direita avança, à esquerda volta):
+  tempo de tela com o seu horário e dia favoritos, onde o tempo foi (categorias e apps), foco e metas, jogos
+  (partidas, % de vitórias, herói/mapa favorito e a melhor partida), tempo falando, XP e conquistas do mês e a sua
+  "personalidade" (Coruja, Gamer de carteirinha, Monge do foco, Workaholic...). No fim, um cartão em imagem com as
+  cores do tema para compartilhar ou salvar. Dá para ver o mês atual (até agora) ou os anteriores; no começo do mês
+  o celular avisa que a do mês que acabou está pronta.
 
 **Depois da 1.9**
 

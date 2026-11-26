@@ -73,6 +73,9 @@
       <div class="card" data-b="level"><h3><span>Nível</span><span id="cq-streak"></span></h3><div id="cq-lvl"><div class="empty">Carregando…</div></div></div>
       <div class="card" data-b="metas"><h3><span>Metas de hoje</span><span id="cq-today"></span></h3><div id="cq-metas"><div class="empty">Carregando…</div></div></div>
       <div class="card" data-b="conq"><h3><span>Conquistas</span><span id="cq-count"></span></h3><div id="cq-list" class="cqgrid"></div></div>
+      <div class="card" data-b="retro" id="td-retro"><h3><span>Retrospectiva</span></h3>
+        <div class="sub" style="white-space:normal;margin-bottom:8px">O seu mês em números: tempo de tela, foco, jogos, voz, XP e a sua "personalidade" do mês.</div>
+        <div class="brow"><select id="retro-month" class="sel" aria-label="Mês"></select><button class="btn" id="retro-open">Ver</button></div></div>
     </div>
   </section>
 
@@ -447,6 +450,23 @@
     <div class="acts"><button type="button" class="btn danger" id="ped-del">Excluir</button><button type="button" class="btn" id="ped-left" aria-label="Mover para trás">&lt;</button><button type="button" class="btn" id="ped-right" aria-label="Mover para frente">&gt;</button><span style="flex:1"></span><button type="button" class="btn" id="ped-cancel">Cancelar</button><button class="btn primary">Salvar</button></div>
   </form>
 </div>
+<!-- troféus: degradês das três raridades (usados por todos os <svg class="tro">) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="tg-bronze" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0a868"/><stop offset=".5" stop-color="#cd7f32"/><stop offset="1" stop-color="#7a4518"/></linearGradient>
+  <linearGradient id="tg-prata" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#c9ced3"/><stop offset="1" stop-color="#7d858c"/></linearGradient>
+  <linearGradient id="tg-ouro" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".45" stop-color="#ffd23f"/><stop offset="1" stop-color="#b8860b"/></linearGradient>
+</defs></svg>
+<div class="overlay hidden" id="cqm" role="dialog" aria-label="Conquista">
+  <div class="dialog cqmd">
+    <div class="cqm-top"><span id="cqm-n"></span><button class="btn sm" id="cqm-x" aria-label="Fechar">×</button></div>
+    <div id="cqm-body"></div>
+    <div class="cqm-nav"><button class="btn" id="cqm-prev" aria-label="Anterior">‹</button><button class="btn" id="cqm-next" aria-label="Próxima">›</button></div>
+  </div>
+</div>
+<div class="hidden" id="retro" role="dialog" aria-label="Retrospectiva do mês">
+  <div class="rtop"><div id="retro-prog"></div><button class="btn sm" id="retro-x" aria-label="Fechar">×</button></div>
+  <div id="retro-body"></div>
+</div>
 <div class="overlay hidden" id="sbx">
   <div class="dialog wide">
     <h1>Sons no microfone</h1>
@@ -506,6 +526,7 @@
 <script src="js/steam.js"></script>
 <script src="js/dia.js"></script>
 <script src="js/conq.js"></script>
+<script src="js/retro.js"></script>
 <script src="js/ajustes.js"></script>
 <script src="js/main.js"></script>
 </body>

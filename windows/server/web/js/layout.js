@@ -166,7 +166,7 @@ function showView(name, temp) {
   if (vis("games") && welcome) loadHist();
   if (vis("mix") && welcome) loadProfiles();
   if (vis("today")) { renderToday(); setTimeout(() => loadDay(true)); }
-  if (vis("conq")) setTimeout(() => (state.conq ? renderConq() : loadConq()));
+  if (vis("conq")) setTimeout(() => { state.conq ? renderConq() : loadConq(); renderRetroCard(); });
   if (vis("games")) { renderSteam(); renderPost(); }
   if (vis("screen")) requestAnimationFrame(() => { layoutScreen(); screenLoop(); });
   if (vis("media") || vis("mix")) { mixT = 0; renderMixer(); pollMixer(); }

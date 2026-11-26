@@ -26,7 +26,7 @@ const BLOCKS = {
     { title: "Botões da reunião", items: [["m-mic", "Microfone"], ["m-cam", "Câmera"], ["m-share", "Compartilhar tela"], ["m-hand", "Levantar a mão"],
       ["m-captions", "Legendas"], ["m-chat", "Chat"], ["m-focus", "Mostrar no PC"], ["m-leave", "Sair"]] }],
   today: [{ wide: 1, items: [["weather", "Clima"], ["agenda", "Agenda"], ["day", "Seu dia (resumo)"], ["focus", "Foco"]] }],
-  conq: [{ wide: 1, items: [["level", "Nível e sequência"], ["metas", "Metas de hoje"], ["conq", "Conquistas"]] }],
+  conq: [{ wide: 1, items: [["level", "Nível e sequência"], ["metas", "Metas de hoje"], ["conq", "Conquistas (troféus)"], ["retro", "Retrospectiva do mês"]] }],
   games: [{ wide: 1, items: [["now", "Jogo atual"], ["recent", "Jogados recentemente"], ["week", "Esta semana"], ["post", "Fim de partida"], ["dl", "Downloads da Steam"], ["friends", "Amigos da Steam"], ["dota", "Dota 2: draft e build"], ["hist", "Partidas (CS2 / Dota 2)"], ["lib", "Biblioteca"]] }],
   usage: [{ items: [["range", "Hoje / Semana / Mês"]] }, { wide: 1, items: [["total", "Total, gráfico e categorias"], ["apps", "Por aplicativo"]] }],
   media: [{ items: [["art", "Capa"], ["info", "Música e artista"], ["prog", "Barra de progresso"], ["ctrls", "Anterior / tocar / próxima"], ["vol", "Volume"], ["out", "Saída de áudio"]] }],

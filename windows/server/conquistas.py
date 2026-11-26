@@ -225,6 +225,7 @@ class Conquistas:
         self.first_day_fn = first_day_fn or (lambda: None)
         self.lock = threading.Lock()
         self._state = None
+        self._calc = None
         with self._db() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS days (day TEXT PRIMARY KEY, facts TEXT, final INT);
@@ -299,6 +300,7 @@ class Conquistas:
         }
         ev = self._events(st, new)
         self._state = st
+        self._calc = {"days": [(k, f, metas, xp_days[k]) for k, f, metas in days], "unlocked": dict(unlocked)}
         return st, ev
 
     def _events(self, st, new):
@@ -316,6 +318,30 @@ class Conquistas:
 
     def state(self):
         return self._state
+
+    def month_data(self, month):
+        """Para a retrospectiva: (dias do mês [(dia, facts, metas, xp)], XP antes do mês,
+        conquistas do mês [{id, name, tier, xp, day}], dias com dados de todos os meses)."""
+        if self._calc is None:
+            self.refresh()
+        days, unlocked = self._calc["days"], self._calc["unlocked"]
+        start = month + "-01"
+        inside = [x for x in days if x[0][:7] == month]
+        conq = {c[0]: c for c in CONQ}
+        xp_before = sum(x[3] for x in days if x[0] < start) + sum(TIER_XP[conq[c][3]] for c, d in unlocked.items()
+                                                                  if c in conq and d < start)
+        got = [{"id": c, "name": conq[c][1], "tier": conq[c][3], "xp": TIER_XP[conq[c][3]], "day": d}
+               for c, d in sorted(unlocked.items(), key=lambda x: x[1]) if c in conq and d[:7] == month]
+        return inside, xp_before, got, [x[0] for x in days]
+
+    def flag(self, key, value=None):
+        """Marcador simples guardado no banco (ex.: retrospectiva já avisada). Sem value: lê."""
+        with self.lock, self._db() as db:
+            if value is None:
+                row = db.execute("SELECT v FROM kv WHERE k = ?", (key,)).fetchone()
+                return row[0] if row else None
+            db.execute("INSERT OR REPLACE INTO kv VALUES (?, ?)", (key, str(value)))
+            return value
 
     def summary(self):
         """O que um ranking online receberia (sem nada de tempo de tela ou apps)."""

@@ -29,6 +29,7 @@ from websockets.exceptions import ConnectionClosed
 import devices
 import extras
 import conquistas
+import retro
 import games
 import gsi
 import https_cert
@@ -500,6 +501,7 @@ ASYNC_ACTIONS = {
     "daily.get": lambda p: _async(daily_public()),
     "day.summary": lambda p: asyncio.to_thread(day_summary, p),
     "conq.get": lambda p: _async(CONQ.state()),
+    "retro.get": lambda p: asyncio.to_thread(retro_get, p),
     "steam.set": lambda p: steam_set(p),
     "steam.get": lambda p: _async({**STEAM_STATE, "steamid": STEAM.steamid()}),
     "stratz.get": lambda p: _async(stratz_public()),
@@ -873,7 +875,7 @@ async def meet_cmd(p):
         raise ValueError("não consegui trazer o Meet para a frente")
     await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"snd.get", "snd.state", "snd.mics", "snd.add", "snd.info", "snd.play", "snd.stop", "layout.get", "dota.plan.get", "dota.heroes", "dota.draft", "dota.build", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"conq.get", "retro.get", "snd.get", "snd.state", "snd.mics", "snd.add", "snd.info", "snd.play", "snd.stop", "layout.get", "dota.plan.get", "dota.heroes", "dota.draft", "dota.build", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -1693,6 +1695,8 @@ async def conq_loop():
             for e in ev:
                 log.info("conquistas: %s", e)
                 await broadcast({"t": "event", "kind": "conq", "d": e})
+            if clients:
+                await retro_notice()
             key = json.dumps(st, sort_keys=True)
             if key != sent:
                 sent = key
@@ -1705,6 +1709,38 @@ async def conq_loop():
             pass
         CONQ_KICK.clear()
         await asyncio.sleep(2)   # junta vários avisos seguidos (partida + foco)
+
+
+def retro_get(p):
+    """Retrospectiva de um mês ("AAAA-MM"; padrão: o mês atual)."""
+    import datetime as _dt
+    month = str(p.get("month") or time.strftime("%Y-%m"))
+    if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
+        raise ValueError("mês inválido")
+    days, xp_before, conq, all_days = CONQ.month_data(month)
+    first, last = retro.month_bounds(month)
+    # comparação justa com o mês anterior: até o mesmo dia do mês, se este ainda não acabou
+    today = _dt.date.today()
+    upto = min(last, today).day
+    prev = [x for x in CONQ.month_data(retro.prev_month(month))[0] if int(x[0][8:]) <= upto]
+    start = time.mktime(first.timetuple())
+    end = time.mktime((last + _dt.timedelta(days=1)).timetuple())
+    with MATCHES.lock:
+        rows = MATCHES.db.execute("SELECT ended, game, title, win, data FROM matches WHERE ended >= ? AND ended < ?",
+                                  (start, end)).fetchall()
+    out = retro.build(month, days, xp_before, conq, SCREEN.report("month", first.isoformat()),
+                      [(e, g, t, w, json.loads(d or "{}")) for e, g, t, w, d in rows], prev)
+    out["months"] = sorted({d[:7] for d in all_days}, reverse=True)
+    return out
+
+
+async def retro_notice():
+    """No começo do mês, avisa uma vez que a retrospectiva do mês que acabou está pronta."""
+    month = retro.prev_month(time.strftime("%Y-%m"))
+    if CONQ.flag("retro_seen") == month or not any(d[:7] == month for d in CONQ.month_data(month)[3]):
+        return
+    CONQ.flag("retro_seen", month)
+    await broadcast({"t": "event", "kind": "retro", "month": month, "label": retro.month_bounds(month)[0].strftime("%m/%Y")})
 
 
 def matches_get(p):
