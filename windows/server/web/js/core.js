@@ -165,6 +165,7 @@ function onMsg(m) {
     case "event":
       if (m.kind === "notif") { snd("note"); notify(`${m.app}: ${m.title}`, m.body, "pcn-" + m.app); break; }
       if (m.kind === "voice") { voiceEvent(m); break; }
+      if (m.kind === "talkwarn") { onTalkWarn(m); break; }
       if (m.kind === "steam_done" && prefs.alerts.steam) notify("Steam: pronto para jogar", m.name, "steam-dl");
       if (m.kind === "download" && prefs.alerts.download) notify("Download concluído", m.name + (m.size ? ` · ${fmtBytes(m.size)}` : ""), "dl");
       break;

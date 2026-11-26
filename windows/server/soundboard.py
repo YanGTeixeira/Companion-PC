@@ -9,6 +9,10 @@ Supressão de ruído: a do Discord (Krisp) age em tudo o que chega pelo cabo e c
 Por isso o servidor limpa só o microfone (RNNoise, pacote pyrnnoise) antes de misturar com os sons;
 no Discord a supressão fica desligada.
 
+O RNNoise também diz a chance de cada 10 ms ser voz: com isso o servidor sabe quando você está falando
+(medidor no celular, aviso de "falando no mudo" e tempo de fala do dia, em voz.db). O "mudo" daqui corta só
+o seu microfone no cabo (os sons continuam), e os efeitos de voz (robô, rádio...) também só mexem nele.
+
 Os áudios chegam do celular já convertidos (WAV 16 bits, mono, 48 kHz, normalizado) e ficam em
 sons/<id>.wav. O deck guarda só o id e o volume do botão.
 """
@@ -22,6 +26,7 @@ import os
 import sys
 import re
 import secrets
+import sqlite3
 import threading
 import time
 import wave
@@ -41,6 +46,11 @@ CABLES = ("cable input", "cable-a input", "cable-b input", "voicemeeter input", 
 NOT_MIC = ("cable output", "cable-a output", "cable-b output", "voicemeeter out", "steam streaming", "mapeador", "mapper",
            "driver de captura", "primary sound")
 DEFAULTS = {"mic": "", "monitor": True, "vol": 80, "mic_vol": 100, "overlap": True, "nr": True}
+FX = {"robo": "Robô", "radio": "Rádio", "grave": "Voz grossa", "agudo": "Voz fina", "eco": "Eco"}
+VAD_PROB = 0.7               # chance de voz (RNNoise) para contar como fala
+VAD_RMS = 0.004              # ... e nível mínimo (~ -48 dBFS), para a TV no fundo não contar
+VAD_RMS_ONLY = 0.02          # sem RNNoise: só o nível (~ -34 dBFS)
+TALK_HOLD = 0.4              # "falando" continua por esse tempo depois da última voz (sem piscar entre palavras)
 CHECK_S = 2                  # de quanto em quanto tempo olha se a saída padrão do Windows mudou
 REFRESH_MIN_S = 20           # intervalo mínimo entre reinícios do PortAudio
 
@@ -101,6 +111,7 @@ class Denoiser:
         self.st = self.lib.rnnoise_create(None) if self.lib else None
         self.buf = np.zeros(0, dtype=np.float32)
         self.frame = np.zeros(BLOCK, dtype=np.float32)
+        self.prob = None      # maior chance de voz dos quadros do último bloco (None sem RNNoise)
 
     def __call__(self, a):
         """float32 [-1, 1] -> o mesmo áudio limpo (pode atrasar até 10 ms se os blocos não forem de 480)."""
@@ -115,16 +126,136 @@ class Denoiser:
         self.buf = todo[n:].copy()
         out = np.empty(n, dtype=np.float32)
         ptr = self.frame.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+        probs = []
         for i in range(0, n, BLOCK):
             self.frame[:] = todo[i:i + BLOCK] * 32768.0   # o RNNoise trabalha na escala de 16 bits
-            self.lib.rnnoise_process_frame(self.st, ptr, ptr)
+            probs.append(self.lib.rnnoise_process_frame(self.st, ptr, ptr))
             out[i:i + BLOCK] = self.frame / 32768.0
+        if probs:
+            self.prob = max(probs)
         return out
 
     def close(self):
         if self.st:
             self.lib.rnnoise_destroy(self.st)
             self.st = None
+
+
+class VoiceFx:
+    """Efeitos de voz ao vivo (só no microfone). Cada bloco sai com o mesmo tamanho com que entrou."""
+    HIST = 16384                 # 340 ms de passado (o eco usa 250 ms; a troca de tom, 40 ms)
+    PITCH = {"grave": 0.72, "agudo": 1.4}
+    WIN = 1920                   # janela da troca de tom (40 ms)
+    ECHO, ECHO_FB = 12000, 0.38  # eco: 250 ms, cada repetição a 38%
+
+    def __init__(self):
+        import numpy as np
+        self.np = np
+        self.n = 0                                   # amostras já processadas (relógio dos efeitos)
+        self.x = np.zeros(self.HIST, dtype=np.float32)   # entrada passada
+        self.y = np.zeros(self.HIST, dtype=np.float32)   # saída passada (eco)
+        # rádio: passa-faixa 350-3200 Hz (FIR com janela de Hann)
+        t = np.arange(129) - 64
+        lp = lambda f: 2 * f / SR * np.sinc(2 * f / SR * t)  # noqa: E731
+        self.bp = ((lp(3200) - lp(350)) * np.hanning(129)).astype(np.float32)
+
+    def __call__(self, a, kind):
+        np = self.np
+        k = len(a)
+        if not k:
+            return a
+        xh = np.concatenate((self.x, a))
+        m = self.n + np.arange(k)
+        if kind == "robo":        # modulação em anel: voz "metálica"
+            out = a * np.sin(2 * np.pi * 55 * m / SR).astype(np.float32) * 1.6
+        elif kind == "radio":     # faixa de telefone + saturação
+            y = np.convolve(xh[-(k + len(self.bp) - 1):], self.bp, "valid")
+            out = np.tanh(3 * y) / np.tanh(3) * 0.8
+        elif kind in self.PITCH:  # dois leitores num atraso que varia (efeito Doppler), com crossfade
+            r, w = self.PITCH[kind], self.WIN
+            d1 = np.mod(m * (1 - r), w)
+            d2 = np.mod(d1 + w / 2, w)
+            idx = len(xh) - k + np.arange(k)
+
+            def tap(d):
+                pos = idx - d - 1
+                i = np.floor(pos).astype(int)
+                f = pos - i
+                return xh[i] * (1 - f) + xh[i + 1] * f
+            out = tap(d1) * np.sin(np.pi * d1 / w) ** 2 + tap(d2) * np.sin(np.pi * d2 / w) ** 2
+        elif kind == "eco":
+            out = a + self.ECHO_FB * self.y[-self.ECHO:-self.ECHO + k]
+        else:
+            out = a
+        out = out.astype(np.float32)
+        self.x = xh[-self.HIST:]
+        self.y = np.concatenate((self.y, out))[-self.HIST:]
+        self.n += k
+        return out
+
+
+class TalkLog:
+    """Segundos falando por dia e contexto (reunião, jogo, outro), em voz.db."""
+
+    def __init__(self, path):
+        self.path = str(path)
+        self.lock = threading.Lock()
+        with self._db() as db:
+            db.execute("CREATE TABLE IF NOT EXISTS talk (day TEXT, ctx TEXT, secs REAL, PRIMARY KEY (day, ctx))")
+
+    def _db(self):
+        return sqlite3.connect(self.path, timeout=5)
+
+    def add(self, day, secs_by_ctx):
+        with self.lock, self._db() as db:
+            for ctx, secs in secs_by_ctx.items():
+                db.execute("INSERT INTO talk VALUES (?, ?, ?) ON CONFLICT(day, ctx) DO UPDATE SET secs = secs + excluded.secs",
+                           (day, ctx, secs))
+
+    def day(self, day):
+        with self.lock, self._db() as db:
+            return dict(db.execute("SELECT ctx, secs FROM talk WHERE day = ?", (day,)).fetchall())
+
+
+class TalkWatch:
+    """Soma o tempo de fala por contexto e decide quando avisar "você está falando no mudo"."""
+    WARN_S = 1.2       # segundos de voz no mudo...
+    QUIET_S = 4        # ... sem pausa maior que isso (tosse e "hum" soltos não avisam)
+    COOLDOWN_S = 25    # entre dois avisos
+    FLUSH_S = 15       # de quanto em quanto tempo grava no voz.db
+
+    def __init__(self, now=0.0):
+        self.last = None
+        self.pend = {}
+        self.flushed = now
+        self.muted_voice, self.muted_t, self.warned = 0.0, -1e9, -1e9
+
+    def step(self, now, total, ctx, mute):
+        """total: Board.talk_secs; ctx: "meet"/"game"/"other"; mute: onde está no mudo ("" se não está).
+        Devolve o motivo do aviso (mute) quando é hora de avisar, senão None."""
+        d = 0.0 if self.last is None else max(0.0, total - self.last)
+        self.last = total
+        if d:
+            self.pend[ctx] = self.pend.get(ctx, 0.0) + d
+        if not mute:
+            self.muted_voice = 0.0
+            return None
+        if d:
+            if now - self.muted_t > self.QUIET_S:
+                self.muted_voice = 0.0
+            self.muted_voice += d
+            self.muted_t = now
+            if self.muted_voice >= self.WARN_S and now - self.warned > self.COOLDOWN_S:
+                self.warned, self.muted_voice = now, 0.0
+                return mute
+        return None
+
+    def take(self, now, force=False):
+        """O que juntou para gravar (a cada FLUSH_S, ou já se force)."""
+        if self.pend and (force or now - self.flushed >= self.FLUSH_S):
+            out, self.pend, self.flushed = self.pend, {}, now
+            return out
+        return None
 
 
 class Board:
@@ -146,6 +277,10 @@ class Board:
         self.status, self.error = "off", ""
         self.cable = self.mic_name = self.mon_name = ""
         self._sent = None
+        # não ficam salvos: ninguém quer abrir o PC amanhã com voz de robô ou mudo sem saber
+        self.muted, self.fx = False, ""
+        self._talk_t = -1e9             # última vez (monotonic) que ouviu voz
+        self.talk_secs = 0.0            # total de segundos com voz desde que o servidor abriu
         try:
             import numpy  # noqa: F401
             import sounddevice  # noqa: F401
@@ -161,7 +296,19 @@ class Board:
                 "mic": self.mic_name, "monitor_dev": self.mon_name, "pick": self.cfg["mic"],
                 "monitor": bool(self.cfg["monitor"]), "vol": self.cfg["vol"], "mic_vol": self.cfg["mic_vol"],
                 "overlap": bool(self.cfg["overlap"]), "nr": bool(self.cfg["nr"]),
-                "nr_ok": _rnnoise_lib() is not None, "playing": playing}
+                "nr_ok": _rnnoise_lib() is not None, "muted": self.muted, "fx": self.fx, "fxs": FX,
+                "talk": self.talking, "playing": playing}
+
+    @property
+    def talking(self):
+        return bool(self.mic_name) and time.monotonic() - self._talk_t < TALK_HOLD
+
+    def _vad(self, raw, prob):
+        """Marca fala no bloco do microfone (antes de limpar). prob: chance do RNNoise, ou None sem ele."""
+        rms = float((raw * raw).mean()) ** 0.5 if len(raw) else 0.0
+        if (rms > VAD_RMS and prob > VAD_PROB) if prob is not None else rms > VAD_RMS_ONLY:
+            self._talk_t = time.monotonic()
+            self.talk_secs += len(raw) / SR
 
     def mics(self):
         """Microfones físicos (WASAPI) para escolher qual vai junto com os sons."""
@@ -186,7 +333,15 @@ class Board:
         for k in ("overlap", "nr"):
             if k in p:
                 self.cfg[k] = bool(p[k])
+        if "muted" in p:
+            self.muted = not self.muted if p["muted"] == "toggle" else bool(p["muted"])
+        if "fx" in p:
+            fx = str(p["fx"] or "")
+            if fx and fx not in FX:
+                raise ValueError("efeito de voz inválido")
+            self.fx = "" if p.get("toggle") and fx == self.fx else fx
         self._save_cfg(dict(self.cfg))
+        self._notify()
         if restart:
             self._spawn()
         return self.state()
@@ -402,12 +557,16 @@ class Board:
                     self._mic.clear()
                     self._mic_n = 0
                 if mic:
-                    nr = Denoiser()
+                    nr, fx = Denoiser(), VoiceFx()
 
                     def cb_in(indata, frames, _t, _s):
                         a = indata[:, 0].copy()
-                        if self.cfg["nr"]:
-                            a = nr(a)
+                        clean = nr(a)             # roda sempre: a chance de voz serve ao medidor
+                        self._vad(a, nr.prob)
+                        if self.cfg["nr"] and nr.st:
+                            a = clean
+                        if self.fx:
+                            a = fx(a, self.fx)
                         with self._lock:
                             self._mic.append(a)
                             self._mic_n += len(a)
@@ -421,8 +580,10 @@ class Board:
 
                     def cb_cable(outdata, frames, _t, _s):
                         out = self._mix(np, frames, "c")
-                        if mic:
-                            out += self._pull_mic(np, frames) * (self.cfg["mic_vol"] / 100)
+                        if mic:   # sempre puxa (o atraso não cresce no mudo); no mudo, joga fora
+                            m = self._pull_mic(np, frames)
+                            if not self.muted:
+                                out += m * (self.cfg["mic_vol"] / 100)
                         np.clip(out, -1, 1, out=out)
                         outdata[:] = out[:, None]
                     streams.append(sd.OutputStream(device=cable[0], channels=ch, samplerate=SR, blocksize=BLOCK,
@@ -508,7 +669,7 @@ class Board:
 
     def _notify(self, force=False):
         st = self.state()
-        key = (st["status"], tuple(st["playing"]), st["cable"], st["mic"], st["error"])
+        key = (st["status"], tuple(st["playing"]), st["cable"], st["mic"], st["error"], st["talk"], st["muted"], st["fx"])
         if not force and key == self._sent:
             return
         self._sent = key

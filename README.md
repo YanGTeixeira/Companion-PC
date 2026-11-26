@@ -140,6 +140,13 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
   e corta música e efeitos). O ruído do microfone é tirado no próprio servidor (RNNoise, pacote `pyrnnoise`),
   só na sua voz, antes de misturar com os sons. O botão **Som** escolhe o microfone que vai junto, liga/desliga
   "tirar o ruído do microfone", os volumes, "um som por vez" e se você também ouve. Sem cabo, os sons tocam só no PC.
+- **Sua voz na mesa de som (1.14):** o chip **NO AR** no topo acende quando você fala (detector de voz do RNNoise)
+  e um toque nele **muta só o seu microfone** no cabo (os sons continuam saindo); mutado, ele pisca **MUDO**.
+  Se você falar no mudo (da mesa de som ou do Meet), o celular avisa. **Efeitos de voz** ao vivo na tela **Som**
+  ou em botões do deck (*Efeito de voz: robô, rádio, voz grossa, voz fina, eco*; tocar de novo desliga) e
+  *Mesa de som: mutar meu mic*. Mudo e efeito não ficam salvos: o servidor sempre abre com a voz normal.
+  O tempo que você falou (total, em reunião e em jogo) aparece em **Status › Hoje** e fica em `voz.db`.
+  Para mutar no Discord use o mudo da mesa de som, que o servidor enxerga (o do Discord ele não vê).
 - **Botões que seguem o programa:** cada página pode ter uma lista de programas (`code.exe`,
   `spotify.exe`...; `@jogo` = qualquer jogo detectado). Quando um deles entra em foco no PC, a página
   abre sozinha. Já vêm páginas para navegador, VS Code, Terminal, Discord, Spotify, WhatsApp e jogos.

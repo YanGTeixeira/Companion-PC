@@ -38,6 +38,13 @@ DECK_ACTIONS = {
     "mic.toggle": ("Microfone do PC: mudo", "mic.set", {"muted": "toggle"}),
     "timer.cancel": ("Cancelar timer de energia", "timer.cancel", {}),
     "voice.toggle": ("Comandos de voz: liga/desliga", "voice.set", {"on": "toggle"}),
+    "snd.mute": ("Mesa de som: mutar meu mic", "snd.set", {"muted": "toggle"}),
+    "snd.fx.robo": ("Efeito de voz: robô", "snd.set", {"fx": "robo", "toggle": True}),
+    "snd.fx.radio": ("Efeito de voz: rádio", "snd.set", {"fx": "radio", "toggle": True}),
+    "snd.fx.grave": ("Efeito de voz: voz grossa", "snd.set", {"fx": "grave", "toggle": True}),
+    "snd.fx.agudo": ("Efeito de voz: voz fina", "snd.set", {"fx": "agudo", "toggle": True}),
+    "snd.fx.eco": ("Efeito de voz: eco", "snd.set", {"fx": "eco", "toggle": True}),
+    "snd.fx.off": ("Efeito de voz: desligar", "snd.set", {"fx": ""}),
 }
 
 

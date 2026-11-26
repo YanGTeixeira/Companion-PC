@@ -1061,6 +1061,32 @@ def audio_refresh():
 
 
 BOARD = soundboard.Board(BASE, CFG.get("sounds"), lambda c: save_cfg_key("sounds", c), board_event, audio_refresh)
+TALK = soundboard.TalkLog(BASE / "voz.db")
+TALK_WATCH = soundboard.TalkWatch(time.monotonic())
+
+
+def talk_flush(force=False):
+    got = TALK_WATCH.take(time.monotonic(), force)
+    if got:
+        TALK.add(time.strftime("%Y-%m-%d"), got)
+
+
+async def talk_loop():
+    """Tempo de fala (Seu dia) e o aviso de "falando no mudo" (mesa de som ou Meet)."""
+    while True:
+        await asyncio.sleep(0.5)
+        try:
+            meet = MEET["state"] or {}
+            in_call = bool(MEET["since"])
+            ctx = "meet" if in_call else "game" if MON.state.get("game") else "other"
+            mute = "mesa" if BOARD.muted else "meet" if in_call and meet.get("mic") is False else ""
+            why = TALK_WATCH.step(time.monotonic(), BOARD.talk_secs, ctx, mute)
+            if why:
+                await broadcast({"t": "event", "kind": "talkwarn", "why": why})
+            if TALK_WATCH.pend:
+                await asyncio.to_thread(talk_flush)
+        except Exception:  # noqa: BLE001
+            log.exception("talk_loop")
 VOICE = voice.Voice(CFG.get("voice"), BASE, voice_save_cfg, voice_catalog, voice_run, voice_event,
                     mic_fn=lambda: pc_info.mic_get())
 
@@ -1599,7 +1625,16 @@ def day_summary(p=None):
             "cats": (scr.get("cats") or [])[:3], "apps": [{"name": a["name"], "secs": a["secs"]} for a in (scr.get("apps") or [])[:3]],
             "focus_min": focus_today(), "game_s": games_today["week_s"], "games": games_today["top"][:3],
             "matches": {"n": len(rows), "w": sum(1 for r in rows if r[2] == 1), "l": sum(1 for r in rows if r[2] == 0)},
-            "meetings": {"n": len(meets), "min": round(mmin)}}
+            "meetings": {"n": len(meets), "min": round(mmin)},
+            "talk": talk_today(today)}
+
+
+def talk_today(today):
+    """Minutos falando hoje por contexto (o que ainda não foi gravado também conta)."""
+    secs = TALK.day(today)
+    for k, v in dict(TALK_WATCH.pend).items():
+        secs[k] = secs.get(k, 0) + v
+    return {k: round(v / 60, 1) for k, v in secs.items()}
 
 
 def matches_get(p):
@@ -1842,6 +1877,7 @@ async def main():
     asyncio.create_task(games_loop())
     asyncio.create_task(battery_loop())
     asyncio.create_task(screentime_loop())
+    asyncio.create_task(talk_loop())
     asyncio.create_task(daily_loop())
     asyncio.create_task(focus_loop())
     asyncio.create_task(steam_loop())
@@ -1864,6 +1900,7 @@ async def main():
 def stop_server():
     release_modifiers()
     SCREEN.flush()
+    talk_flush(force=True)
 
 
 def run_with_tray():

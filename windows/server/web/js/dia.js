@@ -22,6 +22,13 @@ async function loadDay(force) {
   let r; try { r = await send("day.summary"); } catch { return; }
   state.day = r; renderDay();
 }
+// tempo falando (mesa de som com microfone): total e quanto foi em reunião / jogo
+function talkBox(t, box) {
+  const tot = Object.values(t || {}).reduce((a, b) => a + b, 0);
+  if (!tot) return "";
+  const parts = [["meet", "reunião"], ["game", "jogo"]].filter(([k]) => t[k] >= 1).map(([k, l]) => `${humanDur(t[k] * 60)} em ${l}`);
+  return box(humanDur(tot * 60), "falando" + (parts.length ? " · " + parts.join(", ") : ""));
+}
 function renderDay() {
   const r = state.day; if (!r) return;
   const m = r.matches, mt = r.meetings;
@@ -34,7 +41,8 @@ function renderDay() {
     ${box(humanDur(r.game_s || 0), r.games?.[0] ? "jogando · " + esc(r.games[0].name) : "jogando")}
     ${box(m.n ? `${m.w}V ${m.l}D` : "-", m.n ? `${m.n} partida${m.n > 1 ? "s" : ""}` : "nenhuma partida")}
     ${box(mt.n ? humanDur(mt.min * 60) : "-", mt.n ? `${mt.n} reuni${mt.n > 1 ? "ões" : "ão"}` : "sem reuniões")}
-    ${box(r.apps?.[0] ? esc(r.apps[0].name) : "-", "app mais usado")}</div>`;
+    ${box(r.apps?.[0] ? esc(r.apps[0].name) : "-", "app mais usado")}
+    ${talkBox(r.talk, box)}</div>`;
   const h = new Date().getHours();
   $("dk-day").textContent = h >= 21 || h < 4 ? `Hoje: tela ${humanDur(r.screen || 0)} · foco ${humanDur((r.focus_min || 0) * 60)} · jogo ${humanDur(r.game_s || 0)}${m.n ? ` · ${m.w}V ${m.l}D` : ""}` : "";
 }

@@ -207,7 +207,8 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .mtbtns .dbtn.danger.hold { background: var(--alert); color: var(--bg); }
 .mtbtns .dbtn:disabled { opacity: .3; }
 .meetchip { border-color: var(--alert) !important; color: var(--alert) !important; }
-.meetchip.muted { animation: blink 1.2s steps(1) infinite; }
+.meetchip.muted, .sbchip.muted { animation: blink 1.2s steps(1) infinite; }
+.sbchip { transition: background .12s, color .12s; }
 @container (min-width: 640px) {
   .meet { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; }
   .mtbtns { grid-template-columns: repeat(4, minmax(0, 1fr)); }

@@ -185,6 +185,7 @@ class BoardTest(unittest.TestCase):
         out = np.concatenate([d(noise[i:i + 300]) for i in range(0, len(noise), 300)])
         d.close()
         self.assertEqual(len(out), len(noise) // 480 * 480)   # blocos de 300 viram quadros de 480
+        self.assertLess(d.prob, sb.VAD_PROB)                   # ruído não é voz
         tail = out[len(out) // 2:]                              # depois de o modelo se ajustar
         self.assertLess(np.sqrt(np.mean(tail ** 2)), 0.05 / 4)
 
@@ -196,6 +197,120 @@ class BoardTest(unittest.TestCase):
             os.utime(d / f"{sid}.wav", (past, past))
         self.b.cleanup({keep})
         self.assertEqual(sorted(f.stem for f in d.glob("*.wav")), sorted([keep, new]))
+
+
+@unittest.skipIf(np is None, "precisa de numpy")
+class VozTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.b, self.saved = board(self.tmp)
+        self.b._spawn = lambda: None
+        self.b.mic_name = "Microfone (fifine)"
+
+    def tone(self, amp, n=480, f=220):
+        return (np.sin(2 * np.pi * f * np.arange(n) / sb.SR) * amp).astype(np.float32)
+
+    def test_fala_pelo_rnnoise_e_pelo_nivel(self):
+        self.b._vad(self.tone(0.3), 0.2)               # alto, mas o RNNoise diz que não é voz
+        self.assertFalse(self.b.talking)
+        self.b._vad(self.tone(0.001), 0.95)            # é voz, mas baixinho (TV no fundo)
+        self.assertFalse(self.b.talking)
+        self.b._vad(self.tone(0.3), 0.95)
+        self.assertTrue(self.b.talking)
+        self.assertAlmostEqual(self.b.talk_secs, 0.01)
+        self.b._talk_t -= sb.TALK_HOLD + 0.01          # passou o tempo de "segurar"
+        self.assertFalse(self.b.talking)
+        self.b._vad(self.tone(0.3), None)              # sem RNNoise: só o nível
+        self.assertTrue(self.b.talking)
+        self.b.mic_name = ""                           # sem microfone na mesa: nunca "falando"
+        self.assertFalse(self.b.talking)
+
+    def test_mudo_e_efeito_nao_ficam_salvos(self):
+        st = self.b.set({"muted": "toggle", "fx": "robo"})
+        self.assertEqual((st["muted"], st["fx"]), (True, "robo"))
+        self.assertNotIn("muted", self.saved[-1])
+        self.assertNotIn("fx", self.saved[-1])
+        self.assertEqual(self.b.set({"fx": "robo", "toggle": True})["fx"], "")   # botão do deck: de novo desliga
+        self.assertEqual(self.b.set({"fx": "eco", "toggle": True})["fx"], "eco")
+        self.assertFalse(self.b.set({"muted": "toggle"})["muted"])
+        with self.assertRaises(ValueError):
+            self.b.set({"fx": "../x"})
+
+    def test_efeitos_mantem_tamanho_e_nao_explodem(self):
+        x = self.tone(0.5, 48000)
+        for kind in list(sb.FX) + [""]:
+            fx = sb.VoiceFx()
+            out = np.concatenate([fx(x[i:i + 480], kind) for i in range(0, len(x), 480)])
+            self.assertEqual(out.shape, x.shape, kind)
+            self.assertTrue(np.isfinite(out).all(), kind)
+            self.assertLess(np.abs(out).max(), 1.6, kind)
+            self.assertGreater(np.abs(out[24000:]).max(), 0.1, kind)   # a voz continua lá
+
+    def test_troca_de_tom_muda_a_frequencia(self):
+        x = self.tone(0.5, 48000, f=300)
+        for kind, r in sb.VoiceFx.PITCH.items():
+            fx = sb.VoiceFx()
+            out = np.concatenate([fx(x[i:i + 480], kind) for i in range(0, len(x), 480)])[8000:]
+            spec = np.abs(np.fft.rfft(out * np.hanning(len(out))))
+            peak = np.argmax(spec) * sb.SR / len(out)
+            self.assertAlmostEqual(peak / 300, r, delta=0.06, msg=kind)
+
+    def test_eco_repete_depois_de_250ms(self):
+        fx = sb.VoiceFx()
+        x = np.zeros(48000, dtype=np.float32)
+        x[:480] = 0.5
+        out = np.concatenate([fx(x[i:i + 480], "eco") for i in range(0, len(x), 480)])
+        d = sb.VoiceFx.ECHO
+        self.assertAlmostEqual(float(out[d + 10]), 0.5 * sb.VoiceFx.ECHO_FB, places=4)
+        self.assertAlmostEqual(float(out[2 * d + 10]), 0.5 * sb.VoiceFx.ECHO_FB ** 2, places=4)
+        self.assertEqual(float(out[d - 100]), 0.0)
+
+
+class TalkWatchTest(unittest.TestCase):
+    def test_avisa_so_com_fala_continua_no_mudo(self):
+        w = sb.TalkWatch()
+        total, t = 0.0, 0.0
+        self.assertIsNone(w.step(t, total, "meet", "meet"))   # primeira leitura: só referência
+        for _ in range(2):                                    # 1 s falando sem mudo: nada
+            t += 0.5; total += 0.5
+            self.assertIsNone(w.step(t, total, "meet", ""))
+        t += 0.5; total += 0.5                                # 0,5 s no mudo, ainda não
+        self.assertIsNone(w.step(t, total, "meet", "meet"))
+        t += 10                                               # pausa longa: zera
+        self.assertIsNone(w.step(t, total, "meet", "meet"))
+        t += 0.5; total += 0.5
+        self.assertIsNone(w.step(t, total, "meet", "meet"))
+        got = []
+        for _ in range(3):
+            t += 0.5; total += 0.5
+            got.append(w.step(t, total, "meet", "meet"))
+        self.assertIn("meet", got)
+        for _ in range(6):                                    # já avisou: espera o intervalo
+            t += 0.5; total += 0.5
+            self.assertIsNone(w.step(t, total, "meet", "mesa"))
+        t += sb.TalkWatch.COOLDOWN_S                          # passou o intervalo: avisa de novo
+        got = []
+        for _ in range(3):
+            t += 0.5; total += 0.5
+            got.append(w.step(t, total, "game", "mesa"))
+        self.assertIn("mesa", got)
+        self.assertEqual(w.take(t, force=True), {"meet": 6.5, "game": 1.5})
+
+    def test_junta_por_contexto_e_grava_no_db(self):
+        w = sb.TalkWatch(now=0)
+        w.step(0, 0.0, "other", "")
+        w.step(1, 2.0, "meet", "")
+        w.step(2, 3.0, "game", "")
+        w.step(3, 3.5, "meet", "")
+        self.assertIsNone(w.take(5))                          # antes de FLUSH_S
+        got = w.take(sb.TalkWatch.FLUSH_S)
+        self.assertEqual(got, {"meet": 2.5, "game": 1.0})
+        self.assertIsNone(w.take(100, force=True))
+        log = sb.TalkLog(Path(tempfile.mkdtemp()) / "voz.db")
+        log.add("2026-11-26", got)
+        log.add("2026-11-26", {"meet": 1.5})
+        self.assertEqual(log.day("2026-11-26"), {"meet": 4.0, "game": 1.0})
+        self.assertEqual(log.day("2026-11-25"), {})
 
 
 class Dispositivos(unittest.TestCase):

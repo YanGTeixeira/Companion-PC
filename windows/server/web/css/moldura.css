@@ -276,6 +276,7 @@ input[type=range]:disabled { opacity: .35; }
 .sbst { margin-bottom: 10px; } .sbst .ok { color: var(--p); margin-bottom: 4px; } .sbst .warn { color: var(--alert); }
 .sbhelp { font-size: 13px; line-height: 1.45; color: var(--p2); border-top: 1px dashed var(--p3); padding-top: 8px; margin-top: 4px; }
 .sbhelp ol { margin: 6px 0 0; padding-left: 20px; } .sbhelp li { margin-bottom: 4px; }
+#sbx-fxl { margin-bottom: 10px; } #sbx-fx { flex-wrap: wrap; overflow: visible; margin-top: 6px; }
 #deck-stop { border-color: var(--alert); color: var(--alert); }
 @container (min-width: 820px) {
   .deckgrid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
