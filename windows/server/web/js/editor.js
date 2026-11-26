@@ -28,7 +28,7 @@ const BLOCKS = {
     { title: "Botões da reunião", items: [["m-mic", "Microfone"], ["m-cam", "Câmera"], ["m-share", "Compartilhar tela"], ["m-hand", "Levantar a mão"],
       ["m-captions", "Legendas"], ["m-chat", "Chat"], ["m-focus", "Mostrar no PC"], ["m-leave", "Sair"]] }],
   today: [{ wide: 1, items: [["weather", "Clima"], ["agenda", "Agenda"], ["day", "Seu dia (resumo)"], ["focus", "Foco"]] }],
-  conq: [{ wide: 1, items: [["level", "Jogador (nível, título e sequência)"], ["metas", "Metas de hoje"], ["retro", "Retrospectiva do mês"]] }],
+  conq: [{ wide: 1, items: [["level", "Jogador (nível, título e sequência)"], ["prest", "Prestígio"], ["metas", "Metas de hoje"], ["retro", "Retrospectiva do mês"]] }],
   quests: [{ wide: 1, items: [["week", "Desafios da semana"], ["boss", "Chefão da semana"]] }],
   troph: [{ wide: 1, items: [["show", "Vitrine"], ["conq", "Conquistas (troféus)"]] }],
   inv: [{ wide: 1, items: [["next", "Próximas recompensas"], ["sets", "Conjuntos"], ["perfil", "Perfil (frase e blocos)"], ["title", "Títulos"], ["frame", "Molduras"], ["avatar", "Avatares"], ["bg", "Fundos do cartão"],
@@ -558,17 +558,17 @@ const CQ_HM = (s) => (s < 3600 ? `${Math.round(s / 60)} min` : `${Math.floor(s /
 const CQ_FMT = (unit, v) => (unit === "dur" ? CQ_HM(v) : unit === "min" ? CQ_HM(v * 60) : String(Math.round(v)));
 function themeLock(skin, v) {
   const r = CQ?.rewards?.find((x) => x.id === `${skin}:${v}`);
-  return r && !r.got ? (r.req ? `nível ${r.req}` : `conquista ${r.conq}`) : "";
+  return r && !r.got ? reqText(r) : "";
 }
 async function loadConq() { try { CQ = await send("conq.get"); renderConq(); renderThemes(); } catch {} }
 function renderConq() {
   const box = $("jg-body"); if (!box || !CQ) return;
   const d = CQ, eq = d.equip || {}, nm = (id) => d.rewards.find((r) => r.id === id)?.name || "";
-  const pct = Math.max(0, Math.min(100, ((d.xp - d.lvl_lo) / Math.max(1, d.lvl_hi - d.lvl_lo)) * 100));
+  const xl = xpLine(d), pct = xl.pct;
   const got = d.rewards.filter((r) => r.got).length;
-  box.innerHTML = `<div class="jg-top">${badge(d.level, eq.frame, "big", eq.avatar)}
+  box.innerHTML = `<div class="jg-top">${badge(d.level, eq.frame, "big", eq.avatar, d.prestige)}
       <div style="flex:1;min-width:0">${fxName(nm(eq.title) || "Novato", eq.effect, "div", "jg-title")}
-        <div class="hint" style="margin:2px 0">${d.xp - d.lvl_lo} / ${d.lvl_hi - d.lvl_lo} XP para o nível ${d.level + 1} · sequência ${d.streak} dia${d.streak === 1 ? "" : "s"}
+        <div class="hint" style="margin:2px 0">${d.prestige ? esc(prestName(d.prestige)) + " · " : ""}${esc(xl.text)} · sequência ${d.streak} dia${d.streak === 1 ? "" : "s"}
           · <b>${d.credits?.bal ?? 0}</b> créditos · ${got} de ${d.rewards.length} itens</div>
         <div class="jg-bar"><i style="width:${pct}%"></i></div></div>
       <button class="pri" id="jg-open">Abrir a página Jogador</button></div>

@@ -48,7 +48,7 @@ const shield = (n, cls = "") => `<svg class="lgsh ${cls}" viewBox="0 0 40 46" ar
 function rankRow(r, right, cls = "") {
   const t = rewardName(r.title);
   return `<li class="${cls}${r.me || r.nick === rankSt?.nick ? " me" : ""}"><span class="rkpos">${r.pos ?? ""}</span>
-    <button class="rknick" data-pf="${esc(r.nick)}">${badge(r.level, r.frame, "xs", r.av)}${fxName(r.nick, r.fx)}</button>
+    <button class="rknick" data-pf="${esc(r.nick)}">${badge(r.level, r.frame, "xs", r.av, r.prestige)}${fxName(r.nick, r.fx)}</button>
     <small>${t ? esc(t) + " · " : ""}nível ${r.level}${r.extra ? " · " + r.extra : ""}</small><b>${right}</b></li>`;
 }
 
@@ -200,7 +200,7 @@ document.addEventListener("click", async (e) => {
   const conq = state.conq?.conq || [], pf = p.pf || {};
   const show = p.show.map((id) => conq.find((c) => c.id === id)).filter(Boolean);
   // a cor livre/animada do outro vale só dentro do cartão dele
-  $("pfm-body").innerHTML = `<div id="pf-other">${profileCard({ nick: p.nick, level: p.level, title: rewardName(p.title) || "Novato", frame: p.frame,
+  $("pfm-body").innerHTML = `<div id="pf-other">${profileCard({ nick: p.nick, level: p.level, prestige: p.prestige, title: rewardName(p.title) || "Novato", frame: p.frame,
       avatar: pf.av, effect: pf.fx, bg: pf.bg, bio: pf.bio, lay: pf.lay || ["stats", "show"], sub: p.streak ? `🔥 ${p.streak} dia${p.streak > 1 ? "s" : ""}` : "",
       stats: [[p.level, "nível"], [p.week_xp, "XP na semana"], [p.best_streak ?? p.streak, "recorde"], [p.unlocked, "troféus"]],
       show: show.length ? `<div class="shrow">${show.map((c) => `<div class="cqt got">${trophy(c.tier, true)}<span>${esc(c.name)}</span></div>`).join("")}</div>` : '<div class="empty">Nada na vitrine.</div>',

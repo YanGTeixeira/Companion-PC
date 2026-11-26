@@ -34,6 +34,11 @@ html.noanim .an, html.noanim .an *, html.noanim .an::before, html.noanim .an::af
 .badge.f_galaxia { --fr: conic-gradient(from 0deg, #1b1035, #6741d9, #f783ac, #1b1035, #4dabf7, #1b1035); box-shadow: 0 0 14px #9775fa66; }
 .badge.f_natal { --fr: repeating-conic-gradient(#2f9e44 0 30deg, #e03131 30deg 45deg, #2f9e44 45deg 75deg, #ffd43b 75deg 90deg); }
 .badge.f_abobora { --fr: repeating-conic-gradient(#ff7a1a 0 22deg, #d9480f 22deg 30deg); box-shadow: 0 0 10px #ff7a1a55; }
+/* 1.21: molduras de prestígio */
+.badge.f_p1 { --fr: conic-gradient(from 45deg, #d4af37, #1d2a45 12%, #d4af37 25%, #1d2a45 37%, #d4af37 50%, #1d2a45 62%, #d4af37 75%, #1d2a45 87%, #d4af37); box-shadow: 0 0 10px #d4af3755; }
+.badge.f_p5 { --fr: conic-gradient(from 0deg, #ffffff, #8e99a3, #ffd23f, #ffffff, #8e99a3, #ffd23f, #ffffff); box-shadow: 0 0 12px #ffffff66, 0 0 4px #ffd23f; }
+.badge.f_p10 { --fr: conic-gradient(from 0deg, #fff1a8, #c8901a, #ff6a1f, #fff1a8, #c8901a, #ff6a1f, #fff1a8); box-shadow: 0 0 16px #ffb00099, 0 0 4px #fff; }
+.badge.f_mestre { --fr: conic-gradient(from 0deg, #ffd76a, #ffffff, #c49bff, #9ef0ff, #ffd76a, #ffffff, #c49bff, #ffd76a); box-shadow: 0 0 18px #ffd76aaa, 0 0 30px #c49bff66, 0 0 4px #fff; }
 /* 1.20: prêmios dos conjuntos */
 .badge.f_abissal { --fr: linear-gradient(180deg, #7ff0ff, #0b6e8a 45%, #06233a 75%, #ff7f6a); box-shadow: 0 0 12px #2ad4ff55; }
 .badge.f_magma { --fr: conic-gradient(from 90deg, #2b0a00, #ff4500, #ffb000, #2b0a00, #ff2d00, #2b0a00); box-shadow: 0 0 14px #ff450088; }
@@ -42,8 +47,9 @@ html.noanim .an, html.noanim .an *, html.noanim .an::before, html.noanim .an::af
 .badge.f_fogos { --fr: radial-gradient(circle at 25% 25%, #fff 0 6%, transparent 7%), radial-gradient(circle at 75% 70%, #ffd23f 0 6%, transparent 7%), linear-gradient(135deg, #1b1035, #e64980 50%, #4dabf7); box-shadow: 0 0 12px #e6498066; }
 .badge.f_lendaria { --fr: conic-gradient(from 0deg, #fff1a8, #c8901a, #ffffff, #ffd23f, #b98bff, #fff1a8); box-shadow: 0 0 16px #ffd23f99, 0 0 4px #fff; }
 @media (prefers-reduced-motion: no-preference) {
-  .badge.big.f_magma, .badge.big.f_lendaria { animation: frspin 6s linear infinite; }
-  .badge.big.f_magma b, .badge.big.f_lendaria b, .badge.big.f_magma .blv, .badge.big.f_lendaria .blv { animation: frspin 6s linear infinite reverse; }
+  .badge.big.f_magma, .badge.big.f_lendaria, .badge.big.f_p10, .badge.big.f_mestre { animation: frspin 6s linear infinite; }
+  .badge.big.f_magma b, .badge.big.f_lendaria b, .badge.big.f_magma .blv, .badge.big.f_lendaria .blv,
+  .badge.big.f_p10 b, .badge.big.f_mestre b, .badge.big.f_p10 .blv, .badge.big.f_mestre .blv { animation: frspin 6s linear infinite reverse; }
   .badge.big.f_chamas, .badge.big.f_arco, .badge.big.f_neon, .badge.big.f_galaxia { animation: frspin 6s linear infinite; }
   .badge.big.f_chamas b, .badge.big.f_arco b, .badge.big.f_neon b, .badge.big.f_galaxia b { animation: frspin 6s linear infinite reverse; }
   .badge.big.f_chamas .blv, .badge.big.f_arco .blv, .badge.big.f_neon .blv, .badge.big.f_galaxia .blv { animation: frspin 6s linear infinite reverse; }
@@ -58,7 +64,7 @@ html.noanim .badge, html.noanim .badge b, html.noanim .badge .blv { animation: n
 /* ---- efeitos no nome (fxName) */
 .fx { position: relative; }
 .fx.e_brilho { text-shadow: 0 0 6px currentColor, 0 0 14px currentColor; }
-.fx.e_gradiente, .fx.e_fogo, .fx.e_arco, .fx.e_gelo, .fx.e_ouro, .fx.e_confete, .fx.e_cintilante, .fx.e_neon {
+.fx.e_gradiente, .fx.e_fogo, .fx.e_arco, .fx.e_gelo, .fx.e_ouro, .fx.e_confete, .fx.e_cintilante, .fx.e_neon, .fx.e_mestre, .fx.e_prisma {
   -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; text-shadow: none; }
 .fx.e_gradiente { background-image: linear-gradient(90deg, var(--hl, var(--p)), var(--p2)); }
 .fx.e_gelo { background-image: linear-gradient(180deg, #ffffff 20%, #a5d8ff 55%, #4dabf7); filter: drop-shadow(0 0 4px #a5d8ff88); }
@@ -76,6 +82,11 @@ html.noanim .badge, html.noanim .badge b, html.noanim .badge .blv { animation: n
 .fx.e_cintilante { background-image: linear-gradient(100deg, #dee2e6 0 40%, #ffffff 48%, #ffd36e 52%, #dee2e6 60% 100%); background-size: 300% 100%;
   animation: fxslide 2.2s linear infinite; filter: drop-shadow(0 0 3px #ffffff88); }
 .fx.e_glitch { animation: fxglitch 2.4s steps(1) infinite; }
+/* 1.21: prestígio */
+.fx.e_mestre { background-image: linear-gradient(100deg, #c8901a 0 25%, #fff6c8 35%, #ffffff 42%, #c49bff 50%, #ffd76a 60%, #c8901a 70% 100%);
+  background-size: 300% 100%; filter: drop-shadow(0 0 4px #ffd76a) drop-shadow(0 0 10px #c49bff88); animation: fxslide 3.4s linear infinite; }
+.fx.e_prisma { background-image: linear-gradient(90deg, #9ef0ff, #c49bff, #ff9ed8, #ffe27a, #9effb0, #9ef0ff); background-size: 300% 100%;
+  filter: drop-shadow(0 0 3px #c49bffaa); animation: fxslide 5s linear infinite; }
 .fx.e_glitch::before, .fx.e_glitch::after { content: attr(data-t); position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .fx.e_glitch::before { color: #ff2a6d; transform: translate(-2px, 0); clip-path: inset(0 0 55% 0); mix-blend-mode: screen; animation: fxgl1 2.4s steps(1) infinite; }
 .fx.e_glitch::after { color: #05d9e8; transform: translate(2px, 0); clip-path: inset(50% 0 0 0); mix-blend-mode: screen; animation: fxgl2 2.4s steps(1) infinite; }
@@ -109,6 +120,9 @@ html.noanim.acc-anim { animation: none !important; }
 .bgc-fall { animation: bgfall 3s linear infinite; }
 @keyframes bgfall { from { transform: translateY(-110px); } to { transform: translateY(125px); } }
 .bgn-snow { animation: bgsnow 14s linear infinite; }
+.bgv-spin { animation: bgspin 24s linear infinite; transform-origin: 160px 60px; }
+.bgv-spin2 { animation: bgspin 40s linear infinite reverse; transform-origin: 160px 60px; }
+@keyframes bgspin { to { transform: rotate(360deg); } }
 @keyframes bgsnow { from { transform: translateY(0); } to { transform: translateY(120px); } }
 
 /* ---- cartão do jogador (perfil): banner com fundo, selo, título e nome; blocos embaixo */
@@ -126,7 +140,7 @@ html.noanim.acc-anim { animation: none !important; }
 .pfcard.hasbg .pfnm small { color: #ffffffcc; }
 .pfcard.hasbg .pftitle, .pfcard.hasbg .pfnick { text-shadow: 0 1px 3px #000c; }
 .pfcard.hasbg .fx.e_gradiente, .pfcard.hasbg .fx.e_fogo, .pfcard.hasbg .fx.e_arco, .pfcard.hasbg .fx.e_gelo, .pfcard.hasbg .fx.e_ouro,
-.pfcard.hasbg .fx.e_confete, .pfcard.hasbg .fx.e_cintilante, .pfcard.hasbg .fx.e_neon { text-shadow: none; }
+.pfcard.hasbg .fx.e_confete, .pfcard.hasbg .fx.e_cintilante, .pfcard.hasbg .fx.e_neon, .pfcard.hasbg .fx.e_mestre, .pfcard.hasbg .fx.e_prisma { text-shadow: none; }
 .pfblocks { display: flex; flex-direction: column; gap: 10px; padding: 10px 2px 2px; }
 .pfbio { color: var(--p2); font-style: italic; font-size: 14px; overflow-wrap: anywhere; }
 .pfstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; text-align: center; }
@@ -233,3 +247,20 @@ html.noanim.acc-anim { animation: none !important; }
 .ivit.setmem { display: inline-flex; width: auto; min-height: 0; flex-direction: row; gap: 4px; padding: 3px 8px; border-radius: 999px; font-size: 12px;
   border: 1px solid var(--p4); background: none; color: var(--p3); cursor: pointer; }
 .ivit.setmem.got { color: var(--p); border-color: var(--p3); }
+
+/* ---- prestígio (1.21) */
+.bps { position: absolute; left: -4px; top: -4px; min-width: 18px; height: 16px; padding: 0 3px; border-radius: 8px; display: grid; place-items: center;
+  font: 700 10px/1 system-ui, sans-serif; font-style: normal; color: #1a1204; background: linear-gradient(180deg, #fff1a8, #d4a017); box-shadow: 0 0 0 1.5px #0008; z-index: 2; }
+.bps.m { background: linear-gradient(135deg, #ffd76a, #fff, #c49bff); }
+.badge.big .bps { min-width: 26px; height: 20px; border-radius: 10px; font-size: 12px; }
+.badge.xs .bps { min-width: 12px; height: 11px; font-size: 7px; left: -3px; top: -3px; padding: 0 2px; }
+.prbox { display: flex; flex-direction: column; gap: 6px; }
+.prl { font-family: var(--display); font-size: 20px; color: var(--hl, var(--p)); }
+.prbox p { margin: 2px 0; color: var(--p2); font-size: 13px; }
+.prbox small { color: var(--p3); font-size: 11.5px; }
+.prnx { letter-spacing: 1.5px; margin-top: 4px; }
+.prits { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.prits .ivit { cursor: default; }
+.prgo { margin-top: 6px; padding: 12px; border-radius: var(--r); border: 0; font: 700 15px/1 var(--display); cursor: pointer;
+  color: #1a1204; background: linear-gradient(180deg, #fff1a8, #d4a017); box-shadow: 0 0 18px #ffd76a66; }
+.pchip.pr, .pj-chip.pr { color: #ffd76a; border-color: #ffd76a66; }

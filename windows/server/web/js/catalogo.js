@@ -58,6 +58,15 @@ const THEMES = [
     ["green", "Verde", "#00ff6a", "#000502", "#7dffb0", "#00ff6a"], ["red", "Vermelha", "#ff3355", "#050002", "#ffb0bd", "#ff3355"]] },
   { id: "aurora", name: "Aurora", desc: "Céu polar que se mexe (animado)", font: "Exo 2", anim: true, variants: [
     ["boreal", "Boreal", "#45f0a0", "#020812", "#e6fff4", "#45f0a0"], ["austral", "Austral", "#ff6ad5", "#0a0414", "#ffe8f8", "#8f7bff"]] },
+  // ---- temas de prestígio (1.21: só saem prestigiando)
+  { id: "insignia", name: "Insígnia", desc: "Prestígio 1: azul-marinho e ouro", font: "Rajdhani", variants: [
+    ["naval", "Naval", "#d4af37", "#0a1428", "#f3ead2", "#d4af37"]] },
+  { id: "fenix", name: "Fênix", desc: "Prestígio 3: brasas subindo (animado)", font: "Chakra Petch", anim: true, variants: [
+    ["chama", "Chama", "#ff6a1f", "#0f0503", "#ffe7d6", "#ffb000"]] },
+  { id: "prisma", name: "Prisma", desc: "Prestígio 7: cristal que muda de cor (animado)", font: "Exo 2", anim: true, variants: [
+    ["cristal", "Cristal", "#9ef0ff", "#05070f", "#eef9ff", "#c49bff"]] },
+  { id: "ascensao", name: "Ascensão", desc: "Prestígio 10: raios de luz dourada (animado)", font: "Cinzel", anim: true, variants: [
+    ["ouro", "Ouro", "#ffd76a", "#0b0904", "#fff6dc", "#ffd76a"]] },
   // ---- temas de evento (liberam no evento e ficam)
   { id: "natal", name: "Natal", desc: "Evento de dezembro", font: "Cinzel", variants: [
     ["pinheiro", "Pinheiro", "#2f9e44", "#07130c", "#f3ead7", "#e03131"], ["neve", "Nevado (animado)", "#dbe8f5", "#0c1624", "#f1f6fb", "#e03131"]] },
@@ -106,6 +115,9 @@ const AVATARS = {
   av_dragao: { h: "#f5e6c8", r: "#e0483e", y: "#ffd23f", d: "#7a1f12", w: "#ffffff", o: "#ffb000", px: [
     "..h......h..", "..hh....hh..", "...rrrrrr...", "..rrrrrrrr..", ".rryrrrryrr.", ".rrrrrrrrrr.",
     "rrrrrrrrrrrr", "rrdrrrrrrdrr", ".rrrrrrrrrr.", "..rwrwrwrr..", "...rrrrrr...", "....oooo...."] },
+  av_fenix: { r: "#e0483e", o: "#ff8a2a", y: "#ffd23f", k: "#1d1d1d", px: [
+    "....y..y....", ".....yy.....", "....oyko....", "y...oooo...y", "oy.roooor.yo", "rooyrooryoor",
+    ".roorooroor.", "..rrooooorr.", "....rooor...", "...ryoyoyr..", "..ry.y.y.yr.", ".y...y.y...y"] },
   av_coruja: { b: "#7a5230", B: "#c9a074", w: "#fff4d6", k: "#1d1d1d", y: "#ffb000", px: [
     ".b........b.", ".bb......bb.", ".bbbbbbbbbb.", "bwwwbbbbwwwb", "bwkwbbbbwkwb", "bwwwbyybwwwb",
     ".bbbbyybbbb.", ".bBBBBBBBBb.", ".bBbBbBbBBb.", ".bBBBBBBBBb.", "..bbbbbbbb..", "...y....y..."] },
@@ -148,10 +160,48 @@ function avatarSvg(id) {
 }
 
 // selo do nível com a moldura; com avatar, o desenho fica no miolo e o nível vai num selinho embaixo
-function badge(level, frame, size = "", av = "") {
-  const f = /^f_[a-z]+$/.test(frame || "") ? frame : "f_simples";
+function badge(level, frame, size = "", av = "", prest = 0) {
+  const f = /^f_[a-z0-9]+$/.test(frame || "") ? frame : "f_simples";
   const art = av && av !== "av_nivel" ? avatarSvg(av) : "";
-  return `<span class="badge ${f}${size ? " " + size : ""}${art ? " hasav" : ""}"><b>${art || (+level || 1)}</b>${art ? `<i class="blv">${+level || 1}</i>` : ""}</span>`;
+  const ps = +prest > 0 ? `<i class="bps${+prest >= 11 ? " m" : ""}" title="${cEsc(prestLabel(+prest))}">${+prest >= 11 ? "M" : "★" + +prest}</i>` : "";
+  return `<span class="badge ${f}${size ? " " + size : ""}${art ? " hasav" : ""}"><b>${art || (+level || 1)}</b>${art ? `<i class="blv">${+level || 1}</i>` : ""}${ps}</span>`;
+}
+// ---------------------------------------------------------------- prestígio (1.21)
+const PRESTIGE_MAX = 11;
+const prestLabel = (p) => (p >= PRESTIGE_MAX ? "Mestre" : p > 0 ? "★" + p : "");
+const prestName = (p) => (p >= PRESTIGE_MAX ? "Mestre do Prestígio" : `Prestígio ${p}`);
+// barra de XP: até o próximo nível, ou (no 30) até os próximos créditos do XP extra
+function xpLine(d) {
+  if (d.extra) {
+    return { pct: (d.extra.xp / d.extra.per) * 100,
+      text: `Nível máximo · ${d.extra.xp}/${d.extra.per} XP para +${d.credits?.rules?.level ?? 20} créditos` };
+  }
+  return { pct: Math.max(0, Math.min(100, ((d.xp - d.lvl_lo) / Math.max(1, d.lvl_hi - d.lvl_lo)) * 100)),
+    text: `${d.xp - d.lvl_lo} / ${d.lvl_hi - d.lvl_lo} XP para o nível ${d.level + 1}` };
+}
+// como liberar um item (texto da janela do item, no celular e no PC)
+function howText(r, d) {
+  if (r.got) return "Já é seu.";
+  const inShop = r.shop && d.shop.items.includes(r.id);
+  if (r.prestige) return `${r.prestige >= PRESTIGE_MAX ? "Chegue ao Mestre do Prestígio" : `Chegue ao prestígio ${r.prestige}`}${d.prestige ? ` (você está no ${prestLabel(d.prestige)})` : ""}. Dá para prestigiar no nível ${d.level_max || 30}.`;
+  if (r.req) return `Chegue ao nível ${r.req}${d.prestige ? "" : ` (você está no ${d.level})`}.`;
+  if (r.shop) return `Loja da semana: ${r.price} créditos.${r.shop_p ? ` Só aparece para quem tem prestígio ${prestLabel(r.shop_p)} ou mais.` : ""}${inShop ? "" : " Não está na loja agora; ela muda toda segunda."}`;
+  if (r.event) return `Complete o evento ${EVENT_NAME[r.event] || r.event}.`;
+  if (r.set) return `Complete o conjunto ${SET_NAME[r.set] || r.set}.`;
+  return `Ganhe a conquista ${r.conq}.`;
+}
+// quadro do prestígio: onde você está, o que o próximo libera e o botão (id "pr-go"; a página liga o clique)
+function prestigeBox(d) {
+  if (!d || d.prestige_max == null) return "";
+  const p = d.prestige, nx = (d.prestige_next || []).map((id) => d.rewards.find((r) => r.id === id)).filter(Boolean);
+  const head = p ? `<b class="prl">${cEsc(prestName(p))}</b>` : "<b class=\"prl\">Sem prestígio ainda</b>";
+  const hist = (d.prestiges || []).length ? `<small>${d.prestiges.map((x) => `${prestLabel(x.n)} em ${new Date(x.day + "T12:00").toLocaleDateString("pt-BR")}`).join(" · ")}</small>` : "";
+  const how = p >= PRESTIGE_MAX ? "Você chegou ao topo. O XP extra no nível 30 continua rendendo créditos."
+    : d.can_prestige ? `Você está no nível ${d.level_max}: dá para prestigiar. O nível volta a 1 e tudo o que já liberou continua seu.`
+    : `Chegue ao nível ${d.level_max} para prestigiar (está no ${d.level}). Não é obrigatório: no 30, o XP extra vira créditos.`;
+  return `<div class="prbox">${head}${hist}<p>${how}</p>
+    ${nx.length ? `<small class="prnx">${p + 1 >= PRESTIGE_MAX ? "O MESTRE LIBERA" : `O ${prestLabel(p + 1)} LIBERA`}</small><div class="prits">${nx.map((r) => `<div class="ivit rar-${r.rarity}">${itemPreview(r, d.level, d.equip)}<span>${cEsc(r.name)}</span></div>`).join("")}</div>` : ""}
+    ${d.can_prestige ? `<button class="prgo" id="pr-go">${p + 1 >= PRESTIGE_MAX ? "Virar Mestre do Prestígio" : `Prestigiar (${prestLabel(p + 1)})`}</button>` : ""}</div>`;
 }
 
 // troféu em SVG; a cor vem do degradê da raridade (TROPHY_DEFS, no index.html e na página Jogador), ou apagado se ainda não ganhou
@@ -238,6 +288,11 @@ const BGS = {
     <path d="M150 120V60h8v-8h6v8h8V40h6v-8h6v8h6v20h8v-8h6v8h8v60z M176 120v-24a8 8 0 0 1 16 0v24z" fill="#0c0718"/>
     <path d="M0 120V100l60-8 50 10 40-6v24z M210 120v-18l50-10 60 14v14z" fill="#0c0718"/>
     <rect x="183" y="70" width="3" height="6" fill="#ffd36e"/><rect x="158" y="72" width="3" height="5" fill="#ffd36e"/>`,
+  b_vortice: () => `<rect width="320" height="120" fill="#07031a"/>
+    <defs><radialGradient id="bvx"><stop offset="0" stop-color="#ffffff"/><stop offset=".12" stop-color="#c49bff"/><stop offset=".5" stop-color="#5a2dd6" stop-opacity=".45"/><stop offset="1" stop-color="#07031a" stop-opacity="0"/></radialGradient></defs>
+    <circle cx="160" cy="60" r="160" fill="url(#bvx)" opacity=".7"/>${stars(30, 61, 120, "#c49bff")}
+    <g class="an bgv-spin">${[22, 40, 60, 84, 110, 140].map((r, i) => `<circle cx="160" cy="60" r="${r}" fill="none" stroke="${i % 2 ? "#ff9ed8" : "#9ef0ff"}" stroke-opacity="${(0.75 - i * 0.1).toFixed(2)}" stroke-width="${(3 - i * 0.35).toFixed(2)}" stroke-dasharray="${Math.round(r * 0.9)} ${Math.round(r * 0.55)}"/>`).join("")}</g>
+    <g class="an bgv-spin2">${[30, 72, 125].map((r) => `<circle cx="160" cy="60" r="${r}" fill="none" stroke="#ffffff" stroke-opacity=".25" stroke-width="1" stroke-dasharray="2 ${Math.round(r / 3)}"/>`).join("")}</g>`,
   b_lava: () => `<rect width="320" height="120" fill="#140403"/>
     <defs><radialGradient id="blv"><stop offset="0" stop-color="#ffb000"/><stop offset=".45" stop-color="#ff3b1f" stop-opacity=".8"/><stop offset="1" stop-color="#ff3b1f" stop-opacity="0"/></radialGradient></defs>
     <g class="an bgl-pulse"><ellipse cx="60" cy="118" rx="80" ry="26" fill="url(#blv)"/><ellipse cx="220" cy="122" rx="110" ry="30" fill="url(#blv)"/></g>
@@ -322,7 +377,7 @@ function itemPreview(r, level, eq) {
   if (k === "effect") return fxName("Nome", r.id, "span", "ivfx");
   return "";
 }
-const reqText = (r) => (r.req ? `nível ${r.req}` : r.shop ? `loja · ${r.price} créditos` : r.event ? `evento ${EVENT_NAME[r.event] || r.event}`
+const reqText = (r) => (r.prestige ? `prestígio ${prestLabel(r.prestige)}` : r.req ? `nível ${r.req}` : r.shop ? `loja${r.shop_p ? " " + prestLabel(r.shop_p) + "+" : ""} · ${r.price} créditos` : r.event ? `evento ${EVENT_NAME[r.event] || r.event}`
   : r.set ? `conjunto ${SET_NAME[r.set] || r.set}` : `conquista ${r.conq}`);
 const SET_NAME = { cosmos: "Cosmos", masmorra: "Masmorra", abismo: "Abismo", digital: "Chuva digital", dunas: "Deserto", fogo: "Fogo",
   retro: "Fliperama", natal: "Natal", halloween: "Halloween", carnaval: "Carnaval", anonovo: "Ano Novo", lendario: "Lendário" };
@@ -350,9 +405,9 @@ function profileCard(p) {
     return "";
   }).join("");
   return `<div class="pfcard${p.bg && p.bg !== "b_nenhum" ? " hasbg" : ""}">
-    <div class="pfban">${bgSvg(p.bg)}<div class="pfid">${badge(p.level, p.frame, "big", p.avatar)}
+    <div class="pfban">${bgSvg(p.bg)}<div class="pfid">${badge(p.level, p.frame, "big", p.avatar, p.prestige)}
       <div class="pfnm">${fxName(p.title || "Novato", p.effect, "div", "pftitle")}${p.nick ? fxName(p.nick, p.effect, "div", "pfnick") : ""}
-        <small>nível ${+p.level || 1}${p.sub ? " · " + cEsc(p.sub) : ""}</small></div></div></div>
+        <small>${+p.prestige ? cEsc(prestLabel(+p.prestige)) + " · " : ""}nível ${+p.level || 1}${p.sub ? " · " + cEsc(p.sub) : ""}</small></div></div></div>
     ${blocks ? `<div class="pfblocks">${blocks}</div>` : ""}</div>`;
 }
 

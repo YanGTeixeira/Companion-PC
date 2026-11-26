@@ -2,7 +2,8 @@
 
 Cada item tem um tipo, uma raridade e uma forma de liberar:
     nível (int) · conquista (id de CONQ) · "shop" (só na loja, comprado com créditos) · "ev:<id>" (evento sazonal) ·
-    "set:<id>" (1.20: completar um conjunto da coleção)
+    "set:<id>" (1.20: completar um conjunto da coleção) ·
+    "p:<N>" (1.21: chegar ao prestígio N; 11 = Mestre) · "shop:<N>" (1.21: só na loja, para quem tem prestígio N ou mais)
 O visual de cada item (fundos, avatares, efeitos, temas) fica no app (web/js/catalogo.js); aqui só ids e regras.
 
 Créditos: calculados do histórico, como o XP (sempre dão o mesmo resultado); só as compras ficam gravadas.
@@ -27,8 +28,8 @@ ITEMS = [
     # ---- títulos
     ("novato", "title", "Novato", C, 1), ("aprendiz", "title", "Aprendiz", C, 3), ("focado", "title", "Focado", C, 5),
     ("explorador", "title", "Explorador", C, 7), ("veterano", "title", "Veterano", R, 10), ("mestre", "title", "Mestre", R, 20),
-    ("lenda", "title", "Lenda", E, 25), ("campeao", "title", "Campeão", E, 35), ("imperador", "title", "Imperador", E, 45),
-    ("mito", "title", "Mito", L, 50), ("eterno", "title", "Eterno", L, 60),
+    ("lenda", "title", "Lenda", E, 25), ("campeao", "title", "Campeão", E, 26), ("imperador", "title", "Imperador", E, 30),
+    ("mito", "title", "Mito", L, "p:3"), ("eterno", "title", "Eterno", L, "p:9"),
     ("coruja", "title", "Coruja", C, "coruja"), ("madrugador", "title", "Madrugador", C, "cedo"), ("monge", "title", "Monge", E, "foco100"),
     ("imortal", "title", "Imortal", E, "imortal"), ("imparavel", "title", "Imparável", E, "vit10"),
     ("cacador", "title", "Caçador de chefões", R, "boss5"), ("desafiante", "title", "Desafiante", R, "des10"),
@@ -39,17 +40,20 @@ ITEMS = [
     ("astronauta", "title", "Astronauta", E, "set:cosmos"), ("senhor", "title", "Senhor da Masmorra", E, "set:masmorra"),
     ("hacker", "title", "Hacker", E, "set:digital"), ("nomade", "title", "Nômade", R, "set:dunas"),
     ("oldschool", "title", "Old school", R, "set:retro"), ("rei_abobora", "title", "Rei das Abóboras", R, "set:halloween"),
+    ("mestre_p", "title", "Mestre do Prestígio", L, "p:11"),
     ("noel", "title", "Espírito natalino", R, "ev:natal"), ("assombrado", "title", "Assombrado", R, "ev:halloween"),
     ("foliao", "title", "Folião", R, "ev:carnaval"), ("visionario", "title", "Visionário", R, "ev:anonovo"),
     # ---- molduras
     ("f_simples", "frame", "Simples", C, 1), ("f_bronze", "frame", "Bronze", C, 4), ("f_prata", "frame", "Prata", R, 8),
     ("f_neon", "frame", "Neon", E, 12), ("f_ouro", "frame", "Ouro", R, 15), ("f_esmeralda", "frame", "Esmeralda", R, 24),
-    ("f_cristal", "frame", "Cristal", E, 30), ("f_obsidiana", "frame", "Obsidiana", E, 40), ("f_arco", "frame", "Arco-íris", L, 50),
+    ("f_cristal", "frame", "Cristal", E, 30), ("f_obsidiana", "frame", "Obsidiana", E, 28), ("f_arco", "frame", "Arco-íris", L, "p:6"),
     ("f_chamas", "frame", "Chamas", E, "seq30"),
     ("f_pixel", "frame", "Pixel", R, SHOP), ("f_gelo", "frame", "Gelo", R, SHOP), ("f_galaxia", "frame", "Galáxia", L, SHOP),
     ("f_abissal", "frame", "Abissal", E, "set:abismo"), ("f_magma", "frame", "Magma", E, "set:fogo"),
     ("f_presente", "frame", "Presente", E, "set:natal"), ("f_serpentina", "frame", "Serpentina", R, "set:carnaval"),
     ("f_fogos", "frame", "Fogos", R, "set:anonovo"), ("f_lendaria", "frame", "Lendária", L, "set:lendario"),
+    ("f_p1", "frame", "Prestígio I", E, "p:1"), ("f_p5", "frame", "Prestígio V", L, "p:5"),
+    ("f_p10", "frame", "Prestígio X", L, "p:10"), ("f_mestre", "frame", "Mestre", L, "p:11"),
     ("f_natal", "frame", "Guirlanda", R, "ev:natal"), ("f_abobora", "frame", "Abóbora", R, "ev:halloween"),
     # ---- sons das conquistas
     ("s_bipe", "sound", "Bipe", C, 1), ("s_fanfarra", "sound", "Fanfarra", C, 4), ("s_moeda", "sound", "Moeda", C, 7),
@@ -63,8 +67,8 @@ ITEMS = [
     ("synth:mint", "theme", "Synthwave Menta", R, 17), ("paper:sepia", "theme", "Papel Sépia", R, 19),
     ("rpg:emerald", "theme", "Fantasia Esmeralda", E, 20), ("hud:alert", "theme", "Cockpit Alerta", R, 21),
     ("minimal:sand", "theme", "Minimal Areia", R, 24), ("code:dracula", "theme", "Código Drácula", E, 26),
-    ("tac:desert", "theme", "Tático Deserto", R, 28), ("rpg:frost", "theme", "Fantasia Gelo", E, 33),
-    ("exec:bordeaux", "theme", "Executivo Bordô", E, 38),
+    ("tac:desert", "theme", "Tático Deserto", R, 28), ("rpg:frost", "theme", "Fantasia Gelo", E, 23),
+    ("exec:bordeaux", "theme", "Executivo Bordô", E, 27),
     ("fallout:toxic", "theme", "Fallout Tóxico", R, SHOP), ("minimal:rose", "theme", "Minimal Rosé", R, SHOP),
     ("pocket:pink", "theme", "Portátil Rosa", R, SHOP), ("code:solar", "theme", "Código Solarizado", R, SHOP),
     ("paper:night", "theme", "Papel Noturno", E, SHOP), ("jp:matcha", "theme", "Japão Matcha", E, SHOP),
@@ -75,52 +79,79 @@ ITEMS = [
     ("cosmos:nebula", "theme", "Cosmos", E, 30), ("cosmos:galaxy", "theme", "Cosmos Galáxia", L, SHOP),
     ("dunas:day", "theme", "Dunas", R, SHOP), ("dunas:night", "theme", "Dunas Noite", E, SHOP),
     ("matrix:green", "theme", "Chuva Digital", E, "des10"), ("matrix:red", "theme", "Chuva Digital Vermelha", E, SHOP),
-    ("aurora:boreal", "theme", "Aurora", L, 45), ("aurora:austral", "theme", "Aurora Austral", L, 55),
+    ("aurora:boreal", "theme", "Aurora", L, "p:7"), ("aurora:austral", "theme", "Aurora Austral", L, "p:8"),
+    # ---- temas de prestígio (1.21)
+    ("insignia:naval", "theme", "Insígnia", E, "p:1"), ("fenix:chama", "theme", "Fênix", L, "p:3"),
+    ("prisma:cristal", "theme", "Prisma", L, "p:7"), ("ascensao:ouro", "theme", "Ascensão", L, "p:10"),
     # ---- temas de evento
     ("natal:pinheiro", "theme", "Natal", E, "ev:natal"), ("natal:neve", "theme", "Natal Nevado", E, "ev:natal"),
     ("halloween:abobora", "theme", "Halloween", E, "ev:halloween"), ("carnaval:confete", "theme", "Carnaval", E, "ev:carnaval"),
     ("anonovo:fogos", "theme", "Ano Novo", E, "ev:anonovo"),
     # ---- cor de destaque (por cima de qualquer tema)
-    ("a_tema", "accent", "A do tema", C, 1), ("a_livre", "accent", "Cor livre", E, 35), ("a_holo", "accent", "Holográfica", E, 42),
-    ("a_arco", "accent", "Arco-íris", L, 55), ("a_brasa", "accent", "Brasa", E, "vit10"),
+    ("a_tema", "accent", "A do tema", C, 1), ("a_livre", "accent", "Cor livre", E, 29), ("a_holo", "accent", "Holográfica", E, 30),
+    ("a_arco", "accent", "Arco-íris", L, "p:5"), ("a_brasa", "accent", "Brasa", E, "vit10"),
     ("a_plasma", "accent", "Plasma", E, SHOP), ("a_ouro", "accent", "Ouro vivo", L, SHOP),
     # ---- fundos do cartão do jogador
     ("b_nenhum", "bg", "Liso", C, 1), ("b_grade", "bg", "Grade", C, 2), ("b_cidade", "bg", "Cidade pixel", R, 6),
     ("b_montanhas", "bg", "Montanhas", R, 10), ("b_espaco", "bg", "Espaço", R, 16), ("b_sol", "bg", "Sol neon", E, 23),
-    ("b_circuito", "bg", "Circuito", R, 27), ("b_aurora", "bg", "Aurora", L, 48),
+    ("b_circuito", "bg", "Circuito", R, 27), ("b_aurora", "bg", "Aurora", L, "p:4"),
     ("b_castelo", "bg", "Castelo", E, "boss20"), ("b_lava", "bg", "Lava", E, "seq30"),
-    ("b_oceano", "bg", "Oceano", R, SHOP), ("b_floresta", "bg", "Floresta", R, SHOP), ("b_chuva", "bg", "Chuva digital", E, SHOP),
+    ("b_vortice", "bg", "Vórtice", L, "shop:6"), ("b_oceano", "bg", "Oceano", R, SHOP), ("b_floresta", "bg", "Floresta", R, SHOP), ("b_chuva", "bg", "Chuva digital", E, SHOP),
     ("b_natal", "bg", "Noite de Natal", R, "ev:natal"), ("b_halloween", "bg", "Lua cheia", R, "ev:halloween"),
     # ---- avatares (pixel art no lugar do número do nível)
     ("av_nivel", "avatar", "Número do nível", C, 1), ("av_robo", "avatar", "Robô", C, 2), ("av_gato", "avatar", "Gato", C, 3),
     ("av_controle", "avatar", "Controle", C, 5), ("av_fantasma", "avatar", "Fantasma", R, 8), ("av_alien", "avatar", "Alien", R, 13),
-    ("av_caveira", "avatar", "Caveira", R, 19), ("av_ninja", "avatar", "Ninja", E, 25), ("av_coroa", "avatar", "Coroa", E, 40),
-    ("av_dragao", "avatar", "Dragão", L, 50),
+    ("av_caveira", "avatar", "Caveira", R, 19), ("av_ninja", "avatar", "Ninja", E, 25), ("av_coroa", "avatar", "Coroa", E, 29),
+    ("av_dragao", "avatar", "Dragão", L, "p:2"),
     ("av_coruja", "avatar", "Coruja", R, "coruja"), ("av_espada", "avatar", "Espada", R, "boss1"), ("av_foguete", "avatar", "Foguete", R, "foco3h"),
     ("av_slime", "avatar", "Slime", C, SHOP), ("av_cogumelo", "avatar", "Cogumelo", R, SHOP), ("av_pinguim", "avatar", "Pinguim", R, SHOP),
-    ("av_mago", "avatar", "Mago", E, SHOP),
+    ("av_mago", "avatar", "Mago", E, SHOP), ("av_fenix", "avatar", "Fênix", L, "shop:3"),
     ("av_neve", "avatar", "Boneco de neve", R, "ev:natal"), ("av_abobora", "avatar", "Abóbora", R, "ev:halloween"),
     ("av_mascara", "avatar", "Máscara", R, "ev:carnaval"), ("av_estrela", "avatar", "Estrela", R, "ev:anonovo"),
     # ---- efeitos no nome e no título
     ("e_nenhum", "effect", "Nenhum", C, 1), ("e_brilho", "effect", "Brilho", C, 5), ("e_gradiente", "effect", "Degradê", R, 12),
-    ("e_fogo", "effect", "Fogo", E, 32), ("e_arco", "effect", "Arco-íris", L, 52), ("e_glitch", "effect", "Glitch", E, "vit10"),
+    ("e_fogo", "effect", "Fogo", E, 22), ("e_arco", "effect", "Arco-íris", L, "p:4"), ("e_glitch", "effect", "Glitch", E, "vit10"),
     ("e_gelo", "effect", "Gelo", R, SHOP), ("e_neon", "effect", "Neon pulsante", E, SHOP), ("e_ouro", "effect", "Ouro reluzente", L, SHOP),
+    ("e_mestre", "effect", "Mestre", L, "p:11"), ("e_prisma", "effect", "Prisma", L, "shop:9"),
     ("e_confete", "effect", "Confete", R, "ev:carnaval"), ("e_cintilante", "effect", "Cintilante", R, "ev:anonovo"),
 ]
 BY_ID = {i[0]: i for i in ITEMS}
 ANIMATED = {"matrix:green", "matrix:red", "aurora:boreal", "aurora:austral", "natal:neve", "anonovo:fogos",
             "a_holo", "a_arco", "a_brasa", "a_plasma", "a_ouro", "b_aurora", "b_chuva", "b_lava", "b_natal",
-            "e_fogo", "e_arco", "e_glitch", "e_neon", "e_ouro", "e_cintilante", "f_galaxia", "f_magma", "f_lendaria"}
+            "e_fogo", "e_arco", "e_glitch", "e_neon", "e_ouro", "e_cintilante", "f_galaxia", "f_magma", "f_lendaria",
+            "fenix:chama", "prisma:cristal", "ascensao:ouro", "f_p10", "f_mestre", "e_mestre", "e_prisma", "b_vortice"}
 
 EQUIP_DEFAULT = {"title": "novato", "frame": "f_simples", "sound": "s_bipe", "accent": "a_tema", "bg": "b_nenhum",
                  "avatar": "av_nivel", "effect": "e_nenhum", "color": "#4c8dff", "bio": "", "lay": ["bio", "stats", "show"], "show": []}
 LAY_BLOCKS = ("bio", "stats", "show", "recent", "league")
 BIO_MAX = 60
-SHOW_SLOTS = [(50, 6), (30, 5), (15, 4)]   # nível -> lugares na vitrine (3 até o 15)
+SHOW_SLOTS = [(30, 6), (20, 5), (10, 4)]   # nível -> lugares na vitrine (3 até o 10); com prestígio, 6
+
+# ---------------------------------------------------------------- nível e prestígio (1.21)
+LEVEL_K = 17          # o nível N começa em 17·N·(N−1) XP: o 30 em ~15 mil (uns 2 meses de uso ativo)
+LEVEL_MAX = 30
+PRESTIGE_MAX = 11     # 1 a 10, e o 11 é o Mestre (o último)
+EXTRA_XP = 1000       # no nível 30: cada 1000 XP a mais valem os créditos de um nível
 
 
-def show_max(level):
-    return next((n for lv, n in SHOW_SLOTS if level >= lv), 3)
+def level_of(xp):
+    """Nível (até LEVEL_MAX) e a faixa de XP dele; no máximo, a faixa fecha (lo == hi)."""
+    n = 1
+    while n < LEVEL_MAX and LEVEL_K * (n + 1) * n <= xp:
+        n += 1
+    lo = LEVEL_K * n * (n - 1)
+    return n, lo, (LEVEL_K * (n + 1) * n if n < LEVEL_MAX else lo)
+
+
+XP_MAX_LEVEL = level_of(10 ** 9)[1]
+
+
+def prestige_label(p):
+    return "Mestre" if p >= PRESTIGE_MAX else f"★{p}" if p else ""
+
+
+def show_max(level, prestige=0):
+    return 6 if prestige else next((n for lv, n in SHOW_SLOTS if level >= lv), 3)
 
 
 # ---------------------------------------------------------------- conjuntos (1.20)
@@ -137,7 +168,7 @@ SETS = [
     ("halloween", "Halloween", "🎃", ["halloween:abobora", "b_halloween", "f_abobora", "av_abobora", "assombrado"]),
     ("carnaval", "Carnaval", "🎭", ["carnaval:confete", "av_mascara", "e_confete", "foliao"]),
     ("anonovo", "Ano Novo", "🎆", ["anonovo:fogos", "av_estrela", "e_cintilante", "visionario"]),
-    ("lendario", "Lendário", "👑", [i[0] for i in ITEMS if i[3] == L and not str(i[4]).startswith("set:")]),
+    ("lendario", "Lendário", "👑", [i[0] for i in ITEMS if i[3] == L and i[4] == SHOP]),   # os lendários da loja
 ]
 SET_REWARD = {i[4][4:]: i[0] for i in ITEMS if str(i[4]).startswith("set:")}
 CR_SET = {"comum": 30, "raro": 60, "epico": 120, "lendario": 300}
@@ -152,12 +183,14 @@ def sets_complete(got):
     return [sid for sid, _n, _i, items in SETS if all(i in got for i in items)]
 
 
-def item_got(item, level, unlocked, bought):
+def item_got(item, level, unlocked, bought, prestige=0):
     _id, _k, _n, _r, req = item
     if isinstance(req, int):
-        return req <= level
-    if req == SHOP:
+        return req <= (LEVEL_MAX if prestige else level)    # prestigiar mantém tudo o que o nível já deu
+    if req == SHOP or req.startswith("shop:"):
         return _id in bought
+    if req.startswith("p:"):
+        return prestige >= int(req[2:])
     if req.startswith("ev:"):
         return "ev_" + req[3:] in unlocked
     if req.startswith("set:"):
@@ -165,8 +198,16 @@ def item_got(item, level, unlocked, bought):
     return req in unlocked
 
 
-def got_ids(level, unlocked, bought):
-    return {i[0] for i in ITEMS if item_got(i, level, unlocked, bought)}
+def got_ids(level, unlocked, bought, prestige=0):
+    return {i[0] for i in ITEMS if item_got(i, level, unlocked, bought, prestige)}
+
+
+def shop_req(item):
+    """None se não é da loja; senão o prestígio mínimo para aparecer nela (0 = qualquer um)."""
+    req = item[4]
+    if req == SHOP:
+        return 0
+    return int(req[5:]) if isinstance(req, str) and req.startswith("shop:") else None
 
 
 def clean_color(v):
@@ -190,15 +231,15 @@ def clean_lay(v):
 # ---------------------------------------------------------------- créditos
 CR_META, CR_ALL_METAS = 2, 3            # por meta do dia, e o bônus das 3
 CR_QUEST, CR_ALL_QUESTS, CR_BOSS = 10, 10, 25
-CR_LEVEL = 20                           # por nível acima do 1
+CR_LEVEL = 20                           # por nível acima do 1 (e de novo a cada prestígio, e a cada EXTRA_XP no 30)
 CR_CONQ = {"bronze": 5, "prata": 15, "ouro": 40}
 CR_STREAK7 = 15                         # a cada 7 dias seguidos
 CR_EVENT = 50
 
 
-def credits_by_day(days, weeks, sim_per, conq_days, level, events_done, sets_done=None):
+def credits_by_day(days, weeks, sim_per, conq_days, levels, events_done, sets_done=None):
     """Créditos ganhos por dia. days: [(dia, facts, metas)]; weeks: eval_week de cada semana; sim_per: streak_sim()["per"];
-    conq_days: [(dia, tier)] das conquistas; events_done: {id: dia}; sets_done: {id do conjunto: dia}. O dos níveis entra no dia de hoje (o último)."""
+    conq_days: [(dia, tier)] das conquistas; events_done: {id: dia}; sets_done: {id do conjunto: dia}. levels: quantos níveis já subiu em tudo (com os prestígios); entram no dia de hoje (o último)."""
     out = {}
     add = lambda k, v: out.__setitem__(k, out.get(k, 0) + v)  # noqa: E731
     for k, _f, metas in days:
@@ -222,15 +263,16 @@ def credits_by_day(days, weeks, sim_per, conq_days, level, events_done, sets_don
     for sid, d in (sets_done or {}).items():
         add(d, set_credits(sid))
     if days:
-        add(days[-1][0], CR_LEVEL * (level - 1))
+        add(days[-1][0], CR_LEVEL * levels)
     return out
 
 
 # ---------------------------------------------------------------- loja da semana
-def shop_pick(week, owned_before):
+def shop_pick(week, owned_before, prestige=0):
     """Os SHOP_N itens da semana (sorteados pela semana: iguais em todo aparelho e não mudam ao recarregar).
-    owned_before: o que já era seu antes da semana começar. Sempre vem pelo menos um raro ou melhor."""
-    pool = [i[0] for i in ITEMS if i[4] == SHOP and i[0] not in owned_before]
+    owned_before: o que já era seu antes da semana começar. Sempre vem pelo menos um raro ou melhor.
+    Os de prestígio (shop:N) só entram para quem tem prestígio N ou mais."""
+    pool = [i[0] for i in ITEMS if shop_req(i) is not None and shop_req(i) <= prestige and i[0] not in owned_before]
     rng = random.Random("shop:" + week)
     rare = [i for i in pool if BY_ID[i][3] != C]
     picks = [rng.choice(rare)] if rare else []

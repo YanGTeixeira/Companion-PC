@@ -117,7 +117,7 @@ class Ranking:
         """Envia o resumo (a cada SUBMIT_EVERY_S, ou já se force). Devolve True se enviou."""
         if not (self.configured and self.joined and summary and summary.get("xp") is not None):
             return False
-        body = {k: summary.get(k) or 0 for k in ("xp", "week_xp", "streak", "best_streak", "unlocked")}
+        body = {k: summary.get(k) or 0 for k in ("xp", "week_xp", "streak", "best_streak", "unlocked", "prestige", "pxp")}
         body["week"] = summary.get("week")
         body.update(title=summary.get("title") or "", frame=summary.get("frame") or "", show=list(summary.get("show") or []),
                     profile=dict(summary.get("profile") or {}))

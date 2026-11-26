@@ -96,7 +96,8 @@ class ColecaoTest(unittest.TestCase):
             c.buy(it, d(0))
 
     def test_vitrine_cresce_com_o_nivel(self):
-        self.assertEqual([co.show_max(n) for n in (1, 14, 15, 29, 30, 49, 50, 99)], [3, 3, 4, 4, 5, 5, 6, 6])
+        self.assertEqual([co.show_max(n) for n in (1, 9, 10, 19, 20, 29, 30)], [3, 3, 4, 4, 5, 5, 6])
+        self.assertEqual(co.show_max(1, prestige=1), 6)              # prestigiar mantém os 6 lugares
         c = self.mk()
         st, _ = c.refresh(d(0))
         got = [x["id"] for x in st["conq"] if x["day"]]
@@ -194,7 +195,7 @@ class CatalogoTest(unittest.TestCase):
         self.assertEqual(acc, self.ids["accent"])
         fx = set(re.findall(r"\.fx\.(e_[a-z]+)", self.css))
         self.assertEqual(fx | {"e_nenhum"}, self.ids["effect"])
-        frames = set(re.findall(r"\.badge\.(f_[a-z]+)", self.css))
+        frames = set(re.findall(r"\.badge\.(f_[a-z0-9]+)", self.css))
         self.assertTrue(self.ids["frame"] - {"f_simples"} <= frames, self.ids["frame"] - frames)
 
     def test_sons(self):
@@ -216,7 +217,10 @@ class CatalogoTest(unittest.TestCase):
             self.assertIn(i[1], co.KINDS)
             self.assertIn(i[3], co.RARITY)
             req = i[4]
+            if isinstance(req, int):
+                self.assertLessEqual(req, co.LEVEL_MAX, i)
             ok = isinstance(req, int) or req == co.SHOP or req in {c[0] for c in cq.CONQ} or \
+                (isinstance(req, str) and req.startswith(("p:", "shop:")) and 1 <= int(req.split(":")[1]) <= co.PRESTIGE_MAX) or \
                 (isinstance(req, str) and req.startswith("ev:") and req[3:] in {e[0] for e in co.EVENTS}) or \
                 (isinstance(req, str) and req.startswith("set:") and req[4:] in {x[0] for x in co.SETS})
             self.assertTrue(ok, i)
@@ -274,3 +278,52 @@ class ConjuntosTest(unittest.TestCase):
         self.assertEqual([x["name"] for x in col["sets"]], ["Fliperama"])
         self.assertEqual(col["bought"], 1)
         self.assertEqual(c.collection_data(d(30), d(1))["sets"], [])
+
+
+class PrestigioTest(unittest.TestCase):
+    """1.21: nível máximo 30 e prestígio estilo COD."""
+
+    def setUp(self):
+        self.path = Path(tempfile.mkdtemp()) / "conquistas.db"
+
+    def test_prestigiar(self):
+        c = cq.Conquistas(self.path, history(60), lambda: d(59))
+        st, _ = c.refresh(d(0))
+        self.assertEqual((st["level"], st["prestige"], st["can_prestige"]), (30, 0, True))
+        self.assertEqual(st["lvl_lo"], st["lvl_hi"])                 # no máximo a faixa fecha
+        self.assertIsNotNone(st["extra"])
+        self.assertIn("insignia:naval", st["prestige_next"])
+        cr = st["credits"]["earned"]
+        rw = lambda st, i: next(r for r in st["rewards"] if r["id"] == i)  # noqa: E731
+        self.assertFalse(rw(st, "f_p1")["got"])
+        self.assertEqual(rw(st, "f_p1")["prestige"], 1)
+        st, ev = c.prestige(d(0))
+        self.assertEqual((st["prestige"], st["prestige_label"]), (1, "★1"))
+        self.assertLess(st["level"], 30)                             # recomeçou
+        self.assertTrue(rw(st, "imperador")["got"])                  # o que o nível 30 deu continua
+        self.assertTrue(rw(st, "f_p1")["got"] and rw(st, "insignia:naval")["got"])
+        self.assertFalse(rw(st, "av_dragao")["got"])                 # é do prestígio 2
+        self.assertEqual(st["show_max"], 6)
+        self.assertGreaterEqual(st["credits"]["earned"], cr)         # os créditos dos níveis não se perdem
+        self.assertTrue(any(e["kind"] == "prestige" and e["n"] == 1 for e in ev))
+        self.assertFalse(any(e["kind"] == "reward" and e["id"] == "f_p1" for e in ev))
+        self.assertIn("prest1", {x["id"] for x in st["conq"] if x["day"]})
+        self.assertFalse(st["can_prestige"])
+        with self.assertRaisesRegex(ValueError, "nível 30"):
+            c.prestige(d(0))
+        sm = c.summary()
+        self.assertEqual((sm["prestige"], sm["pxp"]), (1, c._calc["pxp"]))
+        self.assertGreater(sm["pxp"], 0)
+        # outro processo lê o mesmo banco: continua no prestígio 1
+        self.assertEqual(cq.Conquistas(self.path, history(60), lambda: d(59)).refresh(d(0))[0]["prestige"], 1)
+
+    def test_loja_de_prestigio(self):
+        pre = {i[0] for i in co.ITEMS if co.shop_req(i)}
+        self.assertEqual(pre, {"av_fenix", "b_vortice", "e_prisma"})
+        for wk in ("2026-W50", "2027-W02", "2027-W20"):
+            self.assertFalse(set(co.shop_pick(wk, set(), 0)) & pre)
+        self.assertTrue(any(set(co.shop_pick(f"2027-W{w:02d}", set(), 9)) & pre for w in range(1, 30)))
+
+    def test_mestre_e_o_ultimo(self):
+        self.assertEqual(co.prestige_label(11), "Mestre")
+        self.assertEqual({i[0] for i in co.ITEMS if i[4] == "p:11"}, {"mestre_p", "f_mestre", "e_mestre"})

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR" data-skin="fallout" data-theme="green">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartão · Companion PC</title>
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/temas.css">
+<link rel="stylesheet" href="/css/colecao.css">
+<style>
+  /* fonte de navegador do OBS: fundo transparente, só o cartão */
+  html, body, html[data-skin] body { background: transparent !important; min-height: 0; margin: 0; padding: 0; overflow: hidden; }
+  html[data-skin] body::before, html[data-skin] body::after { display: none !important; }
+  #card { width: var(--w, 420px); padding: 8px; }
+  #card .pfcard { background: var(--panel); border: 1px solid var(--p4); box-shadow: 0 8px 30px #0008; }
+  #msg { font: 14px/1.4 system-ui, sans-serif; color: #fff; background: #000a; padding: 10px 14px; border-radius: 8px; display: inline-block; margin: 8px; }
+</style>
+</head>
+<body>
+<div id="card"></div>
+<div id="msg" hidden></div>
+<script src="/js/catalogo.js"></script>
+<script src="/js/cartao.js"></script>
+</body>
+</html>

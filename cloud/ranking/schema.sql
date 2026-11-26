@@ -1,4 +1,4 @@
--- Ranking público do Companion PC (Cloudflare D1). Banco novo: este arquivo. Banco da 1.17: migrations/0002_social.sql e 0003_perfil.sql; da 1.18: 0003_perfil.sql
+-- Ranking público do Companion PC (Cloudflare D1). Banco novo: este arquivo. Banco da 1.17: migrations/0002 a 0004; da 1.18: 0003 e 0004; da 1.19/1.20: 0004_prestigio.sql
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,            -- público (aparece só para o próprio PC)
   key_hash TEXT NOT NULL,         -- sha256 da chave secreta; a chave fica só no PC
@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS users (
   league INTEGER NOT NULL DEFAULT 0,  -- liga atual (0 Bronze ... 5 Diamante)
   league_res TEXT NOT NULL DEFAULT '',-- resultado da última semana fechada: up, down, stay
   league_week TEXT NOT NULL DEFAULT '',
-  profile TEXT NOT NULL DEFAULT ''    -- 1.19: perfil (JSON: bg, av, fx, acc, col, bio, lay), já limpo pelo cleanProfile
+  profile TEXT NOT NULL DEFAULT '',   -- 1.19: perfil (JSON: bg, av, fx, acc, col, bio, lay), já limpo pelo cleanProfile
+  prestige INTEGER NOT NULL DEFAULT 0,-- 1.21: prestígio (11 = Mestre)
+  pxp INTEGER NOT NULL DEFAULT 0      -- 1.21: XP total na hora do último prestígio
 );
 CREATE INDEX IF NOT EXISTS users_xp ON users (hidden, xp DESC);
 CREATE INDEX IF NOT EXISTS users_streak ON users (hidden, streak DESC);

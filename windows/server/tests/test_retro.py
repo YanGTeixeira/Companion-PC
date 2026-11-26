@@ -55,7 +55,7 @@ class BuildTest(unittest.TestCase):
                    (ts("2026-11-03", 21), "cs2", "de_mirage", None, {"k": 20, "d": 15, "a": 2})]
         apps = {"apps": [{"name": "VS Code", "secs": 5 * H, "cat": "Trabalho"}, {"name": "Dota 2", "secs": 2 * H, "cat": "Jogos"}]}
         conq = [{"id": "vit1", "name": "Primeira vitória", "tier": "bronze", "xp": 50, "day": "2026-11-02"}]
-        r = retro.build("2026-11", days, 250, conq, apps, matches, prev_days=[("2026-10-02", facts(scr=4 * H), [], 0)],
+        r = retro.build("2026-11", days, 50, conq, apps, matches, prev_days=[("2026-10-02", facts(scr=4 * H), [], 0)],
                         today="2026-12-01")
         self.assertEqual(r["label"], "novembro de 2026")
         self.assertFalse(r["partial"])
@@ -73,7 +73,7 @@ class BuildTest(unittest.TestCase):
         self.assertEqual((g["best"]["title"], g["best"]["kda"]), ("Lina", 20.0))
         self.assertEqual(g["top"], [{"name": "Dota 2", "secs": 2 * H}])
         self.assertEqual(r["talk"], {"total": 600, "meet": 600, "game": 0})
-        self.assertEqual(r["xp"], {"month": 550, "level_start": 2, "level_end": 4})
+        self.assertEqual(r["xp"], {"month": 550, "level_start": 2, "level_end": 6})   # 1.21: 17·N·(N−1)
         self.assertEqual(r["persona"]["name"], "Workaholic")
 
     def test_mes_vazio(self):

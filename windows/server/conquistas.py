@@ -33,12 +33,7 @@ BACKFILL_DAYS = 180
 H, M = 3600, 60
 
 
-def level_of(xp):
-    """Nível e a faixa de XP dele: o nível N começa em 50·N·(N−1) (100, 300, 600, 1000...)."""
-    n = 1
-    while 50 * (n + 1) * n <= xp:
-        n += 1
-    return n, 50 * n * (n - 1), 50 * (n + 1) * n
+level_of = colecao.level_of   # 1.21: curva 17·N·(N−1), até o nível 30 (o resto é prestígio)
 
 
 def _r(x, step):
@@ -325,15 +320,19 @@ CONQ = [
     ("voz10", "Locutor", "10 h falando no total (mesa de som)", "prata", lambda a: a["talk_total"], 600),
     ("fds", "Fim de semana produtivo", "2 h de foco no sábado e no domingo", "prata", lambda a: a["weekend"], 1),
     ("col25", "Colecionador", "Ganhe 25 conquistas", "prata", lambda a: a["unlocked"], 25),
-    ("nv50", "Mito", "Chegue ao nível 50", "ouro", lambda a: a["level"], 50),
+    ("nv50", "Mito", "Chegue ao nível 30", "ouro", lambda a: a["level"], 30),
     ("duelo1", "Duelista", "Vença um duelo da semana no ranking", "bronze", lambda a: a["duels_won"], 1),
     ("x2", "Dobradinha", "Cumpra as 3 metas num dia de XP em dobro", "bronze", lambda a: a["x2_perfect"], 1, True),
     ("gelo", "Sangue frio", "Salve a sequência com um congelamento", "bronze", lambda a: a["freezes_used"], 1, True),
     ("fenix", "Fênix", "Perca uma sequência de 7+ dias e faça outra de 7", "prata", lambda a: a["phoenix"], 1, True),
     ("silencio", "Voto de silêncio", "Um dia com 4 h+ de PC sem redes sociais nem vídeos", "prata", lambda a: a["silent"], 1, True),
+    # 1.21: prestígio
+    ("prest1", "Recomeço", "Faça o seu primeiro prestígio", "ouro", lambda a: a["prestige"], 1),
+    ("prest5", "Cinco estrelas", "Chegue ao prestígio 5", "ouro", lambda a: a["prestige"], 5),
+    ("pmestre", "Mestre do Prestígio", "Chegue ao Mestre (depois do prestígio 10)", "ouro", lambda a: a["prestige"], 11),
     ("meianoite", "Meia-noite", "Vença uma partida entre meia-noite e 4h", "bronze", lambda a: a["midnight"], 1, True),
 ]
-CONQ_VER = 2     # sobe quando entram conquistas novas: as que o histórico já merecia entram sem aviso
+CONQ_VER = 3     # sobe quando entram conquistas novas: as que o histórico já merecia entram sem aviso
 
 
 def aggregate(days, today=None):
@@ -493,12 +492,16 @@ class Conquistas:
                        x2_perfect=sum(1 for k, _f, m in days if k >= since and is_x2(k) and _done(m) == METAS_DAY),
                        duels_won=len(json.loads(self._kv(db, "duels_won", "[]"))))
             unlocked = dict(db.execute("SELECT id, day FROM unlocks").fetchall())
+            pres = json.loads(self._kv(db, "prestige", "[]"))        # 1.21: [{n, xp (o total na hora), extra, day}]
+            prest = len(pres)
+            base = pres[-1]["xp"] if pres else 0
+            agg["prestige"] = prest
             first_run = self._kv(db, "init") is None
             silent = first_run or self._kv(db, "conq_ver") != str(CONQ_VER)
             new = []
             for _pass in range(3):          # o nível depende do XP das conquistas, e há conquistas de nível e de coleção
                 xp = sum(xp_days.values()) + sum(TIER_XP[c[3]] for c in CONQ if c[0] in unlocked)
-                agg["level"] = level_of(xp)[0]
+                agg["level"] = colecao.LEVEL_MAX if prest else level_of(max(0, xp - base))[0]
                 agg["unlocked"] = sum(1 for c in CONQ if c[0] in unlocked)
                 for c in CONQ:
                     cid, name, _desc, tier, val, goal = c[:6]
@@ -528,10 +531,14 @@ class Conquistas:
             xp = sum(xp_days.values()) + sum(TIER_XP[c[3]] for c in CONQ if c[0] in unlocked)
             conq_xp_today = sum(TIER_XP[c[3]] for c in CONQ if unlocked.get(c[0]) == today)
             equip = {**EQUIP_DEFAULT, **json.loads(self._kv(db, "equip", "{}"))}
-        lvl, lo, hi = level_of(xp)
+        rel = max(0, xp - base)
+        lvl, lo, hi = level_of(rel)
+        lo, hi = lo + base, hi + base
+        extra = (rel - colecao.XP_MAX_LEVEL) // colecao.EXTRA_XP if lvl == colecao.LEVEL_MAX else 0
+        levels = (lvl - 1) + extra + sum(colecao.LEVEL_MAX - 1 + int(e.get("extra") or 0) for e in pres)
         conq_days = [(unlocked[c[0]], c[3]) for c in CONQ if c[0] in unlocked]
         owned = {b["id"] for b in bought}
-        got = colecao.got_ids(lvl, unlocked, owned)
+        got = colecao.got_ids(lvl, unlocked, owned, prest)
         # 1.20: conjuntos completos (o dia fica gravado: os créditos não mudam se um item sair da coleção depois)
         new_sets = [sid for sid in colecao.sets_complete(got) if "set_" + sid not in unlocked]
         if new_sets:
@@ -543,16 +550,16 @@ class Conquistas:
                 st_ = next(x for x in colecao.SETS if x[0] == sid)
                 new.append({"kind": "set", "id": sid, "name": st_[1], "icon": st_[2], "credits": colecao.set_credits(sid),
                             "reward": colecao.BY_ID[colecao.SET_REWARD[sid]][2]})
-            got = colecao.got_ids(lvl, unlocked, owned)
+            got = colecao.got_ids(lvl, unlocked, owned, prest)
         sets_done = {k[4:]: d for k, d in unlocked.items() if k.startswith("set_")}
-        cr_days = colecao.credits_by_day(days, weeks, sim["per"], conq_days, lvl, events_done, sets_done)
+        cr_days = colecao.credits_by_day(days, weeks, sim["per"], conq_days, levels, events_done, sets_done)
         earned, spent = sum(cr_days.values()), sum(int(b.get("price") or 0) for b in bought)
-        equip = self._fix_equip(equip, got, unlocked, lvl)
+        equip = self._fix_equip(equip, got, unlocked, lvl, prest)
         today_metas = days[-1][2] if days else []
         week0 = monday(today)
         base_xp, mult = bonus.get(today, (0, 1.0))
         cur_week = weeks[-1] if weeks else None
-        shop = colecao.shop_pick(week_id(today), {b["id"] for b in bought if b.get("day", "") < week0})
+        shop = colecao.shop_pick(week_id(today), {b["id"] for b in bought if b.get("day", "") < week0}, prest)
         st = {
             "day": today, "level": lvl, "xp": xp, "lvl_lo": lo, "lvl_hi": hi,
             "today_xp": xp_days.get(today, 0) + conq_xp_today,
@@ -572,12 +579,19 @@ class Conquistas:
             "conq": [self._conq_view(c, agg, unlocked) for c in CONQ],
             "rewards": [self._item_view(it, got, unlocked, owned) for it in colecao.ITEMS],
             "equip": equip,
-            "show_max": colecao.show_max(lvl),
-            "show_next": next((lv for lv, _n in reversed(colecao.SHOW_SLOTS) if lv > lvl), None),
+            "show_max": colecao.show_max(lvl, prest),
+            "show_next": None if prest else next((lv for lv, _n in reversed(colecao.SHOW_SLOTS) if lv > lvl), None),
+            "level_max": colecao.LEVEL_MAX, "prestige": prest, "prestige_label": colecao.prestige_label(prest),
+            "prestige_max": colecao.PRESTIGE_MAX,
+            "can_prestige": lvl == colecao.LEVEL_MAX and prest < colecao.PRESTIGE_MAX,
+            "prestige_next": [i[0] for i in colecao.ITEMS if i[4] == f"p:{prest + 1}"],
+            "prestiges": [{"n": e["n"], "day": e.get("day")} for e in pres],
+            "extra": {"xp": (rel - colecao.XP_MAX_LEVEL) % colecao.EXTRA_XP, "per": colecao.EXTRA_XP, "levels": extra}
+            if lvl == colecao.LEVEL_MAX else None,
             "credits": {"bal": earned - spent, "earned": earned, "spent": spent, "today": cr_days.get(today, 0),
                         "week": sum(v for k, v in cr_days.items() if k >= week0),
                         "rules": {"meta": colecao.CR_META, "metas3": colecao.CR_ALL_METAS, "quest": colecao.CR_QUEST,
-                                  "boss": colecao.CR_BOSS, "level": colecao.CR_LEVEL, "streak7": colecao.CR_STREAK7,
+                                  "boss": colecao.CR_BOSS, "level": colecao.CR_LEVEL, "extra_xp": colecao.EXTRA_XP, "streak7": colecao.CR_STREAK7,
                                   "conq": colecao.CR_CONQ, "event": colecao.CR_EVENT, "set": colecao.CR_SET}},
             "shop": {"week": week_id(today), "end": (date.fromisoformat(week0) + timedelta(days=6)).isoformat(), "items": shop},
             "event": event,
@@ -591,7 +605,7 @@ class Conquistas:
         ev = self._events(st, new, weeks)
         self._state = st
         self._calc = {"days": [(k, f, metas, xp_days[k]) for k, f, metas in days], "unlocked": dict(unlocked),
-                      "credits": cr_days, "bought": bought,
+                      "credits": cr_days, "bought": bought, "pxp": base,
                       "bosses": [w["boss"]["dead"] for w in weeks if w["boss"]["dead"]],
                       "quests": [q["day"] for w in weeks for q in w["quests"] if q["day"]]}
         return st, ev
@@ -611,17 +625,20 @@ class Conquistas:
     def _item_view(it, got, unlocked, owned):
         rid, kind, name, rarity, req = it
         conq = None
-        if isinstance(req, str) and req != colecao.SHOP and not req.startswith(("ev:", "set:")):
+        shop_p = colecao.shop_req(it)
+        if isinstance(req, str) and shop_p is None and not req.startswith(("ev:", "set:", "p:")):
             conq = next((c[1] if c[0] in unlocked or not (len(c) > 6 and c[6]) else "???") for c in CONQ if c[0] == req)
         return {"id": rid, "kind": kind, "name": name, "rarity": rarity, "got": rid in got,
                 "req": req if isinstance(req, int) else None, "conq": conq,
-                "shop": req == colecao.SHOP, "price": colecao.PRICE[rarity] if req == colecao.SHOP else None,
+                "shop": shop_p is not None, "price": colecao.PRICE[rarity] if shop_p is not None else None,
+                "shop_p": shop_p or None,
+                "prestige": int(req[2:]) if isinstance(req, str) and req.startswith("p:") else None,
                 "event": req[3:] if isinstance(req, str) and req.startswith("ev:") else None,
                 "set": req[4:] if isinstance(req, str) and req.startswith("set:") else None,
                 "anim": rid in colecao.ANIMATED}
 
     @staticmethod
-    def _fix_equip(equip, got, unlocked, level=1):
+    def _fix_equip(equip, got, unlocked, level=1, prestige=0):
         """O que está equipado continua valendo? (ex.: conquista perdida num banco apagado) Senão volta ao padrão."""
         out = dict(equip)
         for kind in colecao.EQUIP_KINDS:
@@ -632,7 +649,7 @@ class Conquistas:
         out["bio"] = colecao.clean_bio(out.get("bio"))
         lay = out.get("lay")
         out["lay"] = colecao.clean_lay(lay) if isinstance(lay, list) else list(EQUIP_DEFAULT["lay"])
-        out["show"] = [c for c in (out.get("show") or []) if c in unlocked and not c.startswith(("ev_", "set_"))][:colecao.show_max(level)]
+        out["show"] = [c for c in (out.get("show") or []) if c in unlocked and not c.startswith(("ev_", "set_"))][:colecao.show_max(level, prestige)]
         return out
 
     def _events(self, st, new, weeks):
@@ -654,11 +671,13 @@ class Conquistas:
                 ev.append({"kind": "quests_all", "xp": ALL_QUESTS_XP})
             if w["boss"]["dead"] and not pw["boss"]["dead"]:
                 ev.append({"kind": "boss", "name": w["boss"]["name"], "icon": w["boss"]["icon"], "xp": BOSS_XP})
-        if st["level"] > prev["level"]:
+        if st["prestige"] > prev.get("prestige", 0):
+            ev.append({"kind": "prestige", "n": st["prestige"], "label": st["prestige_label"]})
+        elif st["level"] > prev["level"]:
             ev.append({"kind": "level", "level": st["level"]})
         pgot = {r["id"] for r in prev["rewards"] if r["got"]}
         for r in st["rewards"]:
-            if r["got"] and r["id"] not in pgot and not r["shop"] and not r["set"]:   # loja ou conjunto: já teve aviso
+            if r["got"] and r["id"] not in pgot and not (r["shop"] or r["set"] or r["prestige"]):   # já teve aviso próprio
                 ev.append({"kind": "reward", "id": r["id"], "type": r["kind"], "name": r["name"]})
         if prev["day"] != st["day"]:
             if st["x2"]:
@@ -734,6 +753,19 @@ class Conquistas:
             db.execute("INSERT OR REPLACE INTO kv VALUES ('bought', ?)", (json.dumps(bought),))
         return self.refresh(today)
 
+    def prestige(self, today=None):
+        """Prestigiar (1.21): no nível 30, o nível volta a 1 e tudo o que já foi liberado fica."""
+        st = self.refresh(today)[0]
+        if not st["can_prestige"]:
+            raise ValueError("o Mestre é o último prestígio" if st["prestige"] >= colecao.PRESTIGE_MAX
+                             else f"chegue ao nível {colecao.LEVEL_MAX} para prestigiar")
+        with self.lock, self._db() as db:
+            pres = json.loads(self._kv(db, "prestige", "[]"))
+            pres.append({"n": len(pres) + 1, "xp": st["xp"], "extra": (st["extra"] or {}).get("levels", 0),
+                         "day": today or date.today().isoformat()})
+            db.execute("INSERT OR REPLACE INTO kv VALUES ('prestige', ?)", (json.dumps(pres),))
+        return self.refresh(today)
+
     def set_duels_won(self, ids):
         """Duelos vencidos no ranking (ids): guarda a união; conta para a conquista Duelista."""
         with self.lock, self._db() as db:
@@ -795,4 +827,5 @@ class Conquistas:
             pf["color"] = eq.get("color")
         return {k: st.get(k) for k in ("level", "xp", "week_xp", "streak", "best_streak")} | {
             "unlocked": sum(1 for c in st.get("conq") or [] if c["day"]), "week": f"{y}-W{w:02d}",   # semana ISO local
-            "title": eq["title"], "frame": eq["frame"], "show": list(eq["show"]), "profile": pf}
+            "title": eq["title"], "frame": eq["frame"], "show": list(eq["show"]), "profile": pf,
+            "prestige": st.get("prestige", 0), "pxp": (self._calc or {}).get("pxp", 0)}   # 1.21: o ranking confere

@@ -544,3 +544,80 @@ html.noanim body::before { animation: none !important; }
 [data-skin="abismo"] nav .nb, [data-skin="aurora"] nav .nb, [data-skin="carnaval"] nav .nb, [data-skin="halloween"] nav .nb { font-size: 12px; }
 [data-skin="dunas"] nav .nb, [data-skin="anonovo"] nav .nb { font-size: 11px; letter-spacing: .5px; }
 [data-skin="cosmos"] .subtabs button { font-size: 15px; font-weight: 600; }
+
+/* ------------------------------------------------------------------ 1.21: temas de prestígio */
+[data-skin="fenix"] body::before, [data-skin="prisma"] body::before, [data-skin="ascensao"] body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+[data-skin="fenix"] body, [data-skin="prisma"] body, [data-skin="ascensao"] body { isolation: isolate; }
+
+/* Insígnia (★1): azul-marinho, ouro e divisas */
+[data-skin="insignia"] {
+  --p: #f3ead2; --p2: #c9b98e; --p3: #7d6f4c; --p4: #1d2a45; --bg: #0a1428; --panel: #101d38; --glow: #d4af3733; --alert: #ff6b5e;
+  --on: linear-gradient(180deg, #f1d27a, #b8902c); --onfg: #0a1428; --hl: #d4af37; --track: #16223d; --bar2: #8fa6d1;
+  --r: 4px; --barr: 2px; --gap: 0px; --display: "Rajdhani", sans-serif; --mono: "Inter", system-ui, sans-serif;
+}
+[data-skin="insignia"] body { background: repeating-linear-gradient(135deg, transparent 0 22px, #ffffff05 22px 24px),
+  radial-gradient(ellipse at 50% -10%, #1e3366, transparent 60%), var(--bg); }
+[data-skin="insignia"] .card { border: 1px solid #d4af3740; border-top: 2px solid var(--hl); box-shadow: 0 8px 24px #0007; }
+[data-skin="insignia"] .card h3 { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; font-weight: 700; color: var(--hl); }
+[data-skin="insignia"] .big, [data-skin="insignia"] .gtime, [data-skin="insignia"] .utot b, [data-skin="insignia"] .pfps b { font-weight: 700; color: var(--hl); }
+[data-skin="insignia"] h2 { text-transform: uppercase; letter-spacing: 2px; font-weight: 700; } [data-skin="insignia"] h2::before { content: "★ "; color: var(--hl); }
+[data-skin="insignia"] nav { background: #08101fee; border-top: 2px solid #d4af3766; }
+[data-skin="insignia"] nav button.on { color: var(--hl); background: transparent; box-shadow: inset 0 3px 0 var(--hl); }
+
+/* Fênix (★3): brasas subindo de um fogo lá embaixo (animado) */
+[data-skin="fenix"] {
+  --p: #ffe7d6; --p2: #f0a77a; --p3: #8c4a2a; --p4: #3a160b; --bg: #0f0503; --panel: #1a0a06e6; --glow: #ff6a1f66; --alert: #ff3b3b;
+  --on: linear-gradient(90deg, #ff3b1f, #ffb000); --onfg: #1a0500; --hl: #ff8a2a; --track: #2a0f07; --bar2: #ffb000;
+  --r: 8px; --barr: 99px; --gap: 0px; --display: "Chakra Petch", sans-serif; --mono: "Inter", system-ui, sans-serif;
+}
+[data-skin="fenix"] body { background: radial-gradient(ellipse 120% 45% at 50% 110%, #ff4500aa, #7a1a0044 45%, transparent 70%), var(--bg); }
+[data-skin="fenix"] body::before { opacity: .8; background:
+  radial-gradient(2px 2px at 30px 260px, #ffb000, transparent), radial-gradient(1.5px 1.5px at 110px 200px, #ff6a1f, transparent),
+  radial-gradient(2px 2px at 170px 120px, #ffd84d, transparent), radial-gradient(1.5px 1.5px at 70px 60px, #ff8a2a, transparent),
+  radial-gradient(1px 1px at 200px 280px, #ffb000, transparent);
+  background-size: 230px 300px; animation: brasas 9s linear infinite; }
+@keyframes brasas { from { background-position: 0 0; } to { background-position: 40px -300px; } }
+[data-skin="fenix"] .card { border: 1px solid #ff6a1f33; box-shadow: 0 0 0 1px #0006, 0 10px 30px #ff45001a; }
+[data-skin="fenix"] .big, [data-skin="fenix"] .gtime, [data-skin="fenix"] .utot b, [data-skin="fenix"] .pfps b {
+  background: linear-gradient(0deg, #ff3b1f, #ffd84d); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
+[data-skin="fenix"] h2::before { content: "🔥 "; }
+[data-skin="fenix"] nav { background: #0f0503ee; border-top: 1px solid #ff6a1f44; }
+[data-skin="fenix"] nav button.on { color: var(--hl); background: transparent; box-shadow: inset 0 3px 0 var(--hl); }
+
+/* Prisma (★7): cristal escuro com um brilho de arco-íris que passa (animado) */
+[data-skin="prisma"] {
+  --p: #eef9ff; --p2: #a9c3d6; --p3: #5c7487; --p4: #18233a; --bg: #05070f; --panel: #0b1120cc; --glow: #9ef0ff55; --alert: #ff6b8b;
+  --on: linear-gradient(90deg, #9ef0ff, #c49bff, #ff9ed8); --onfg: #05070f; --hl: #9ef0ff; --track: #121a2c; --bar2: #c49bff;
+  --r: 2px; --barr: 2px; --gap: 0px; --display: "Exo 2", system-ui, sans-serif; --mono: "Inter", system-ui, sans-serif;
+}
+[data-skin="prisma"] body { background: linear-gradient(160deg, #0b1124, var(--bg) 60%); }
+[data-skin="prisma"] body::before { opacity: .22; background: linear-gradient(115deg, transparent 30%, #ff9ed8 40%, #ffe27a 45%, #9effb0 50%, #9ef0ff 55%, #c49bff 60%, transparent 70%);
+  background-size: 300% 100%; animation: prisma 14s ease-in-out infinite alternate; }
+@keyframes prisma { from { background-position: 100% 0; } to { background-position: 0 0; } }
+[data-skin="prisma"] .card { border: 1px solid #9ef0ff2e; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  backdrop-filter: blur(6px); }
+[data-skin="prisma"] .big, [data-skin="prisma"] .gtime, [data-skin="prisma"] .utot b, [data-skin="prisma"] .pfps b {
+  background: linear-gradient(90deg, #9ef0ff, #c49bff, #ff9ed8); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
+[data-skin="prisma"] h2::before { content: "◆ "; color: var(--hl); }
+[data-skin="prisma"] nav { background: #05070fee; border-top: 1px solid #9ef0ff33; }
+[data-skin="prisma"] nav button.on { color: var(--hl); background: transparent; box-shadow: inset 0 3px 0 var(--hl); }
+
+/* Ascensão (★10): preto e ouro, raios de luz girando devagar (animado) */
+[data-skin="ascensao"] {
+  --p: #fff6dc; --p2: #d9c48f; --p3: #8a7643; --p4: #2e2614; --bg: #0b0904; --panel: #15110acc; --glow: #ffd76a66; --alert: #ff6b5e;
+  --on: linear-gradient(180deg, #fff1a8, #c8901a); --onfg: #1a1204; --hl: #ffd76a; --track: #221c0e; --bar2: #fff1a8;
+  --r: 6px; --barr: 99px; --gap: 0px; --display: "Cinzel", Georgia, serif; --mono: "Inter", system-ui, sans-serif;
+}
+[data-skin="ascensao"] body { background: radial-gradient(circle at 50% 0%, #ffd76a2a, transparent 55%), var(--bg); }
+[data-skin="ascensao"] body::before { inset: -60%; opacity: .14;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, #ffd76a 0 4deg, transparent 4deg 18deg); animation: raios 60s linear infinite; }
+@keyframes raios { to { transform: rotate(360deg); } }
+[data-skin="ascensao"] .card { border: 1px solid #ffd76a40; box-shadow: 0 0 24px #ffd76a14, 0 10px 30px #0008; }
+[data-skin="ascensao"] .card h3 { text-transform: uppercase; letter-spacing: 3px; font-size: 10.5px; font-weight: 700; color: var(--hl); }
+[data-skin="ascensao"] .big, [data-skin="ascensao"] .gtime, [data-skin="ascensao"] .utot b, [data-skin="ascensao"] .pfps b {
+  background: linear-gradient(180deg, #fff 10%, #ffd76a 60%, #c8901a); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
+[data-skin="ascensao"] h2 { font-weight: 700; letter-spacing: 1px; } [data-skin="ascensao"] h2::before { content: "✦ "; color: var(--hl); }
+[data-skin="ascensao"] nav { background: #0b0904ee; border-top: 1px solid #ffd76a55; }
+[data-skin="ascensao"] nav button.on { color: var(--hl); background: transparent; box-shadow: inset 0 3px 0 var(--hl); }
+[data-skin="ascensao"] nav .nb, [data-skin="insignia"] nav .nb { font-size: 10.5px; letter-spacing: 0; font-weight: 700; }

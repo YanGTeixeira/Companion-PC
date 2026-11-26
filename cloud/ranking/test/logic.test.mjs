@@ -1,13 +1,17 @@
 // Regras do ranking. Rodar: node --test test/
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { XP_MAX_LEVEL } from "../src/logic.js";
 import { CONQ_XP, DAY_CAP, FIRST_MAX, checkNick, checkSubmit, cleanProfile, duelView, pfMini, readProfile, isoWeek, leagueAfter, leagueZones, levelOf, nickKey, weekDay } from "../src/logic.js";
 
 test("nível igual ao conquistas.py", () => {
-  assert.equal(levelOf(0), 1);
-  assert.equal(levelOf(99), 1);
-  assert.equal(levelOf(100), 2);
-  assert.equal(levelOf(4500), 10);
+  assert.equal(levelOf(0), 1);          // 1.21: 17·N·(N−1), até o 30
+  assert.equal(levelOf(33), 1);
+  assert.equal(levelOf(34), 2);
+  assert.equal(levelOf(1530), 10);
+  assert.equal(levelOf(XP_MAX_LEVEL - 1), 29);
+  assert.equal(levelOf(XP_MAX_LEVEL), 30);
+  assert.equal(levelOf(10 ** 7), 30);
 });
 
 test("semana ISO em UTC", () => {
@@ -33,7 +37,7 @@ test("apelidos", () => {
 
 const W = { cur: "2026-W48", prev: "2026-W47", next: "2026-W49" };
 const fresh = { xp: 0, last_submit: 0 };
-const ok = (o = {}) => ({ xp: 500, week: "2026-W48", week_xp: 300, streak: 2, best_streak: 3, unlocked: 4, ...o });
+const ok = (o = {}) => ({ xp: 500, week: "2026-W48", week_xp: 300, streak: 2, best_streak: 3, unlocked: 4, prestige: 0, pxp: 0, ...o });
 const NOW = 1_800_000_000;
 
 test("envio plausível passa", () => {
@@ -108,4 +112,21 @@ test("duelos: placar desde o aceite e resultado no fim da semana", () => {
   assert.equal(duelView(d, "A", 400, 300, "2026-W49").res, "won");
   assert.equal(duelView({ ...d, status: "pending" }, "B", 0, 0, "2026-W49").status, "expired");
   assert.equal(duelView({ ...d, status: "pending" }, "B", 0, 0, "2026-W48").my, null);
+});
+
+test("prestígio (1.21): só sobe, um por vez, e cada um custa um nível 30 inteiro", () => {
+  const X = XP_MAX_LEVEL, u = { xp: X + 100, last_submit: NOW - 3600, prestige: 0, pxp: 0 };
+  assert.equal(checkSubmit(u, ok({ xp: X + 200, prestige: 1, pxp: X + 150 }), NOW, null, W, 4), null);
+  assert.equal(checkSubmit(u, ok({ xp: X + 200, prestige: 1, pxp: X - 1 }), NOW, null, W, 4), "prestígio inválido");
+  assert.equal(checkSubmit(u, ok({ xp: X + 200, prestige: 1, pxp: X + 300 }), NOW, null, W, 4), "prestígio inválido");  // maior que o XP
+  const u3 = { ...u, last_submit: NOW - 3 * 86400 };
+  assert.equal(checkSubmit(u3, ok({ xp: 2 * X + 200, prestige: 2, pxp: 2 * X + 100 }), NOW, null, W, 4), "prestígio demais de uma vez");
+  assert.equal(checkSubmit(u, ok({ xp: X + 200, prestige: 0, pxp: 50 }), NOW, null, W, 4), "prestígio inválido");
+  assert.equal(checkSubmit(u, ok({ xp: X + 200, prestige: 12, pxp: X }), NOW, null, W, 4), "prestígio inválido");
+  const p1 = { xp: X + 500, last_submit: NOW - 3600, prestige: 1, pxp: X + 150 };
+  assert.equal(checkSubmit(p1, ok({ xp: X + 600, prestige: 1, pxp: X + 150 }), NOW, null, W, 4), null);
+  assert.equal(checkSubmit(p1, ok({ xp: X + 600, prestige: 1, pxp: X + 160 }), NOW, null, W, 4), "prestígio não pode voltar");
+  assert.equal(checkSubmit(p1, ok({ xp: X + 600, prestige: 0, pxp: 0 }), NOW, null, W, 4), "prestígio não pode voltar");
+  // PC da 1.20 (não manda prestígio): continua passando
+  assert.equal(checkSubmit({ xp: 100, last_submit: NOW - 3600 }, ok({ xp: 200, week_xp: 100 }), NOW, null, W, 4), null);
 });

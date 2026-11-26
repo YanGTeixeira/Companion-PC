@@ -38,10 +38,13 @@ def d(n, ref="2026-11-26"):
 
 class NivelTest(unittest.TestCase):
     def test_faixas(self):
-        self.assertEqual(cq.level_of(0), (1, 0, 100))
-        self.assertEqual(cq.level_of(99), (1, 0, 100))
-        self.assertEqual(cq.level_of(100), (2, 100, 300))
-        self.assertEqual(cq.level_of(4500)[0], 10)
+        self.assertEqual(cq.level_of(0), (1, 0, 34))                # 1.21: 17·N·(N−1)
+        self.assertEqual(cq.level_of(33), (1, 0, 34))
+        self.assertEqual(cq.level_of(34), (2, 34, 102))
+        self.assertEqual(cq.level_of(1530)[0], 10)
+        self.assertEqual(cq.level_of(14789)[0], 29)
+        self.assertEqual(cq.level_of(14790), (30, 14790, 14790))    # o máximo: a faixa fecha
+        self.assertEqual(cq.level_of(10 ** 7)[0], 30)
 
 
 class MetasTest(unittest.TestCase):

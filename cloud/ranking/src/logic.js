@@ -7,9 +7,12 @@ export const REGS_PER_DAY = 5;        // cadastros por IP por dia
 export const MAX_STRIKES = 10;        // envios impossíveis até sair do ranking
 
 // ------------------------------------------------------------------ utilidades
-export function levelOf(xp) {          // igual ao conquistas.py: o nível N começa em 50·N·(N−1)
+// 1.21: igual ao colecao.py: o nível N começa em 17·N·(N−1) e vai até o 30; depois, prestígio (1 a 10, e 11 = Mestre)
+export const LEVEL_K = 17, LEVEL_MAX = 30, PRESTIGE_MAX = 11;
+export const XP_MAX_LEVEL = LEVEL_K * LEVEL_MAX * (LEVEL_MAX - 1);
+export function levelOf(xp) {
   let n = 1;
-  while (50 * (n + 1) * n <= xp) n++;
+  while (n < LEVEL_MAX && LEVEL_K * (n + 1) * n <= xp) n++;
   return n;
 }
 
@@ -67,6 +70,12 @@ export function checkSubmit(u, s, now, weekRow, weeks, wday) {
   if (weekRow && s.week_xp < weekRow.xp) return "XP da semana não pode diminuir";
   if (s.streak > 1000 || s.best_streak > 1000 || s.streak > s.best_streak) return "sequência inválida";
   if (s.unlocked > 200) return "conquistas demais";
+  // 1.21: prestígio. pxp = o XP total na hora do último prestígio; cada um exige um nível 30 inteiro
+  const up = u.prestige || 0, upxp = u.pxp || 0;
+  if (Number.isNaN(s.prestige) || Number.isNaN(s.pxp) || s.prestige > PRESTIGE_MAX) return "prestígio inválido";
+  if (s.pxp > s.xp || s.pxp < s.prestige * XP_MAX_LEVEL || (!s.prestige && s.pxp)) return "prestígio inválido";
+  if (s.prestige < up || (s.prestige === up && s.pxp !== upxp)) return "prestígio não pode voltar";
+  if (s.prestige > up + 1 && !first) return "prestígio demais de uma vez";
   return null;
 }
 
@@ -79,11 +88,11 @@ export const SHOW_MAX = 6;
 export const BIO_MAX = 60;
 export const PROFILE_IDS = {
   bg: ["b_nenhum", "b_grade", "b_cidade", "b_montanhas", "b_espaco", "b_sol", "b_circuito", "b_aurora", "b_castelo", "b_lava",
-    "b_oceano", "b_floresta", "b_chuva", "b_natal", "b_halloween"],
+    "b_oceano", "b_floresta", "b_chuva", "b_natal", "b_halloween", "b_vortice"],
   avatar: ["av_nivel", "av_robo", "av_gato", "av_controle", "av_fantasma", "av_alien", "av_caveira", "av_ninja", "av_coroa",
     "av_dragao", "av_coruja", "av_espada", "av_foguete", "av_slime", "av_cogumelo", "av_pinguim", "av_mago", "av_neve",
-    "av_abobora", "av_mascara", "av_estrela"],
-  effect: ["e_nenhum", "e_brilho", "e_gradiente", "e_fogo", "e_arco", "e_glitch", "e_gelo", "e_neon", "e_ouro", "e_confete", "e_cintilante"],
+    "av_abobora", "av_mascara", "av_estrela", "av_fenix"],
+  effect: ["e_nenhum", "e_brilho", "e_gradiente", "e_fogo", "e_arco", "e_glitch", "e_gelo", "e_neon", "e_ouro", "e_confete", "e_cintilante", "e_mestre", "e_prisma"],
   accent: ["a_tema", "a_livre", "a_holo", "a_arco", "a_brasa", "a_plasma", "a_ouro"],
 };
 export const LAY_BLOCKS = ["bio", "stats", "show", "recent", "league"];

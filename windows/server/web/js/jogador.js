@@ -41,7 +41,7 @@ function myCard(over = {}) {
   const show = (eq.show || []).map((id) => d.conq.find((c) => c.id === id)).filter(Boolean);
   const recent = [...got].sort((a, b) => (a.day < b.day ? 1 : -1)).slice(0, 3);
   const lg = typeof rankData !== "undefined" && rankData.league && !rankData.league.error ? rankData.league : null;
-  return profileCard({ nick, level: d.level, title: rewardName(eq.title) || "Novato", frame: eq.frame, avatar: eq.avatar, effect: eq.effect,
+  return profileCard({ nick, level: d.level, prestige: d.prestige, title: rewardName(eq.title) || "Novato", frame: eq.frame, avatar: eq.avatar, effect: eq.effect,
     bg: eq.bg, bio: eq.bio, lay: eq.lay, sub: d.streak ? `🔥 ${d.streak} dia${d.streak > 1 ? "s" : ""}` : "",
     stats: [[d.level, "nível"], [d.week_xp, "XP na semana"], [d.best_streak, "recorde"], [`${got.length}/${d.conq.length}`, "troféus"]],
     show: show.length ? `<div class="shrow">${show.map((c) => `<div class="cqt got">${trophy(c.tier, true)}<span>${esc(c.name)}</span></div>`).join("")}</div>` : "",
@@ -52,8 +52,9 @@ function myCard(over = {}) {
 // ---------------------------------------------------------------- Resumo: cartão do jogador
 function renderPlayer() {
   const d = state.conq, box = $("cq-lvl"); if (!d || !box) return;
-  const pct = Math.max(0, Math.min(100, ((d.xp - d.lvl_lo) / Math.max(1, d.lvl_hi - d.lvl_lo)) * 100));
+  const xl = xpLine(d), pct = xl.pct;
   const chips = [];
+  if (d.prestige) chips.push(`<span class="pchip pr">${esc(prestName(d.prestige))}</span>`);
   if (d.mult > 1) chips.push(`<span class="pchip hot" title="Sequência de ${d.streak} dias">🔥 XP ×${String(d.mult).replace(".", ",")}</span>`);
   if (d.x2) chips.push('<span class="pchip x2">⚡ XP em dobro hoje</span>');
   chips.push(`<span class="pchip ice" title="Salva a sequência num dia perdido">${"❄".repeat(d.freezes) || "–"} ${d.freezes}/${d.freeze_max} congelamento${d.freeze_max > 1 ? "s" : ""}</span>`);
@@ -63,10 +64,31 @@ function renderPlayer() {
   if (!d.x2 && d.x2_next) hints.push(`próximo XP em dobro: ${dayShort(d.x2_next)}`);
   $("cq-streak").textContent = d.streak ? `🔥 ${d.streak} dia${d.streak > 1 ? "s" : ""}` : "";
   box.innerHTML = `${myCard()}
-    <small class="cqv" style="display:block;margin-top:8px">${d.xp - d.lvl_lo} / ${d.lvl_hi - d.lvl_lo} XP para o nível ${d.level + 1} · +${d.today_xp} XP hoje</small>
+    <small class="cqv" style="display:block;margin-top:8px">${esc(xl.text)} · +${d.today_xp} XP hoje</small>
     <div class="bar"><i style="width:${pct}%"></i></div>
     <div class="pchips">${chips.join("")}</div>
-    ${hints.length ? `<small class="phint">${esc(hints.join(" · "))}</small>` : ""}`;
+    ${hints.length ? `<small class="phint">${esc(hints.join(" · "))}</small>` : ""}
+    ${d.can_prestige ? `<button class="prgo" id="cq-prgo" style="width:100%">Nível máximo! ${d.prestige + 1 >= PRESTIGE_MAX ? "Virar Mestre" : `Prestigiar (${prestLabel(d.prestige + 1)})`}</button>` : ""}`;
+  if ($("cq-prgo")) $("cq-prgo").onclick = () => { buzz(8); prestigeModal(); };
+  if ($("cq-prest")) { $("cq-prest").innerHTML = prestigeBox(d); if ($("pr-go")) $("pr-go").onclick = () => { buzz(8); prestigeModal(); }; }
+}
+// prestigiar: janela de confirmação (o nível volta a 1; nada do que foi liberado se perde)
+function prestigeModal() {
+  const d = state.conq; if (!d?.can_prestige) return;
+  const n = d.prestige + 1, nx = (d.prestige_next || []).map((id) => d.rewards.find((r) => r.id === id)).filter(Boolean);
+  $("pfm").classList.remove("hidden");
+  $("pfm-body").innerHTML = `<div class="cqm-tier" style="color:#ffd76a">PRESTÍGIO</div><h1 style="margin:6px 0 10px">${esc(prestName(n))}</h1>
+    <div class="cqm-how"><small>O QUE ACONTECE</small>O seu nível volta a 1 e aparece <b>${esc(prestLabel(n))}</b> ao lado dele, aqui e no ranking.
+      Tudo o que você já liberou continua seu: itens, vitrine de 6 lugares, cor livre e créditos.</div>
+    ${nx.length ? `<div class="cqm-how" style="margin-top:10px"><small>VOCÊ GANHA</small>${nx.map((r) => esc(r.name)).join(" · ")}</div>` : ""}
+    <div class="brow pfbtns"><button class="btn" id="pr-ok">Prestigiar</button><button class="btn" id="pr-no">Agora não</button></div>`;
+  const close = () => $("pfm").classList.add("hidden");
+  $("pr-no").onclick = close;
+  $("pr-ok").onclick = async () => {
+    buzz(20);
+    try { onConq(await send("conq.prestige", { confirm: true })); close(); toast(`${prestName(n)}!`, "ok"); snd(cqSound()); }
+    catch (e) { toast(e.message, "bad"); }
+  };
 }
 
 // ---------------------------------------------------------------- Desafios e chefão da semana
@@ -252,7 +274,7 @@ function itemModal(r) {
   $("pfm").classList.remove("hidden");
   $("pfm-body").innerHTML = `<div class="cqm-tier" style="color:var(--rar)"><span class="rar-${r.rarity}"><span class="rartag">${RARITY[r.rarity]}</span></span> ${esc(KIND_LABEL[r.kind])}${r.anim ? " · animado" : ""}</div>
     <h1 style="margin:6px 0 10px">${esc(r.name)}</h1>${prev}
-    <div class="cqm-how" style="margin-top:10px"><small>COMO LIBERAR</small>${r.got ? "Já é seu." : esc(r.req ? `Chegue ao nível ${r.req}` : r.shop ? `Loja da semana: ${r.price} créditos${inShop ? "" : " (não está na loja agora; ela muda toda segunda)"}` : r.event ? `Complete o evento ${EVENT_NAME[r.event] || r.event}` : r.set ? `Complete o conjunto ${SET_NAME[r.set] || r.set} (Recompensas › Conjuntos)` : `Ganhe a conquista ${r.conq}`)}</div>
+    <div class="cqm-how" style="margin-top:10px"><small>COMO LIBERAR</small>${esc(howText(r, d))}</div>
     <div class="brow pfbtns">${r.got ? `<button class="btn" id="im-eq">${r.kind === "theme" ? "Usar este tema" : "Equipar"}</button>`
       : `${["theme", "accent"].includes(r.kind) ? '<button class="btn" id="im-try">Experimentar 10 s</button>' : ""}${r.kind === "sound" ? '<button class="btn" id="im-try">Ouvir</button>' : ""}
          ${inShop ? `<button class="btn" id="im-buy" ${d.credits.bal < r.price ? "disabled" : ""}>Comprar · ${r.price} créditos</button>` : ""}`}</div>

@@ -10,6 +10,7 @@ Uso:  pythonw companion_server.py      (ícone na bandeja, sem janela)
 """
 import asyncio
 import ctypes
+import hashlib
 import json
 import logging
 import os
@@ -307,7 +308,8 @@ LAYOUT_VIEWS = {"dash", "today", "conq", "games", "usage", "media", "mix", "mous
                 "quests", "troph", "inv", "loja", "rank"}   # Jogador (1.18) e Loja (1.19)
 LAYOUT_CARDS = {"cpu", "ram", "gpu", "net", "procs", "disks", "bat", "sys"}
 SKINS = {"fallout", "synth", "minimal", "hud", "lcd", "paper", "pocket", "code", "rpg", "tac", "jp", "exec",
-         "abismo", "masmorra", "cosmos", "dunas", "matrix", "aurora", "natal", "halloween", "carnaval", "anonovo"}   # 1.19
+         "abismo", "masmorra", "cosmos", "dunas", "matrix", "aurora", "natal", "halloween", "carnaval", "anonovo",   # 1.19
+         "insignia", "fenix", "prisma", "ascensao"}   # 1.21: prestígio
 
 
 def layout_get():
@@ -508,6 +510,8 @@ ASYNC_ACTIONS = {
     "conq.cfg": lambda p: conq_cfg(p),
     "conq.profile": lambda p: conq_profile(p),
     "conq.buy": lambda p: conq_buy(p),
+    "conq.prestige": lambda p: conq_prestige(p),
+    "conq.card": lambda p: _async({"token": card_token(), "port": WEB["port"]}),
     "retro.get": lambda p: asyncio.to_thread(retro_get, p),
     "rank.state": lambda p: _async(RANK.state()),
     "rank.join": lambda p: rank_join(p),
@@ -705,6 +709,31 @@ STATS_REF = [None]
 # --------------------------------------------------------------------------
 clients = set()
 client_kind: dict = {}  # ws -> "celular"
+card_clients = set()    # 1.21: cartão do perfil no OBS (só lê; só no próprio PC)
+
+
+def card_token():
+    """Token só de leitura do cartão do OBS: tirado do token do app, mas não dá acesso a mais nada."""
+    return hashlib.sha256(f"{CFG['token']}:cartao".encode()).hexdigest()[:24]
+
+
+async def card_session(ws, hello, peer):
+    if peer != "cabo USB" or not secrets.compare_digest(str(hello.get("token", "")), card_token()):
+        log.warning("recusado: cartão do OBS de %s", peer)
+        await ws.close(4001, "token")
+        return
+    lay = layout_get() or {}
+    await ws.send(json.dumps({"t": "welcome", "web": web_build(), "layout": {k: lay.get(k) for k in ("skin", "theme")}}))
+    await ws.send(json.dumps({"t": "conq", "d": conq_view()}, ensure_ascii=False))
+    await ws.send(json.dumps({"t": "rank", "d": RANK.state()}, ensure_ascii=False))
+    card_clients.add(ws)
+    try:
+        async for _raw in ws:     # só recebe; não aceita pedido nenhum
+            pass
+    except ConnectionClosed:
+        pass
+    finally:
+        card_clients.discard(ws)
 
 
 async def web_handler(ws):
@@ -727,6 +756,9 @@ async def session(ws, peer, kind):
         else:
             log.warning("recusado: extensão de reunião de %s (origem %s)", peer, origin)
             await ws.close(4001, "origin")
+        return
+    if hello.get("t") == "hello" and hello.get("role") == "card":
+        await card_session(ws, hello, peer)
         return
     if hello.get("t") != "hello" or not secrets.compare_digest(str(hello.get("token", "")), CFG["token"]):
         log.warning("recusado: token inválido de %s", peer)
@@ -828,6 +860,12 @@ async def broadcast(obj):
             await w.send(msg)
         except ConnectionClosed:
             clients.discard(w)
+    if obj.get("t") in ("conq", "rank", "layout"):   # o cartão do OBS só precisa disso
+        for w in list(card_clients):
+            try:
+                await w.send(msg)
+            except ConnectionClosed:
+                card_clients.discard(w)
 
 
 async def meet_set(state):
@@ -1746,6 +1784,21 @@ async def conq_profile(p):
     return conq_view()
 
 
+async def conq_prestige(p):
+    """1.21: prestigiar (no nível 30; o nível volta a 1 e tudo o que já foi liberado fica)."""
+    if p.get("confirm") is not True:
+        raise ValueError("confirme o prestígio")
+    st, ev = await asyncio.to_thread(CONQ.prestige)
+    log.info("prestígio: %s", st["prestige_label"])
+    for e in ev:
+        await broadcast({"t": "event", "kind": "conq", "d": e})
+        conq_overlay(e)
+    await broadcast({"t": "conq", "d": conq_view()})
+    CONQ_KICK.set()
+    asyncio.get_running_loop().run_in_executor(None, lambda: RANK.submit(CONQ.summary(), force=True))
+    return conq_view()
+
+
 async def conq_buy(p):
     st, ev = await asyncio.to_thread(CONQ.buy, str(p.get("id") or ""))
     log.info("loja: comprou %s", p.get("id"))
@@ -1789,6 +1842,8 @@ CONQ_OVERLAY = {
     "reward": lambda e: ("level", f"Recompensa: {e['name']}", "Equipe em Jogador › Recompensas"),
     "event": lambda e: ("quest", f"Evento {e['name']} completo!", f"Itens do evento liberados · +{e['credits']} créditos"),
     "set": lambda e: ("level", f"Conjunto {e['name']} completo!", f"Liberou {e['reward']} · +{e['credits']} créditos"),
+    "prestige": lambda e: ("trophy", "Mestre do Prestígio!" if e["label"] == "Mestre" else f"Prestígio {e['label']}!",
+                           "O nível recomeça; tudo o que você liberou continua seu"),
 }
 
 

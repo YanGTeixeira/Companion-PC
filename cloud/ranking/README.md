@@ -31,6 +31,8 @@ Publicado em https://companion-ranking.yancubot.workers.dev (desde a 1.17).
 
 ```sh
 npx wrangler d1 execute companion-ranking --remote --file=migrations/0002_social.sql   # 1.18: perfil, ligas, amigos, duelos
+npx wrangler d1 execute companion-ranking --remote --file=migrations/0003_perfil.sql    # 1.19: perfil personalizado
+npx wrangler d1 execute companion-ranking --remote --file=migrations/0004_prestigio.sql # 1.21: prestígio e nível até o 30
 ```
 
 Um banco novo usa só o `schema.sql` (já tem tudo).

@@ -65,6 +65,7 @@ const EV_TXT = {
   conq: (e) => `Conquista: ${e.name} (+${e.xp} XP)`, level: (e) => `Subiu para o nível ${e.level}!`,
   quest: () => "Desafio da semana cumprido!", quests_all: (e) => `Os 3 desafios da semana! (+${e.xp} XP)`, boss: (e) => `${e.icon} ${e.name} derrotado!`,
   reward: (e) => `Liberou ${KIND_LABEL[e.type] || ""}: ${e.name}`, event: (e) => `Evento ${e.name} completo!`,
+  prestige: (e) => `${e.label === "Mestre" ? "Mestre do Prestígio" : "Prestígio " + e.label}!`,
   set: (e) => `${e.icon} Conjunto ${e.name} completo! Liberou ${e.reward} (+${e.credits} créditos)`,
 };
 function onEvent(e) { const f = EV_TXT[e.kind]; if (f) toast(f(e)); }
@@ -93,7 +94,7 @@ function card(over = {}) {
   const show = (eq.show || []).map((id) => d.conq.find((c) => c.id === id)).filter(Boolean);
   const recent = [...got].sort((a, b) => (a.day < b.day ? 1 : -1)).slice(0, 3);
   const lg = RD.league && !RD.league.error ? RD.league : null;
-  return profileCard({ nick: RANK?.joined ? RANK.nick : "", level: d.level, title: nm(eq.title) || "Novato", frame: eq.frame, avatar: eq.avatar,
+  return profileCard({ nick: RANK?.joined ? RANK.nick : "", level: d.level, prestige: d.prestige, title: nm(eq.title) || "Novato", frame: eq.frame, avatar: eq.avatar,
     effect: eq.effect, bg: eq.bg, bio: eq.bio, lay: eq.lay, sub: d.streak ? `🔥 ${d.streak} dia${d.streak > 1 ? "s" : ""}` : "",
     stats: [[d.level, "nível"], [d.week_xp, "XP na semana"], [d.best_streak, "recorde"], [`${got.length}/${d.conq.length}`, "troféus"]],
     show: show.length ? `<div class="shrow">${show.map((c) => `<div class="cqt got">${trophy(c.tier, true)}<span>${esc(c.name)}</span></div>`).join("")}</div>` : "",
@@ -107,10 +108,10 @@ function renderSide() {
   // a cor de destaque vale no cartão (e na página: botões e barras)
   const acc = hover?.accent || eq.accent;
   accentApply($("me-card"), acc, eq.color);
-  const pct = Math.max(0, Math.min(100, ((d.xp - d.lvl_lo) / Math.max(1, d.lvl_hi - d.lvl_lo)) * 100));
-  $("me-xp").innerHTML = `<div class="pj-xprow"><span>${d.xp - d.lvl_lo} / ${d.lvl_hi - d.lvl_lo} XP para o nível ${d.level + 1}</span><span>+${d.today_xp} hoje</span></div>
+  const xl = xpLine(d), pct = xl.pct;
+  $("me-xp").innerHTML = `<div class="pj-xprow"><span>${esc(xl.text)}</span><span>+${d.today_xp} hoje</span></div>
     <div class="jg-bar"><i style="width:${pct}%"></i></div>
-    <div class="pj-chips"><span class="pj-chip cr"><i class="crcoin"></i>${d.credits.bal} créditos</span>
+    <div class="pj-chips">${d.prestige ? `<span class="pj-chip pr">${esc(prestName(d.prestige))}</span>` : ""}<span class="pj-chip cr"><i class="crcoin"></i>${d.credits.bal} créditos</span>
       ${d.mult > 1 ? `<span class="pj-chip hot">🔥 XP ×${String(d.mult).replace(".", ",")}</span>` : ""}${d.x2 ? '<span class="pj-chip x2">⚡ XP em dobro hoje</span>' : ""}
       <span class="pj-chip">${"❄".repeat(d.freezes) || "–"} congelamento${d.freezes === 1 ? "" : "s"}</span></div>
     ${hover ? '<p class="hint pj-hov">Prévia: é assim que fica no seu cartão.</p>' : ""}`;
@@ -143,7 +144,8 @@ function tabPerfil() {
   const free = d.rewards.find((r) => r.id === "a_livre")?.got;
   const nm = (k) => d.rewards.find((r) => r.id === eq[k])?.name || "";
   const cur = ["title", "frame", "avatar", "bg", "effect", "accent", "sound"].map((k) => `<button class="pj-eqit" data-goto="${k}"><small>${KIND_PLURAL[k]}</small><b>${esc(nm(k))}</b></button>`).join("");
-  return `<section class="box"><h2>Seu cartão</h2><p class="hint">Aparece no app, aqui ao lado e para quem abre o seu perfil no ranking. Clique num item para trocar.</p>
+  return `${d.prestige_max != null ? `<section class="box"><h2>Prestígio</h2>${prestigeBox(d)}</section>` : ""}
+    <section class="box"><h2>Seu cartão</h2><p class="hint">Aparece no app, aqui ao lado e para quem abre o seu perfil no ranking. Clique num item para trocar.</p>
       <div class="pj-eq">${cur}<button class="pj-eqit" data-goto="theme"><small>Tema do app</small><b>${esc(VAR_NAME[(LAY.skin || "fallout") + ":" + (LAY.theme || "")] ? (THEMES.find((t) => t.id === LAY.skin)?.name + " · " + VAR_NAME[LAY.skin + ":" + LAY.theme]) : (THEMES.find((t) => t.id === LAY.skin)?.name || "Fallout"))}</b></button></div></section>
     <section class="box"><h2>Frase</h2><p class="hint">Até 60 letras. Vai para o ranking (passa por um filtro de palavrões).</p>
       <div class="row"><input type="text" id="pf-bio" maxlength="60" value="${esc(eq.bio || "")}" placeholder="Ex.: só mais uma partida" style="max-width:420px"><button class="pri" id="pf-bio-ok">Salvar</button></div></section>
@@ -153,7 +155,23 @@ function tabPerfil() {
     ${free ? `<section class="box"><h2>Cor livre</h2><p class="hint">Vale quando a cor de destaque é <b>Cor livre</b>${eq.accent === "a_livre" ? "" : " (equipe em Coleção › Cor de destaque)"}.</p>
       <div class="row"><input type="color" id="pf-color" value="${esc(eq.color || "#4c8dff")}"><span class="hint" style="margin:0">${esc(eq.color || "")}</span></div></section>` : ""}
     ${retroBox()}
+    <section class="box"><h2>Cartão para lives (OBS)</h2><p class="hint">No OBS: <b>Fontes › + › Navegador</b>, cole o link e use largura 440 e altura 200
+      (com blocos, 440 × 420). O fundo é transparente e o cartão muda sozinho quando você troca algo. Só funciona neste PC.</p>
+      <div class="row"><label class="chk"><input type="checkbox" id="obs-bl"> Com blocos (frase, números, vitrine)</label>
+        <button class="pri" id="obs-copy">Copiar link</button><button id="obs-open">Ver</button></div></section>
     ${vitrine()}`;
+}
+// prestigiar (1.21): confirmação numa janela
+function prestigeConfirm() {
+  const d = CQ; if (!d?.can_prestige) return;
+  const n = d.prestige + 1, nx = (d.prestige_next || []).map((id) => d.rewards.find((r) => r.id === id)).filter(Boolean);
+  openModal(`<h2 style="margin:0 0 10px">${esc(prestName(n))}</h2>
+    <p class="pj-how"><b>O que acontece:</b> o seu nível volta a 1 e aparece <b>${esc(prestLabel(n))}</b> ao lado dele, aqui, no celular e no ranking.
+      Tudo o que você já liberou continua seu: itens, vitrine de 6 lugares, cor livre e créditos.</p>
+    ${nx.length ? `<p class="pj-how"><b>Você ganha:</b> ${nx.map((r) => esc(r.name)).join(" · ")}</p>` : ""}
+    <div class="row"><button class="pri" id="pr-ok">Prestigiar</button><button id="pr-no">Agora não</button></div>`);
+  $("pr-no").onclick = closeModal;
+  $("pr-ok").onclick = async () => { if (await act("conq.prestige", { confirm: true }, `${prestName(n)}!`)) closeModal(); };
 }
 // retrospectiva: abre na prévia do celular ao lado (é lá que ficam as "stories" e a imagem para compartilhar)
 function retroBox() {
@@ -223,8 +241,7 @@ function itemModal(r) {
   const inShop = r.shop && d.shop.items.includes(r.id);
   const prev = profKinds.includes(r.kind) ? `<div id="im-card">${card({ [r.kind]: r.id })}</div>`
     : r.kind === "theme" ? themeTile(r) : `<div class="pj-bigprev">${itemPreview(r, d.level, d.equip)}</div>`;
-  const how = r.got ? "Já é seu." : r.req ? `Chegue ao nível ${r.req} (você está no ${d.level}).` : r.shop ? `Loja da semana: ${r.price} créditos.${inShop ? "" : " Não está na loja agora; ela muda toda segunda."}`
-    : r.event ? `Complete o evento ${EVENT_NAME[r.event] || r.event}.` : r.set ? `Complete o conjunto ${SET_NAME[r.set] || r.set} (Coleção › Conjuntos).` : `Ganhe a conquista ${r.conq}.`;
+  const how = howText(r, d);
   openModal(`<div class="rar-${r.rarity}"><span class="rartag">${RARITY[r.rarity]}</span> <span class="hint">${esc(KIND_LABEL[r.kind])}${r.anim ? " · animado" : ""}</span></div>
     <h2 style="margin:6px 0 12px">${esc(r.name)}</h2>${prev}
     <p class="pj-how"><b>Como liberar:</b> ${esc(how)}</p>
@@ -339,7 +356,7 @@ async function loadRankTab(force) {
 function rkRow(r, right, cls = "") {
   const t = CQ.rewards.find((x) => x.id === r.title)?.name || "";
   return `<li class="${cls}${r.me || r.nick === RANK?.nick ? " me" : ""}"><span class="rkpos">${r.pos ?? ""}</span>
-    <button class="rknick" data-pf="${esc(r.nick)}">${badge(r.level, r.frame, "sm", r.av)}${fxName(r.nick, r.fx)}</button>
+    <button class="rknick" data-pf="${esc(r.nick)}">${badge(r.level, r.frame, "sm", r.av, r.prestige)}${fxName(r.nick, r.fx)}</button>
     <small>${t ? esc(t) + " · " : ""}nível ${r.level}${r.extra ? " · " + r.extra : ""}</small><b>${right}</b></li>`;
 }
 function tabRanking() {
@@ -394,7 +411,7 @@ async function openProfile(nick) {
   const pf = p.pf || {}, mine = p.nick === RANK?.nick, follows = (RD.friends?.rows || []).some((r) => r.nick === p.nick);
   const show = p.show.map((id) => CQ.conq.find((c) => c.id === id)).filter(Boolean);
   const nm = CQ.rewards.find((x) => x.id === p.title)?.name || "Novato";
-  $("modal-body").innerHTML = `<div id="pf-other">${profileCard({ nick: p.nick, level: p.level, title: nm, frame: p.frame, avatar: pf.av, effect: pf.fx, bg: pf.bg,
+  $("modal-body").innerHTML = `<div id="pf-other">${profileCard({ nick: p.nick, level: p.level, prestige: p.prestige, title: nm, frame: p.frame, avatar: pf.av, effect: pf.fx, bg: pf.bg,
       bio: pf.bio, lay: pf.lay || ["stats", "show"], sub: p.streak ? `🔥 ${p.streak} dias` : "",
       stats: [[p.level, "nível"], [p.week_xp, "XP na semana"], [p.best_streak ?? p.streak, "recorde"], [p.unlocked, "troféus"]],
       show: show.length ? `<div class="shrow">${show.map((c) => `<div class="cqt got">${trophy(c.tier, true)}<span>${esc(c.name)}</span></div>`).join("")}</div>` : '<p class="hint">Nada na vitrine.</p>',
@@ -436,6 +453,12 @@ function bindBody() {
   }));
   B.querySelectorAll("#pj-filter [data-f]").forEach((b) => (b.onclick = () => { FILTER = b.dataset.f; renderBody(); }));
   B.querySelectorAll("[data-cq]").forEach((b) => (b.onclick = () => trophyModal(+b.dataset.cq)));
+  if ($("pr-go")) $("pr-go").onclick = () => prestigeConfirm();
+  if ($("obs-copy")) {
+    const url = async () => { const { token, port } = await send("conq.card"); return `http://127.0.0.1:${port}/cartao${$("obs-bl").checked ? "?blocos=1" : ""}#t=${token}`; };
+    $("obs-copy").onclick = async () => { try { await navigator.clipboard.writeText(await url()); toast("Link copiado: cole no OBS"); } catch (e) { toast(e.message, "bad"); } };
+    $("obs-open").onclick = async () => { try { window.open(await url(), "_blank", "width=480,height=460"); } catch (e) { toast(e.message, "bad"); } };
+  }
   if ($("pj-retro-go")) $("pj-retro-go").onclick = () => { pvPost({ pcc: "retro", id: $("pj-retro").value }); toast("Abrindo na prévia do celular"); };
   // perfil
   if ($("pf-bio-ok")) {
