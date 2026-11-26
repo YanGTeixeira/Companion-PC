@@ -8,7 +8,14 @@ async function loadRank(force) {
   renderRank();
   if (rankSt.joined && (force || !rankData[rankKind])) loadBoard();
 }
-function onRank(d) { rankSt = d; rankData = {}; if (vis("conq")) loadRank(true); }
+// aviso do PC: só recarrega se a conta mudou (entrou, saiu, trocou o apelido, ou apareceu/sumiu um erro)
+function onRank(d) {
+  const changed = !rankSt || d.joined !== rankSt.joined || d.nick !== rankSt.nick || d.error !== rankSt.error;
+  rankSt = d;
+  if (!changed) return;
+  rankData = {};
+  if (vis("conq")) loadRank(true); else renderRank();
+}
 async function loadBoard() {
   const kind = rankKind;
   try { rankData[kind] = await send("rank.board", { kind }, true, 20000); }

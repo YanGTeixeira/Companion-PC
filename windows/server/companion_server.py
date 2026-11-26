@@ -507,7 +507,7 @@ ASYNC_ACTIONS = {
     "rank.join": lambda p: rank_join(p),
     "rank.nick": lambda p: rank_call(RANK.set_nick, str(p.get("nick") or "")),
     "rank.leave": lambda p: rank_call(RANK.leave),
-    "rank.board": lambda p: rank_call(RANK.board, str(p.get("kind") or "week")),
+    "rank.board": lambda p: rank_call(RANK.board, str(p.get("kind") or "week"), changes=False),
     "steam.set": lambda p: steam_set(p),
     "steam.get": lambda p: _async({**STEAM_STATE, "steamid": STEAM.steamid()}),
     "stratz.get": lambda p: _async(stratz_public()),
@@ -1693,13 +1693,15 @@ CONQ_KICK = asyncio.Event()
 RANK = ranking.Ranking(CFG.setdefault("ranking", {}), lambda c: save_cfg_key("ranking", c))
 
 
-async def rank_call(fn, *a):
-    """Ações do ranking (rede): erro vira mensagem para o celular; o estado novo vai para todos."""
+async def rank_call(fn, *a, changes=True):
+    """Ações do ranking (rede): erro vira mensagem para o celular. Se a ação muda a conta (entrar, sair,
+    apelido), o estado novo vai para todos; ler o ranking não avisa ninguém (senão o app recarrega sem parar)."""
     try:
         res = await asyncio.to_thread(fn, *a)
     except ranking.RankError as e:
         raise ValueError(str(e)) from None
-    await broadcast({"t": "rank", "d": RANK.state()})
+    if changes:
+        await broadcast({"t": "rank", "d": RANK.state()})
     return res
 
 
