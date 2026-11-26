@@ -1,4 +1,4 @@
 {
-  "version": "1.17.1",
-  "notes": "Corrige o servidor que não abria depois de atualizar para a 1.17"
+  "version": "1.17.2",
+  "notes": "Corrige o ranking que ficava em \"Carregando...\""
 }
