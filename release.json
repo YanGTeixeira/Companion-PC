@@ -1,4 +1,4 @@
 {
-  "version": "1.18.1",
-  "notes": "Corrige o botão Status, que abria o Resumo do Jogador"
+  "version": "1.18.2",
+  "notes": "Corrige o celular que continuava com o app antigo depois de atualizar o PC"
 }
