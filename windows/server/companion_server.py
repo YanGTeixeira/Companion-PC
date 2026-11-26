@@ -504,7 +504,7 @@ ASYNC_ACTIONS = {
     "conq.get": lambda p: _async(CONQ.state()),
     "retro.get": lambda p: asyncio.to_thread(retro_get, p),
     "rank.state": lambda p: _async(RANK.state()),
-    "rank.join": rank_join,
+    "rank.join": lambda p: rank_join(p),
     "rank.nick": lambda p: rank_call(RANK.set_nick, str(p.get("nick") or "")),
     "rank.leave": lambda p: rank_call(RANK.leave),
     "rank.board": lambda p: rank_call(RANK.board, str(p.get("kind") or "week")),
