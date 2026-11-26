@@ -57,6 +57,9 @@ function cleanNav(nav, known) {
   if (!seen.has("sys")) (out.at(-1) || out[out.push({ id: "pc", label: "PC", views: [] }) - 1]).views.push("sys");
   return out.length ? out : DEFAULT_NAV;
 }
+// última aba aberta na seção, se ela ainda for dessa seção (na 1.18 o Resumo saiu do Status e foi para Jogador:
+// o "último do Status" guardado no aparelho mandava o botão Status para o Jogador)
+const lastIn = (sec) => (SECTIONS[sec] || []).some(([v]) => v === lastView[sec]) ? lastView[sec] : null;
 function buildSections() {
   const L = LAYOUT[orient()] || {};
   NAV = cleanNav(L.nav || DEFAULT_NAV, L.known);
@@ -74,7 +77,7 @@ function buildSections() {
   for (const sec of NAV) {
     const b = document.createElement("button");
     b.className = "nb"; b.dataset.sec = sec.id; b.textContent = sec.label;
-    b.onclick = () => { buzz(8); showView(lastView[sec.id] && VIEWS.includes(lastView[sec.id]) ? lastView[sec.id] : SECTIONS[sec.id][0][0]); };
+    b.onclick = () => { buzz(8); showView(lastIn(sec.id) || SECTIONS[sec.id][0][0]); };
     nav.appendChild(b);
   }
   applyDashLayout(L.dash);
@@ -132,7 +135,7 @@ function setLive(view, label, on, real = true) {
   if (!!LIVE[view] === on) return;
   if (on) LIVE[view] = label; else delete LIVE[view];
   buildSections();
-  if (!on && prefs.tab === view) { const home = secOf("dash"); showView(lastView[home] && lastView[home] !== view && VIEWS.includes(lastView[home]) ? lastView[home] : "dash", true); }
+  if (!on && prefs.tab === view) { const home = secOf("dash"); showView(lastIn(home) && lastView[home] !== view ? lastView[home] : "dash", true); }
   else showView(prefs.tab, true);
 }
 function applyLayout(l, fromServer) {
