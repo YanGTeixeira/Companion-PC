@@ -3,11 +3,12 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 // mesmos nomes do app (index.html)
-const VIEW_LABEL = { dash: "Sistema", today: "Hoje", conq: "Conquistas", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
+const VIEW_LABEL = { dash: "Sistema", today: "Hoje", conq: "Resumo", quests: "Desafios", troph: "Troféus", inv: "Recompensas", rank: "Ranking", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
   screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes" };
 const BASE_VIEWS = Object.keys(VIEW_LABEL);
 const DEFAULT_NAV = [
-  { id: "status", label: "Status", views: ["dash", "today", "conq", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
+  { id: "status", label: "Status", views: ["dash", "today", "games", "usage"] },
+  { id: "xp", label: "Jogador", views: ["conq", "quests", "troph", "inv", "rank"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
   { id: "ctrl", label: "Controle", views: ["mouse", "screen"] }, { id: "deck", label: "Botões", views: ["deck"] },
   { id: "pc", label: "PC", views: ["send", "power", "voz", "sys"] }];
 const CARD_LABEL = { cpu: "CPU", ram: "Memória", gpu: "GPU", net: "Rede", procs: "Processos", disks: "Discos", bat: "Bateria", sys: "Sistema" };
@@ -17,7 +18,8 @@ const DEFAULT_DASH = {
 };
 const COLS = { portrait: 2, landscape: 4 };
 // telas e seus blocos (data-b no index.html); cada grupo é um conjunto de irmãos que dá para reordenar
-const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["today", "Hoje"], ["conq", "Conquistas"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
+const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["today", "Hoje"], ["conq", "Jogador: Resumo"], ["quests", "Jogador: Desafios"],
+  ["troph", "Jogador: Troféus"], ["inv", "Jogador: Recompensas"], ["rank", "Jogador: Ranking"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
   ["mix", "Mixer"], ["mouse", "Mouse e teclado"], ["send", "Arquivos"], ["power", "Energia"], ["voz", "Voz"], ["sys", "Ajustes"]];
 const BLOCKS = {
   play: [{ wide: 1, items: [["hero", "Jogo (capa, tempo e atalhos)"], ["perf", "Desempenho e FPS"], ["gsi", "Partida (CS2 / Dota 2)"], ["post", "Fim de partida (comparação)"], ["agora", "Dota: próximo item, skill e talento"], ["tact", "Timers do Dota / bomba e economia do CS"], ["dota", "Dota 2: draft e build"], ["graph", "Gráficos do Dota / rounds do CS"]] },
@@ -26,7 +28,11 @@ const BLOCKS = {
     { title: "Botões da reunião", items: [["m-mic", "Microfone"], ["m-cam", "Câmera"], ["m-share", "Compartilhar tela"], ["m-hand", "Levantar a mão"],
       ["m-captions", "Legendas"], ["m-chat", "Chat"], ["m-focus", "Mostrar no PC"], ["m-leave", "Sair"]] }],
   today: [{ wide: 1, items: [["weather", "Clima"], ["agenda", "Agenda"], ["day", "Seu dia (resumo)"], ["focus", "Foco"]] }],
-  conq: [{ wide: 1, items: [["level", "Nível e sequência"], ["metas", "Metas de hoje"], ["conq", "Conquistas (troféus)"], ["rank", "Ranking online"], ["retro", "Retrospectiva do mês"]] }],
+  conq: [{ wide: 1, items: [["level", "Jogador (nível, título e sequência)"], ["metas", "Metas de hoje"], ["retro", "Retrospectiva do mês"]] }],
+  quests: [{ wide: 1, items: [["week", "Desafios da semana"], ["boss", "Chefão da semana"]] }],
+  troph: [{ wide: 1, items: [["show", "Vitrine"], ["conq", "Conquistas (troféus)"]] }],
+  inv: [{ wide: 1, items: [["next", "Próximas recompensas"], ["title", "Títulos"], ["frame", "Molduras"], ["sound", "Som das conquistas"], ["theme", "Temas"], ["alerts", "Avisos"]] }],
+  rank: [{ wide: 1, items: [["rank", "Ranking (liga, amigos, duelos, geral)"]] }],
   games: [{ wide: 1, items: [["now", "Jogo atual"], ["recent", "Jogados recentemente"], ["week", "Esta semana"], ["post", "Fim de partida"], ["dl", "Downloads da Steam"], ["friends", "Amigos da Steam"], ["dota", "Dota 2: draft e build"], ["hist", "Partidas (CS2 / Dota 2)"], ["lib", "Biblioteca"]] }],
   usage: [{ items: [["range", "Hoje / Semana / Mês"]] }, { wide: 1, items: [["total", "Total, gráfico e categorias"], ["apps", "Por aplicativo"]] }],
   media: [{ items: [["art", "Capa"], ["info", "Música e artista"], ["prog", "Barra de progresso"], ["ctrls", "Anterior / tocar / próxima"], ["vol", "Volume"], ["out", "Saída de áudio"]] }],
@@ -46,15 +52,15 @@ const NOTES = {
 };
 let SCR = "dash";
 const THEMES = [
-  { id: "fallout", name: "Fallout", desc: "Terminal de fósforo", font: "VT323", crt: true, variants: [["green", "#040d07", "#5cff8a", "#1c7a3d"], ["amber", "#0c0703", "#ffbf47", "#8a5a17"], ["cyan", "#030b0d", "#7cf4ff", "#1b6f7a"], ["blue", "#030a10", "#8fd3ff", "#23597a"], ["white", "#07090a", "#e8f0f2", "#5e6a6e"]] },
-  { id: "synth", name: "Synthwave", desc: "Neon rosa e ciano", font: "Orbitron", crt: true, variants: [["neon", "#0d0518", "#ff4fd8", "#3ef0ff"], ["sunset", "#140818", "#ff6b9d", "#ffb347"], ["ice", "#050b1a", "#4d7cff", "#7df9ff"]] },
-  { id: "minimal", name: "Minimal", desc: "Limpo e moderno", font: "Inter", variants: [["dark", "#171a20", "#eef1f5", "#4c8dff"], ["light", "#f3f5f8", "#15181d", "#2563eb"], ["amoled", "#000000", "#f1f1f1", "#4c8dff"]] },
+  { id: "fallout", name: "Fallout", desc: "Terminal de fósforo", font: "VT323", crt: true, variants: [["green", "#040d07", "#5cff8a", "#1c7a3d"], ["amber", "#0c0703", "#ffbf47", "#8a5a17"], ["cyan", "#030b0d", "#7cf4ff", "#1b6f7a"], ["blue", "#030a10", "#8fd3ff", "#23597a"], ["white", "#07090a", "#e8f0f2", "#5e6a6e"], ["red", "#0d0403", "#ff6b5e", "#82271f"]] },
+  { id: "synth", name: "Synthwave", desc: "Neon rosa e ciano", font: "Orbitron", crt: true, variants: [["neon", "#0d0518", "#ff4fd8", "#3ef0ff"], ["sunset", "#140818", "#ff6b9d", "#ffb347"], ["ice", "#050b1a", "#4d7cff", "#7df9ff"], ["gold", "#120b02", "#ffc94d", "#ff7a1a"]] },
+  { id: "minimal", name: "Minimal", desc: "Limpo e moderno", font: "Inter", variants: [["dark", "#171a20", "#eef1f5", "#4c8dff"], ["light", "#f3f5f8", "#15181d", "#2563eb"], ["amoled", "#000000", "#f1f1f1", "#4c8dff"], ["purple", "#110e1a", "#efeaff", "#8b5cf6"]] },
   { id: "hud", name: "Cockpit", desc: "HUD laranja e branco", font: "Rajdhani", variants: [["orange", "#0a0e12", "#eef3f7", "#ff8a1f"], ["aviation", "#04080a", "#ffb000", "#3fd3ff"]] },
   { id: "lcd", name: "LCD 8-bit", desc: "Tela de pixel verde", font: "Press Start 2P", variants: [["olive", "#a4b465", "#1f2a10", "#5b6c32"]] },
   { id: "paper", name: "Papel", desc: "E-ink, preto no creme", font: "Playfair Display", variants: [["cream", "#f2ede2", "#161514", "#8a857a"]] },
   { id: "pocket", name: "Portátil", desc: "4 tons, tela de bolso", font: "Pixelify Sans", variants: [["dmg", "#9bbc0f", "#0f380f", "#306230"], ["gray", "#c4c4b2", "#22221e", "#6e6e63"]] },
   { id: "code", name: "Código", desc: "Editor escuro, cores de sintaxe", font: "JetBrains Mono", variants: [["dark", "#1e1e1e", "#4ec9b0", "#c586c0"], ["mocha", "#1e1e2e", "#94e2d5", "#cba6f7"]] },
-  { id: "rpg", name: "Fantasia", desc: "Pedra, ouro e moldura", font: "Cinzel", variants: [["stone", "#13100d", "#d9ad4f", "#b3302a"], ["crimson", "#120a0b", "#e8c06a", "#c23b32"]] },
+  { id: "rpg", name: "Fantasia", desc: "Pedra, ouro e moldura", font: "Cinzel", variants: [["stone", "#13100d", "#d9ad4f", "#b3302a"], ["crimson", "#120a0b", "#e8c06a", "#c23b32"], ["emerald", "#0a110d", "#d9ad4f", "#2fbf71"]] },
   { id: "tac", name: "Tático", desc: "Mapa de missão", font: "Chakra Petch", variants: [["olive", "#171a14", "#dadccf", "#ff7a1a"], ["urban", "#121519", "#dfe3e8", "#ffb020"]] },
   { id: "jp", name: "Japão", desc: "Washi, sakura e carimbo", font: "Zen Maru Gothic", variants: [["sakura", "#f7f1e8", "#d94f78", "#c8372d"], ["night", "#0e0f24", "#6ee7ff", "#ff5c8a"]] },
   { id: "exec", name: "Executivo", desc: "Marinho e champanhe", font: "Cormorant Garamond", variants: [["navy", "#0b1220", "#eef0f4", "#c9a961"], ["ivory", "#f6f3ec", "#1c1f26", "#9c7b3c"], ["black", "#0a0a0a", "#f2f2f2", "#c9a961"]] },
@@ -81,10 +87,11 @@ function connect() {
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     if (msg.t === "welcome" && msg.web && WEB && msg.web !== WEB) { location.reload(); return; }   // servidor atualizado: pega o editor novo
-    if (msg.t === "welcome") { WEB = WEB || msg.web; LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); loadDaily(); loadSteam(); loadStratz(); mountPreviews(); }
+    if (msg.t === "welcome") { WEB = WEB || msg.web; LAY = msg.layout || {}; $("login").hidden = true; $("app").hidden = false; status("ok", "Conectado · tudo salvo"); renderAll(); loadDeck(); loadDaily(); loadSteam(); loadStratz(); loadConq(); mountPreviews(); }
     else if (msg.t === "res") { const p = pending.get(msg.id); if (p) { pending.delete(msg.id); msg.ok ? p.res(msg.d) : p.rej(new Error(msg.e)); } }
     else if (msg.t === "layout" && !saveT) { LAY = msg.d || {}; renderAll(); }
     else if (msg.t === "deck" && msg.d) { DECK = msg.d.deck; renderDeck(); }
+    else if (msg.t === "conq" && msg.d) { CQ = msg.d; renderConq(); }
   };
   ws.onclose = (e) => {
     ws = null;
@@ -109,8 +116,18 @@ function save() {
 // ------------------------------------------------------------ modelo
 const LEGACY_VIEWS = ["dash", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"];
 // abas novas (que o layout salvo ainda não conhecia) entram na seção padrão delas, como no app
+const XP_VIEWS = ["conq", "quests", "troph", "inv", "rank"];
+function migrateXp(nav, known) {   // igual ao layout.js: menu salvo antes da 1.18 ganha a seção Jogador
+  const k = new Set(known || LEGACY_VIEWS);
+  if (k.has("quests") || nav.some((s) => s.id === "xp")) return nav;
+  const at = nav.findIndex((s) => s.views.includes("conq"));
+  const views = at >= 0 || !k.has("conq") ? XP_VIEWS : XP_VIEWS.slice(1);
+  nav = nav.map((s) => ({ ...s, views: s.views.filter((v) => !XP_VIEWS.includes(v)) })).filter((s) => s.views.length);
+  nav.splice(at >= 0 ? Math.min(at + 1, nav.length) : Math.min(1, nav.length), 0, { id: "xp", label: "Jogador", views });
+  return nav;
+}
 function navOf(o) {
-  const nav = clone(LAY[o]?.nav || DEFAULT_NAV);
+  const nav = migrateXp(clone(LAY[o]?.nav || DEFAULT_NAV), LAY[o]?.known);
   const k = new Set(LAY[o]?.known || LEGACY_VIEWS), used = new Set(nav.flatMap((s) => s.views));
   for (const v of BASE_VIEWS) {
     if (used.has(v) || k.has(v)) continue;
@@ -216,7 +233,7 @@ function renderThemes() {
     const [, bg, fg, acc] = v;
     return `<div class="thm${t.id === skin ? " on" : ""}" data-skin="${t.id}" style="background:${bg};color:${fg}">
       <span class="tn" style="font-family:'${t.font}';font-size:${t.id === "lcd" ? 12 : 20}px">${t.name}</span><small>${t.desc}</small>
-      ${t.variants.length > 1 ? `<div class="vars">${t.variants.map(([id, b, f]) => `<button data-var="${id}" class="${t.id === skin && id === (theme || t.variants[0][0]) ? "on" : ""}" style="background:${id === "light" || id === "dark" ? b : f}" title="${id}"></button>`).join("")}</div>` : ""}
+      ${t.variants.length > 1 ? `<div class="vars">${t.variants.map(([id, b, f]) => { const lk = themeLock(t.id, id); return `<button data-var="${id}" class="${t.id === skin && id === (theme || t.variants[0][0]) ? "on" : ""}${lk ? " lock" : ""}" style="background:${id === "light" || id === "dark" ? b : f}" title="${esc(VAR_NAME[id] || id)}${lk ? " · libera no " + esc(lk) : ""}">${lk ? "🔒" : ""}</button>`; }).join("")}</div>` : ""}
       <div class="bars"><i style="background:${fg}"></i><i style="background:${acc}"></i><i style="background:${fg};opacity:.4"></i></div></div>`;
   }).join("");
   const t = THEMES.find((x) => x.id === skin) || THEMES[0];
@@ -227,6 +244,7 @@ $("themes").onclick = (e) => {
   const card = e.target.closest(".thm"); if (!card) return;
   const t = THEMES.find((x) => x.id === card.dataset.skin);
   const v = e.target.closest("[data-var]")?.dataset.var;
+  if (v && themeLock(t.id, v)) { status("bad", `Esse tema libera no ${themeLock(t.id, v)} (Jogador › Recompensas)`); return; }
   LAY.skin = t.id; LAY.theme = v || (LAY.skin === t.id && t.variants.some(([id]) => id === LAY.theme) ? LAY.theme : t.variants[0][0]);
   renderThemes(); save();
 };
@@ -240,7 +258,7 @@ function renderAuto() {
   $("au-from").value = tm.from || "19:00"; $("au-to").value = tm.to || "07:00";
   $("au-game").checked = !!gm.on; $("au-dota").value = gm.dota2 || "rpg:stone"; $("au-cs").value = gm.cs2 || "tac:olive";
 }
-const VAR_NAME = { green: "Verde", amber: "Âmbar", cyan: "Ciano", blue: "Azul", white: "Branco", neon: "Neon", sunset: "Pôr do sol", ice: "Gelo", dark: "Escuro", light: "Claro", amoled: "Preto (AMOLED)",
+const VAR_NAME = { red: "Vermelho", gold: "Ouro", purple: "Roxo", emerald: "Esmeralda", green: "Verde", amber: "Âmbar", cyan: "Ciano", blue: "Azul", white: "Branco", neon: "Neon", sunset: "Pôr do sol", ice: "Gelo", dark: "Escuro", light: "Claro", amoled: "Preto (AMOLED)",
   orange: "Laranja", aviation: "Aviônica", olive: "Oliva", cream: "Creme", dmg: "Verde", gray: "Cinza", mocha: "Mocha", stone: "Pedra", crimson: "Carmim", urban: "Urbano", sakura: "Sakura", night: "Noite em Tóquio", navy: "Marinho", ivory: "Marfim", black: "Preto" };
 function saveAuto() {
   LAY.auto = { time: { on: $("au-time").checked, day: $("au-day").value, night: $("au-night").value, from: $("au-from").value || "19:00", to: $("au-to").value || "07:00" },
@@ -544,3 +562,38 @@ function preview(view) {
 }
 
 connect();
+
+// ------------------------------------------------------------ Jogador (1.18): o mesmo da seção Jogador do app
+let CQ = null;
+const CQ_HM = (s) => (s < 3600 ? `${Math.round(s / 60)} min` : `${Math.floor(s / 3600)}h${String(Math.round((s % 3600) / 60)).padStart(2, "0")}`);
+const CQ_FMT = (unit, v) => (unit === "dur" ? CQ_HM(v) : unit === "min" ? CQ_HM(v * 60) : String(Math.round(v)));
+function themeLock(skin, v) {
+  const r = CQ?.rewards?.find((x) => x.id === `${skin}:${v}`);
+  return r && !r.got ? (r.req ? `nível ${r.req}` : `conquista ${r.conq}`) : "";
+}
+async function loadConq() { try { CQ = await send("conq.get"); renderConq(); renderThemes(); } catch {} }
+function renderConq() {
+  const box = $("jg-body"); if (!box || !CQ) return;
+  const d = CQ, eq = d.equip || {}, nm = (id) => d.rewards.find((r) => r.id === id)?.name || "";
+  const pct = Math.max(0, Math.min(100, ((d.xp - d.lvl_lo) / Math.max(1, d.lvl_hi - d.lvl_lo)) * 100));
+  const sel = (kind) => `<select data-eq="${kind}">${d.rewards.filter((r) => r.kind === kind).map((r) =>
+    `<option value="${esc(r.id)}"${r.id === eq[kind] ? " selected" : ""}${r.got ? "" : " disabled"}>${esc(r.name)}${r.got ? "" : ` (${r.req ? "nível " + r.req : esc(r.conq)})`}</option>`).join("")}</select>`;
+  const w = d.week, b = w?.boss;
+  box.innerHTML = `<div class="jg-top"><span class="jg-badge ${esc(eq.frame || "")}"><b>${d.level}</b></span>
+      <div><div class="jg-title">${esc(nm(eq.title) || "Novato")}</div>
+        <div class="hint" style="margin:2px 0">${d.xp - d.lvl_lo} / ${d.lvl_hi - d.lvl_lo} XP para o nível ${d.level + 1} · sequência ${d.streak} dia${d.streak === 1 ? "" : "s"}
+          ${d.mult > 1 ? ` · XP ×${String(d.mult).replace(".", ",")}` : ""}${d.x2 ? " · <b>XP em dobro hoje</b>" : ""} · ${"❄".repeat(d.freezes) || "sem"} congelamento${d.freezes === 1 ? "" : "s"}</div>
+        <div class="jg-bar"><i style="width:${pct}%"></i></div></div></div>
+    <div class="row" style="flex-wrap:wrap;gap:10px;margin:12px 0"><label>Título ${sel("title")}</label><label>Moldura ${sel("frame")}</label><label>Som ${sel("sound")}</label>
+      <label class="chk"><input type="checkbox" id="jg-ov"${d.pc_overlay !== false ? " checked" : ""}> Troféu no canto da tela do PC</label></div>
+    ${w ? `<h3 style="margin:10px 0 6px;font-size:14px">Semana ${esc(w.id.split("-W")[1])} · até ${new Date(w.end + "T12:00").toLocaleDateString("pt-BR")}</h3>
+      <ul class="jg-q">${w.quests.map((q) => `<li class="${q.day ? "ok" : ""}">${q.day ? "✓" : "○"} ${esc(q.text.replace("{t}", CQ_FMT(q.unit, q.target)))}
+        <span>${CQ_FMT(q.unit, q.value)} / ${CQ_FMT(q.unit, q.target)} · +${q.xp} XP</span></li>`).join("")}
+      <li class="${b.dead ? "ok" : ""}">${b.dead ? "✓" : b.icon} Chefão: ${esc(b.name)} <span>${b.dead ? "derrotado" : `${Math.max(0, b.hp - b.dmg)} / ${b.hp} HP`} · +${b.xp} XP</span></li></ul>` : ""}
+    <p class="hint" style="margin:10px 0 0">${d.conq.filter((c) => c.day).length} de ${d.conq.length} conquistas. Troféus, vitrine, ligas, amigos e duelos ficam no app do celular, na seção <b>Jogador</b>.</p>`;
+  box.querySelectorAll("[data-eq]").forEach((el) => (el.onchange = async () => {
+    try { CQ = await send("conq.equip", { kind: el.dataset.eq, id: el.value }); status("ok", "Conectado · tudo salvo"); renderConq(); }
+    catch (e) { status("bad", e.message); renderConq(); }
+  }));
+  $("jg-ov").onchange = async () => { try { CQ = await send("conq.cfg", { overlay: $("jg-ov").checked }); } catch (e) { status("bad", e.message); } };
+}

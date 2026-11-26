@@ -501,13 +501,23 @@ ASYNC_ACTIONS = {
     "matches.get": lambda p: asyncio.to_thread(matches_get, p),
     "daily.get": lambda p: _async(daily_public()),
     "day.summary": lambda p: asyncio.to_thread(day_summary, p),
-    "conq.get": lambda p: _async(CONQ.state()),
+    "conq.get": lambda p: _async(conq_view()),
+    "conq.equip": lambda p: conq_equip(p),
+    "conq.cfg": lambda p: conq_cfg(p),
     "retro.get": lambda p: asyncio.to_thread(retro_get, p),
     "rank.state": lambda p: _async(RANK.state()),
     "rank.join": lambda p: rank_join(p),
     "rank.nick": lambda p: rank_call(RANK.set_nick, str(p.get("nick") or "")),
     "rank.leave": lambda p: rank_call(RANK.leave),
     "rank.board": lambda p: rank_call(RANK.board, str(p.get("kind") or "week"), changes=False),
+    "rank.league": lambda p: rank_call(RANK.league, bool(p.get("force")), changes=False),
+    "rank.friends": lambda p: rank_call(RANK.friends, bool(p.get("force")), changes=False),
+    "rank.friend.add": lambda p: rank_call(RANK.friend_add, str(p.get("nick") or ""), changes=False),
+    "rank.friend.del": lambda p: rank_call(RANK.friend_del, str(p.get("nick") or ""), changes=False),
+    "rank.duels": lambda p: rank_duels(bool(p.get("force"))),
+    "rank.duel.new": lambda p: rank_call(RANK.duel_new, str(p.get("nick") or ""), changes=False),
+    "rank.duel.answer": lambda p: rank_call(RANK.duel_answer, p.get("id") or 0, bool(p.get("accept")), changes=False),
+    "rank.profile": lambda p: rank_call(RANK.profile, str(p.get("nick") or ""), changes=False),
     "steam.set": lambda p: steam_set(p),
     "steam.get": lambda p: _async({**STEAM_STATE, "steamid": STEAM.steamid()}),
     "stratz.get": lambda p: _async(stratz_public()),
@@ -881,7 +891,7 @@ async def meet_cmd(p):
         raise ValueError("não consegui trazer o Meet para a frente")
     await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"conq.get", "retro.get", "rank.state", "rank.board", "snd.get", "snd.state", "snd.mics", "snd.add", "snd.info", "snd.play", "snd.stop", "layout.get", "dota.plan.get", "dota.heroes", "dota.draft", "dota.build", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"conq.get", "retro.get", "rank.state", "rank.board", "rank.league", "rank.friends", "rank.duels", "rank.profile", "snd.get", "snd.state", "snd.mics", "snd.add", "snd.info", "snd.play", "snd.stop", "layout.get", "dota.plan.get", "dota.heroes", "dota.draft", "dota.build", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -1711,22 +1721,88 @@ async def rank_join(p):
     return st
 
 
+def conq_view():
+    """Estado das conquistas + ajustes que ficam no config.json."""
+    st = CONQ.state()
+    return st and {**st, "pc_overlay": bool(CFG.get("conq_overlay", True))}
+
+
+async def conq_equip(p):
+    kind = str(p.get("kind") or "")
+    await asyncio.to_thread(CONQ.equip, kind, p.get("ids") if kind == "show" else str(p.get("id") or ""))
+    await broadcast({"t": "conq", "d": conq_view()})
+    CONQ_KICK.set()          # o ranking recebe o título/moldura novos no próximo envio
+    return conq_view()
+
+
+async def conq_cfg(p):
+    if "overlay" in p:
+        save_cfg_key("conq_overlay", bool(p["overlay"]))
+    await broadcast({"t": "conq", "d": conq_view()})
+    return conq_view()
+
+
+DUELS_SEEN = {"in": None}   # convites de duelo já avisados (None: ainda não leu; o 1º não avisa)
+
+
+async def rank_duels(force=False):
+    data = await rank_call(RANK.duels, force, changes=False)
+    if await asyncio.to_thread(CONQ.set_duels_won, ranking.Ranking.duels_won(data)):
+        CONQ_KICK.set()      # venceu um duelo: pode liberar a conquista Duelista
+    pend = {d["id"]: d.get("nick") for d in data.get("rows") or [] if d.get("dir") == "in" and d.get("status") == "pending"}
+    if DUELS_SEEN["in"] is not None:
+        for did, nick in pend.items():
+            if did not in DUELS_SEEN["in"]:
+                await broadcast({"t": "event", "kind": "conq", "d": {"kind": "duel_in", "nick": nick}})
+    DUELS_SEEN["in"] = set(pend) | (DUELS_SEEN["in"] or set())
+    return data
+
+
+# aviso no canto da tela do PC (overlay.py) quando ganha algo
+CONQ_OVERLAY = {
+    "conq": lambda e: ("trophy", f"Conquista: {e['name']}", f"+{e['xp']} XP · {e['tier'].upper()}"),
+    "level": lambda e: ("level", f"Nível {e['level']}!", "Você subiu de nível"),
+    "boss": lambda e: ("quest", f"{e['name']} derrotado!", f"Chefão da semana · +{e['xp']} XP"),
+    "quests_all": lambda e: ("quest", "Desafios da semana completos!", f"+{e['xp']} XP de bônus"),
+    "quest": lambda e: ("quest", "Desafio da semana cumprido", f"+{e['xp']} XP"),
+    "reward": lambda e: ("level", f"Recompensa: {e['name']}", "Equipe em Jogador › Recompensas"),
+}
+
+
+def conq_overlay(e):
+    fn = CONQ_OVERLAY.get(e.get("kind"))
+    if not fn or not CFG.get("conq_overlay", True):
+        return
+    try:
+        kind, title, body = fn(e)
+        OVERLAY.show(kind, title, body, 5)
+    except Exception:  # noqa: BLE001
+        log.exception("aviso de conquista no PC")
+
+
 async def conq_loop():
     """Recalcula a cada minuto (ou logo depois de uma partida ou um foco) e avisa os celulares."""
-    sent = None
+    sent, duels_at = None, 0.0
     while True:
         try:
             st, ev = await asyncio.to_thread(CONQ.refresh)
             for e in ev:
                 log.info("conquistas: %s", e)
                 await broadcast({"t": "event", "kind": "conq", "d": e})
+                conq_overlay(e)
             if clients:
                 await retro_notice()
             await asyncio.to_thread(RANK.submit, CONQ.summary())     # a cada 15 min, se entrou no ranking
+            if RANK.joined and time.monotonic() - duels_at > 5 * 60:   # convites e duelos vencidos (conquista Duelista)
+                duels_at = time.monotonic()
+                try:
+                    await rank_duels()
+                except Exception:  # noqa: BLE001
+                    pass
             key = json.dumps(st, sort_keys=True)
             if key != sent:
                 sent = key
-                await broadcast({"t": "conq", "d": st})
+                await broadcast({"t": "conq", "d": conq_view()})
         except Exception:  # noqa: BLE001
             log.exception("conq_loop")
         try:

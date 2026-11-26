@@ -1,7 +1,8 @@
 """Ranking público (opcional): envia o resumo das conquistas para o servidor do ranking e busca as posições.
 
-O servidor é um Cloudflare Worker (pasta cloud/ranking). Só sai do PC: apelido, XP total e da semana, sequência
-e quantos troféus (Conquistas.summary). Nada de tempo de tela, apps ou horários. Sem e-mail nem senha: no
+O servidor é um Cloudflare Worker (pasta cloud/ranking). Só sai do PC: apelido, XP total e da semana, sequência,
+quantos troféus e (1.18) os ids do título, da moldura e da vitrine (Conquistas.summary). Nada de tempo de tela,
+apps ou horários. 1.18: ligas semanais, amigos (quem você segue) e duelos de XP da semana. Sem e-mail nem senha: no
 cadastro o servidor devolve um id e uma chave secreta, que ficam no config.json ("ranking").
 """
 import json
@@ -9,6 +10,7 @@ import logging
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 log = logging.getLogger("companion")
@@ -17,6 +19,7 @@ URL = "https://companion-ranking.yancubot.workers.dev"   # Worker de cloud/ranki
 UA = {"User-Agent": "CompanionPC", "Content-Type": "application/json"}
 SUBMIT_EVERY_S = 15 * 60
 BOARD_CACHE_S = 60
+SOCIAL_CACHE_S = 30
 KINDS = ("week", "level", "streak")
 
 
@@ -34,6 +37,7 @@ class Ranking:
         self.url = (url or self.cfg.get("url") or URL).rstrip("/")
         self.lock = threading.Lock()
         self._boards = {}             # kind -> (quando, dados)
+        self._social = {}             # "league" | "friends" | "duels" -> (quando, dados)
         self.last_submit = 0.0
         self.last_sent = None         # último resumo aceito (não reenvia igual)
         self.error = ""
@@ -103,6 +107,7 @@ class Ranking:
                 self.cfg.pop(k, None)
             self._save(dict(self.cfg))
         self._boards.clear()
+        self._social.clear()
         log.info("ranking: saiu e apagou a conta")
         return self.state()
 
@@ -113,6 +118,7 @@ class Ranking:
             return False
         body = {k: summary.get(k) or 0 for k in ("xp", "week_xp", "streak", "best_streak", "unlocked")}
         body["week"] = summary.get("week")
+        body.update(title=summary.get("title") or "", frame=summary.get("frame") or "", show=list(summary.get("show") or []))
         now = time.monotonic()
         if not force and (body == self.last_sent or now - self.last_submit < SUBMIT_EVERY_S):
             return False
@@ -131,6 +137,7 @@ class Ranking:
         self.error = ""
         self.last_sent = body
         self._boards.clear()
+        self._social.clear()
         return True
 
     def board(self, kind="week"):
@@ -150,3 +157,46 @@ class Ranking:
         data["you"] = self.cfg.get("nick", "")
         self._boards[kind] = (time.monotonic(), data)
         return data
+
+    # ------------------------------------------------------------ 1.18: liga, amigos, duelos e perfil
+    def _cached(self, key, fn, force=False):
+        hit = self._social.get(key)
+        if hit and not force and time.monotonic() - hit[0] < SOCIAL_CACHE_S:
+            return hit[1]
+        data = fn()
+        self._social[key] = (time.monotonic(), data)
+        return data
+
+    def _mut(self, key, data):
+        self._social[key] = (time.monotonic(), data)
+        return data
+
+    def league(self, force=False):
+        return self._cached("league", lambda: self._req("GET", "/v1/league", auth=True), force)
+
+    def friends(self, force=False):
+        return self._cached("friends", lambda: self._req("GET", "/v1/friends", auth=True), force)
+
+    def friend_add(self, nick):
+        return self._mut("friends", self._req("POST", "/v1/friends", {"nick": str(nick or "")[:40]}, auth=True))
+
+    def friend_del(self, nick):
+        q = urllib.parse.quote(str(nick or "")[:40])
+        return self._mut("friends", self._req("DELETE", f"/v1/friends?nick={q}", auth=True))
+
+    def duels(self, force=False):
+        return self._cached("duels", lambda: self._req("GET", "/v1/duels", auth=True), force)
+
+    def duel_new(self, nick):
+        return self._mut("duels", self._req("POST", "/v1/duels", {"nick": str(nick or "")[:40]}, auth=True))
+
+    def duel_answer(self, did, accept):
+        return self._mut("duels", self._req("POST", "/v1/duels/answer", {"id": int(did), "accept": bool(accept)}, auth=True))
+
+    def profile(self, nick):
+        return self._req("GET", "/v1/profile?nick=" + urllib.parse.quote(str(nick or "")[:40]))
+
+    @staticmethod
+    def duels_won(data):
+        """Ids dos duelos vencidos (para a conquista Duelista)."""
+        return [d["id"] for d in (data or {}).get("rows") or [] if d.get("res") == "won"]

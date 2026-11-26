@@ -63,8 +63,8 @@ function snd(kind) {
   } catch {}
 }
 let toastT;
-function toast(msg, kind = "") {
-  if (kind === "ok" || kind === "bad") snd(kind === "ok" ? "ok" : "err");
+function toast(msg, kind = "", sound = true) {
+  if (sound && (kind === "ok" || kind === "bad")) snd(kind === "ok" ? "ok" : "err");
   const t = $("toast"); t.textContent = msg; t.className = "toast " + kind;
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.add("hidden"), 2200);
 }

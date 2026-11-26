@@ -51,7 +51,7 @@ class RankingTest(unittest.TestCase):
         r = Fake({"id": "abc123456", "key": "k" * 43})
         self.assertTrue(r.submit(SUM, force=True))
         sent = r.calls[-1][2]
-        self.assertEqual(set(sent), {"xp", "week_xp", "streak", "best_streak", "unlocked", "week"})   # nada além disso
+        self.assertEqual(set(sent), {"xp", "week_xp", "streak", "best_streak", "unlocked", "week", "title", "frame", "show"})   # nada além disso
         self.assertFalse(r.submit(SUM))                 # igual e cedo: não envia
         self.assertFalse(r.submit({**SUM, "xp": 950}))  # diferente, mas antes de 15 min
         r.last_submit -= rk.SUBMIT_EVERY_S + 1
@@ -90,6 +90,21 @@ class RankingTest(unittest.TestCase):
         self.assertEqual(len(r.calls), n)               # cache de 60 s
         with self.assertRaises(rk.RankError):
             r.board("../x")
+
+
+    def test_amigos_duelos_e_cache(self):
+        r = Fake({"id": "abc123456", "key": "k" * 43, "nick": "Yan"})
+        r.replies[("GET", "/v1/duels")] = {"rows": [{"id": 3, "res": "won"}, {"id": 4, "res": "lost"}, {"id": 5, "res": None}]}
+        self.assertEqual(rk.Ranking.duels_won(r.duels()), [3])
+        n = len(r.calls)
+        r.duels()
+        self.assertEqual(len(r.calls), n)               # cache
+        r.duel_answer("3", True)
+        self.assertEqual(r.calls[-1], ("POST", "/v1/duels/answer", {"id": 3, "accept": True}))
+        r.friend_del("João Silva")
+        self.assertEqual(r.calls[-1][:2], ("DELETE", "/v1/friends"))
+        with self.assertRaises(rk.RankError):
+            Fake().league()                              # sem conta
 
 
 if __name__ == "__main__":

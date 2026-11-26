@@ -1,7 +1,8 @@
 # Ranking público do Companion PC
 
 Um Cloudflare Worker com banco D1 (grátis até 100 mil acessos/dia). O PC de cada pessoa envia só um resumo:
-apelido, XP total e da semana, sequência e quantos troféus (nada de tempo de tela, apps ou horários). Sem e-mail
+apelido, XP total e da semana, sequência, quantos troféus e os ids do título, da moldura e da vitrine (nada de
+tempo de tela, apps ou horários). Desde a 1.18 também tem ligas semanais, amigos (quem você segue) e duelos. Sem e-mail
 nem senha: no cadastro o servidor devolve uma chave secreta, que fica no `config.json` do PC; aqui fica só o hash.
 
 O servidor recusa números impossíveis (XP que diminui, XP demais por dia, semana errada), recalcula o nível e
@@ -26,7 +27,13 @@ Publicado em https://companion-ranking.yancubot.workers.dev (desde a 1.17).
 
 ## Atualizar
 
-`npx wrangler deploy` de novo. Mudanças no banco: um arquivo `.sql` novo com `wrangler d1 execute ... --remote`.
+`npx wrangler deploy` de novo. Mudanças no banco ficam em `migrations/` (rode cada uma uma vez, antes do deploy):
+
+```sh
+npx wrangler d1 execute companion-ranking --remote --file=migrations/0002_social.sql   # 1.18: perfil, ligas, amigos, duelos
+```
+
+Um banco novo usa só o `schema.sql` (já tem tudo).
 
 ## Testar
 

@@ -1,4 +1,4 @@
-"""Aviso flutuante no canto da tela do PC para os comandos de voz.
+"""Aviso flutuante no canto da tela do PC para os comandos de voz e (1.18) conquistas, nível e desafios.
 
 "PC" ouvido -> "Ouvindo..."; comando feito -> o que ele entendeu e o resultado.
 Janela sem borda, sempre por cima, que não rouba o foco (não atrapalha o
@@ -14,7 +14,8 @@ from ctypes import wintypes
 log = logging.getLogger("companion")
 
 BG, TEXT, DIM = "#14171c", "#e8ecf1", "#8a94a3"
-ACCENT = {"wake": "#3498db", "ok": "#2ecc71", "err": "#e74c3c"}
+ACCENT = {"wake": "#3498db", "ok": "#2ecc71", "err": "#e74c3c", "trophy": "#f0b446", "level": "#a66bff", "quest": "#ff7a45"}
+HEAD = {"wake": "PC  OUVINDO", "ok": "PC", "err": "PC  NÃO DEU", "trophy": "CONQUISTA", "level": "JOGADOR", "quest": "DESAFIO DA SEMANA"}
 
 GWL_EXSTYLE = -20
 WS_EX_TOOLWINDOW, WS_EX_NOACTIVATE, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_EX_LAYERED = 0x80, 0x08000000, 0x8, 0x20, 0x80000
@@ -80,7 +81,7 @@ class Overlay:
                 while True:
                     kind, t, b, secs = self.q.get_nowait()
                     bar.configure(bg=ACCENT.get(kind, ACCENT["ok"]))
-                    head.configure(text={"wake": "PC  OUVINDO", "ok": "PC", "err": "PC  NÃO DEU"}.get(kind, "PC"))
+                    head.configure(text=HEAD.get(kind, "PC"), fg=ACCENT[kind] if kind in ("trophy", "level", "quest") else DIM)
                     title.configure(text=t)
                     body.configure(text=b)
                     if b:

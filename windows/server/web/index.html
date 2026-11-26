@@ -67,16 +67,50 @@
     </div>
   </section>
 
-  <!-- STATUS > Conquistas: nível, metas do dia e conquistas -->
+  <!-- JOGADOR > Resumo: nível, título, sequência, metas do dia e retrospectiva -->
   <section class="tab" id="t-conq">
     <div class="cols tday">
-      <div class="card" data-b="level"><h3><span>Nível</span><span id="cq-streak"></span></h3><div id="cq-lvl"><div class="empty">Carregando…</div></div></div>
+      <div class="card" data-b="level"><h3><span>Jogador</span><span id="cq-streak"></span></h3><div id="cq-lvl"><div class="empty">Carregando…</div></div></div>
       <div class="card" data-b="metas"><h3><span>Metas de hoje</span><span id="cq-today"></span></h3><div id="cq-metas"><div class="empty">Carregando…</div></div></div>
-      <div class="card" data-b="conq"><h3><span>Conquistas</span><span id="cq-count"></span></h3><div id="cq-list" class="cqgrid"></div></div>
-      <div class="card" data-b="rank" id="td-rank"><h3><span>Ranking</span><span id="rk-me"></span></h3><div id="rk-body"><div class="empty">Carregando…</div></div></div>
       <div class="card" data-b="retro" id="td-retro"><h3><span>Retrospectiva</span></h3>
         <div class="sub" style="white-space:normal;margin-bottom:8px">O seu mês em números: tempo de tela, foco, jogos, voz, XP e a sua "personalidade" do mês.</div>
         <div class="brow"><select id="retro-month" class="sel" aria-label="Mês"></select><button class="btn" id="retro-open">Ver</button></div></div>
+    </div>
+  </section>
+
+  <!-- JOGADOR > Desafios: 3 desafios e o chefão da semana -->
+  <section class="tab" id="t-quests">
+    <div class="cols tday">
+      <div class="card" data-b="week"><h3><span>Desafios da semana</span><span id="qs-left"></span></h3><div id="qs-list"><div class="empty">Carregando…</div></div></div>
+      <div class="card" data-b="boss"><h3><span>Chefão da semana</span><span id="bs-hp"></span></h3><div id="bs-body"><div class="empty">Carregando…</div></div></div>
+    </div>
+  </section>
+
+  <!-- JOGADOR > Troféus: vitrine (aparece no ranking) e galeria -->
+  <section class="tab" id="t-troph">
+    <div class="cols tday">
+      <div class="card" data-b="show"><h3><span>Vitrine</span><span id="sh-n"></span></h3><div id="sh-body"></div></div>
+      <div class="card" data-b="conq"><h3><span>Conquistas</span><span id="cq-count"></span></h3><div id="cq-list" class="cqgrid"></div></div>
+    </div>
+  </section>
+
+  <!-- JOGADOR > Recompensas: o que o nível e as conquistas liberam -->
+  <section class="tab" id="t-inv">
+    <div class="cols tday">
+      <div class="card" data-b="next"><h3><span>Próximas</span></h3><div id="iv-next"></div></div>
+      <div class="card" data-b="title"><h3><span>Títulos</span><span id="iv-n-title"></span></h3><div class="ivgrid" id="iv-title"></div></div>
+      <div class="card" data-b="frame"><h3><span>Molduras</span><span id="iv-n-frame"></span></h3><div class="ivgrid" id="iv-frame"></div></div>
+      <div class="card" data-b="sound"><h3><span>Som das conquistas</span><span id="iv-n-sound"></span></h3><div class="ivgrid" id="iv-sound"></div></div>
+      <div class="card" data-b="theme"><h3><span>Temas</span><span id="iv-n-theme"></span></h3><div class="ivgrid" id="iv-theme"></div></div>
+      <div class="card" data-b="alerts"><h3><span>Avisos</span></h3>
+        <div class="set"><label>Troféu na tela do PC<small>Aviso no canto da tela ao ganhar conquista, desafio, chefão ou nível</small></label><button class="switch" id="sw-cqpc" aria-label="Troféu na tela do PC"></button></div></div>
+    </div>
+  </section>
+
+  <!-- JOGADOR > Ranking: liga da semana, amigos, duelos e geral -->
+  <section class="tab" id="t-rank">
+    <div class="cols tday">
+      <div class="card" data-b="rank" id="td-rank"><h3><span>Ranking</span><span id="rk-me"></span></h3><div id="rk-body"><div class="empty">Carregando…</div></div></div>
     </div>
   </section>
 
@@ -464,6 +498,12 @@
     <div class="cqm-nav"><button class="btn" id="cqm-prev" aria-label="Anterior">‹</button><button class="btn" id="cqm-next" aria-label="Próxima">›</button></div>
   </div>
 </div>
+<div class="overlay hidden" id="pfm" role="dialog" aria-label="Perfil do jogador">
+  <div class="dialog cqmd pfmd">
+    <div class="cqm-top"><span>Perfil</span><button class="btn sm" id="pfm-x" aria-label="Fechar">×</button></div>
+    <div id="pfm-body"></div>
+  </div>
+</div>
 <div class="hidden" id="retro" role="dialog" aria-label="Retrospectiva do mês">
   <div class="rtop"><div id="retro-prog"></div><button class="btn sm" id="retro-x" aria-label="Fechar">×</button></div>
   <div id="retro-body"></div>
@@ -529,6 +569,7 @@
 <script src="js/conq.js"></script>
 <script src="js/retro.js"></script>
 <script src="js/rank.js"></script>
+<script src="js/jogador.js"></script>
 <script src="js/ajustes.js"></script>
 <script src="js/main.js"></script>
 </body>

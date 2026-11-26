@@ -63,6 +63,8 @@ body {
   grid-template-areas: "banner" "header" "subtabs" "main" "nav";
   user-select: none; -webkit-user-select: none;
 }
+/* a VT323 tem uma ligadura "fi" quebrada ("Desafios" saía "Desaños"); o atalho "font:" das outras regras religa */
+* { font-variant-ligatures: none !important; }
 body.crt { text-shadow: 0 0 5px var(--glow); }
 /* linhas de varredura + vinheta, por cima de tudo, sem pegar toque */
 body.crt::after {

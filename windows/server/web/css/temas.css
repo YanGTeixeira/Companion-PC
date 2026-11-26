@@ -105,6 +105,7 @@
 /* ---- variações de cor */
 [data-skin="fallout"][data-theme="blue"] { --p: #8fd3ff; --p2: #4fa3d9; --p3: #23597a; --p4: #0f2a3a; --bg: #030a10; --panel: #061522; --glow: #8fd3ff55; }
 [data-skin="fallout"][data-theme="white"] { --p: #e8f0f2; --p2: #b0bcc0; --p3: #5e6a6e; --p4: #252c2e; --bg: #07090a; --panel: #0e1213; --glow: #e8f0f240; }
+[data-skin="fallout"][data-theme="red"] { --p: #ff6b5e; --p2: #d9443a; --p3: #82271f; --p4: #3a110d; --bg: #0d0403; --panel: #160806; --glow: #ff5a4f66; }
 [data-skin="synth"][data-theme="sunset"] { --p: #ffe3ef; --p2: #ffb0c8; --p3: #b3608a; --p4: #4a1d3c; --bg: #140818; --panel: #200b26cc; --glow: #ff6b9d77;
   --on: linear-gradient(90deg, #ff6b9d, #ffb347); --hl: #ffb347; --track: #3a1530; --bar2: #ff6b9d; }
 [data-skin="synth"][data-theme="ice"] { --p: #e0f2ff; --p2: #a6c8ff; --p3: #5a78b8; --p4: #1e2c5a; --bg: #050b1a; --panel: #0a1430cc; --glow: #7df9ff66;
@@ -280,3 +281,10 @@
 [data-skin="tac"] nav .nb { font-size: 13px; } [data-skin="jp"] nav .nb { font-size: 13px; } [data-skin="exec"] nav .nb { font-size: 10px; }
 .hchip { font-family: var(--display); }
 
+
+/* ------------------------------------------------------------------ variantes de recompensa (Jogador › Recompensas) */
+[data-skin="synth"][data-theme="gold"] { --p: #fff3d1; --p2: #ffd77a; --p3: #b38a2e; --p4: #4a3510; --bg: #120b02; --panel: #1d1206cc; --glow: #ffc94d77;
+  --on: linear-gradient(90deg, #ffc94d, #ff7a1a); --onfg: #1a0f00; --hl: #ffe08a; --track: #3a2a0c; --bar2: #ffc94d; }
+[data-skin="minimal"][data-theme="purple"] { --p: #efeaff; --p2: #b7a9e0; --p3: #776a9e; --p4: #2e2745; --bg: #110e1a; --panel: #1a1626;
+  --on: #8b5cf6; --onfg: #fff; --hl: #a78bfa; --track: #2a2340; --bar2: #8b5cf699; }
+[data-skin="rpg"][data-theme="emerald"] { --bg: #0a110d; --panel: #101a14; --p4: #22392b; --track: #183022; --hl: #e8c06a; --bar2: #2fbf71; }

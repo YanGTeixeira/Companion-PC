@@ -5,12 +5,14 @@
 // ---------------------------------------------------------------- layout (menu e cartões), um em pé e um deitado
 // O layout fica no PC (layout.json) e é editado na página /editor; vale para todos os aparelhos.
 const VIEW_LABEL = { dash: "Sistema", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
-  screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes", play: "Jogando", meet: "Reunião", today: "Hoje", conq: "Conquistas" };
+  screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes", play: "Jogando", meet: "Reunião", today: "Hoje", conq: "Resumo",
+  quests: "Desafios", troph: "Troféus", inv: "Recompensas", rank: "Ranking" };
 const DEFAULT_NAV = [
-  { id: "status", label: "Status", views: ["dash", "today", "conq", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
+  { id: "status", label: "Status", views: ["dash", "today", "games", "usage"] },
+  { id: "xp", label: "Jogador", views: ["conq", "quests", "troph", "inv", "rank"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
   { id: "ctrl", label: "Controle", views: ["mouse", "screen"] }, { id: "deck", label: "Botões", views: ["deck"] },
   { id: "pc", label: "PC", views: ["send", "power", "voz", "sys"] }];
-const SPLIT_DEFAULT = { status: "minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
+const SPLIT_DEFAULT = { status: "minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
   ctrl: "minmax(0,1fr) minmax(0,1.7fr)", pc: "minmax(0,1.1fr) minmax(0,.7fr) minmax(0,1.3fr) minmax(0,1.1fr)" };
 const BASE_VIEWS = Object.keys(VIEW_LABEL).filter((v) => v !== "play" && v !== "meet");
 let LAYOUT = store.get("layout", null) || {};
@@ -30,8 +32,21 @@ function addNewViews(nav, known) {
   }
   return nav;
 }
+// 1.18: seção Jogador. Num menu salvo antes dela, as abas de gamificação saem de onde estavam e viram uma
+// seção nova logo depois da que tinha Conquistas (se a pessoa tinha escondido Conquistas, o Resumo fica escondido).
+const XP_VIEWS = ["conq", "quests", "troph", "inv", "rank"];
+function migrateXp(nav, known) {
+  const k = new Set(known || LEGACY_VIEWS);
+  if (k.has("quests") || nav.some((s) => s.id === "xp")) return nav;
+  const at = nav.findIndex((s) => s.views.includes("conq"));
+  const views = at >= 0 || !k.has("conq") ? XP_VIEWS : XP_VIEWS.slice(1);
+  nav = nav.map((s) => ({ ...s, views: s.views.filter((v) => !XP_VIEWS.includes(v)) }));
+  nav.splice(at >= 0 ? at + 1 : Math.min(1, nav.length), 0, { id: "xp", label: "Jogador", views });
+  return nav;
+}
 function cleanNav(nav, known) {
-  nav = addNewViews((Array.isArray(nav) ? nav : []).map((s) => ({ ...s, views: [...(s.views || [])] })), known);
+  nav = migrateXp((Array.isArray(nav) ? nav : []).map((s) => ({ ...s, views: [...(s.views || [])] })), known);
+  nav = addNewViews(nav, known);
   // aceita só abas que existem, sem repetir; Ajustes nunca some (senão não dá para voltar atrás)
   const seen = new Set(), out = [];
   for (const sec of Array.isArray(nav) ? nav : []) {
@@ -150,14 +165,23 @@ function showView(name, temp) {
     list = [...live, other].filter(Boolean);
     cols = list.map((n) => (LIVE[n] ? "minmax(0,1.9fr)" : "minmax(0,1fr)")).join(" ");
   }
+  // Jogador em tela larga: o Resumo fica fixo à esquerda e a aba escolhida ao lado (5 colunas ficariam espremidas)
+  const pair = multi && !live.length && list.length > 3 && list.includes("conq") ? "conq" : null;
+  if (pair) {
+    const other = name !== pair ? name : list.includes(lastView[sec]) && lastView[sec] !== pair ? lastView[sec] : list.find((n) => n !== pair);
+    list = [pair, other];
+    cols = "minmax(0,1fr) minmax(0,1.4fr)";
+    if (name === pair) name = other;
+  }
+  if (multi && !cols) cols = list.map(() => "minmax(0,1fr)").join(" ");
   shown = new Set(multi ? list : [name]);
   document.querySelectorAll(".tab").forEach((t) => { t.classList.toggle("on", shown.has(t.id.slice(2))); t.style.order = multi && LIVE[t.id.slice(2)] ? -1 : ""; });
   document.querySelectorAll("nav .nb").forEach((b) => b.classList.toggle("on", b.dataset.sec === sec));
   MAIN.classList.toggle("multi", multi);
   MAIN.style.gridTemplateColumns = multi ? cols : "";
-  const sub = $("subtabs"), showSub = !multi && views.length > 1;
+  const sub = $("subtabs"), showSub = (!multi || pair) && views.length > 1;
   sub.classList.toggle("hidden", !showSub);
-  sub.innerHTML = showSub ? views.map(([n, l]) => `<button role="tab" data-view="${n}" aria-selected="${n === name}"${n === name ? ' class="on"' : ""}>${l}</button>`).join("") : "";
+  sub.innerHTML = showSub ? views.filter(([n]) => n !== pair).map(([n, l]) => `<button role="tab" data-view="${n}" aria-selected="${n === name}"${n === name ? ' class="on"' : ""}>${l}</button>`).join("") : "";
   document.querySelectorAll(".tab.on").forEach((t) => (t.scrollTop = 0));
   prefs.tab = name;
   if (!temp) { store.set("tab", name); lastView[sec] = name; store.set("views", lastView); }
@@ -166,7 +190,7 @@ function showView(name, temp) {
   if (vis("games") && welcome) loadHist();
   if (vis("mix") && welcome) loadProfiles();
   if (vis("today")) { renderToday(); setTimeout(() => loadDay(true)); }
-  if (vis("conq")) setTimeout(() => { state.conq ? renderConq() : loadConq(); renderRetroCard(); loadRank(); });
+  if (XP_VIEWS.some(vis)) setTimeout(() => { state.conq ? renderConq() : loadConq(); if (vis("conq")) renderRetroCard(); if (vis("rank")) loadRank(); });
   if (vis("games")) { renderSteam(); renderPost(); }
   if (vis("screen")) requestAnimationFrame(() => { layoutScreen(); screenLoop(); });
   if (vis("media") || vis("mix")) { mixT = 0; renderMixer(); pollMixer(); }

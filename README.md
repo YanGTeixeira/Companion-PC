@@ -32,12 +32,13 @@ Celular Android          ──cabo USB (adb reverse)───  http://localhost
 
 Seis temas: **Fallout** (terminal de fósforo verde, âmbar ou ciano), **Synthwave**, **Minimal**
 (escuro ou claro), **Cockpit**, **LCD 8-bit** e **Papel**. Troque em **PC › Ajustes › Visual** ou no editor
-do PC. Cinco seções na barra (padrão); cada uma tem sub-abas no topo.
+do PC. Seis seções na barra (padrão); cada uma tem sub-abas no topo.
 Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem lado a lado.
 
 | Seção | Sub-abas e o que tem |
 |---|---|
 | **Status** | *Sistema*: CPU, memória, GPU (consumo, ventoinha) e rede com gráfico do último minuto, processos, discos, **bateria** do mouse, teclado, fone e controle; temperatura da CPU e ventoinhas se o LibreHardwareMonitor estiver rodando. *Jogos*: jogo aberto, tempo jogado, recentes e biblioteca. *Tempo*: tempo de tela por app e categoria (hoje, semana, mês). Com um jogo aberto aparece *Jogando*; numa chamada do Meet, *Reunião*. |
+| **Jogador** | *Resumo*: nível, título, moldura, XP, sequência, congelamentos, metas do dia e retrospectiva. *Desafios*: 3 desafios e o chefão da semana. *Troféus*: vitrine e galeria de conquistas. *Recompensas*: títulos, molduras, sons e temas liberados pelo nível e pelas conquistas. *Ranking*: liga da semana, amigos, duelos e o ranking geral. |
 | **Rádio** | *Tocando*: capa, faixa, progresso (arraste para pular), volume e saída de áudio (toque para alternar). *Mixer*: volume e mudo por aplicativo e escolha da saída (fone, caixa, monitor). |
 | **Controle** | *Mouse e teclado*: touchpad (toque = clique; 2 dedos: toque = direito, arrastar = rolar; toque duplo e arraste = segurar), teclas especiais e o teclado do Android digitando no PC. *Tela do PC*: a tela ao vivo; toque = clique, segurar = botão direito, pinça = zoom, faixa da direita = rolar. |
 | **Botões** | Páginas de botões estilo Stream Deck. **Editar** cria/edita botões (atalho de teclado, texto, ação pronta ou programa do config.json), com ícone, cor e confirmação. Ficam salvos em `deck.json` no PC. Tipo **Tocar som**: escolha um áudio no celular e ele sai no microfone (Discord etc.); veja *Sons no microfone*. |
@@ -60,6 +61,33 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
   "personalidade" (Coruja, Gamer de carteirinha, Monge do foco, Workaholic...). No fim, um cartão em imagem com as
   cores do tema para compartilhar ou salvar. Dá para ver o mês atual (até agora) ou os anteriores; no começo do mês
   o celular avisa que a do mês que acabou está pronta.
+
+**Novidades da 1.18: gamificação**
+
+- **Seção Jogador** na barra (Resumo, Desafios, Troféus, Recompensas e Ranking). Quem já tinha arrumado o menu ganha
+  a seção logo depois de onde estava *Conquistas*. Em tablet deitado, o Resumo fica fixo à esquerda e a aba
+  escolhida ao lado. O editor do PC (Personalizar) tem um quadro **Jogador** com nível, título, moldura, som e os
+  desafios da semana.
+- **Desafios da semana:** 3 por semana (foco sempre; os outros sorteados entre dias com metas, dias perfeitos,
+  vitórias, dias com menos tela e trabalho), ajustados à sua média das 4 semanas anteriores. +150 XP cada e +100 XP
+  pelos 3. **Chefão da semana**: um monstro com vida que você derruba com minutos de foco (1), metas cumpridas (15)
+  e vitórias (20); vale +300 XP e foge no domingo.
+- **Sequência mais justa:** a cada 7 dias seguidos você ganha um **congelamento** (guarda até 2), que salva a
+  sequência num dia perdido. A sequência dá **multiplicador de XP** (×1,1 com 3 dias, ×1,2 com 7, ×1,35 com 14,
+  ×1,5 com 30), e cerca de 1 dia em 7 é de **XP em dobro**, sorteado pela data. Essas regras valem do dia da
+  instalação da 1.18 em diante; o XP de antes não muda.
+- **Recompensas:** o nível e algumas conquistas liberam **títulos**, **molduras** do selo de nível, **sons** para os
+  avisos de conquista e 4 **temas** novos (Fallout Vermelho, Minimal Roxo, Synthwave Ouro, Fantasia Esmeralda),
+  que aparecem com cadeado até serem liberados.
+- **+20 conquistas** (43 no total), algumas em série (Desafiante I–III, Caçador I–III, Rodado I–III) e 5 secretas, que
+  aparecem como "???" até você ganhar. **Vitrine**: escolha até 3 troféus para o seu perfil no ranking.
+- **Troféu na tela do PC:** conquista, desafio, chefão, nível e recompensa também aparecem no canto da tela do PC
+  (dá para desligar em Jogador › Recompensas › Avisos).
+- **Ranking social:** **ligas semanais** (Bronze, Prata, Ouro, Safira, Rubi e Diamante) em grupos de até 20 pessoas,
+  em que os primeiros sobem e os últimos descem a cada segunda. **Amigos**: siga alguém pelo apelido e compare o XP
+  da semana. **Duelos**: desafie quem você segue; vence quem ganhar mais XP do aceite até domingo. Toque num apelido
+  para ver o perfil (nível, título, moldura, liga e vitrine). Do PC sai, além do que já saía, só os ids do título,
+  da moldura e da vitrine.
 
 **Novidades da 1.17**
 

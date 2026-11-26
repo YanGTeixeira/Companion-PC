@@ -167,5 +167,124 @@ class ConquistasTest(unittest.TestCase):
         self.assertEqual(f["m"][0]["w"], 1)
 
 
+class Regras118Test(unittest.TestCase):
+    """Congelamento, multiplicador, dia em dobro, desafios, chefão, recompensas e secretas."""
+
+    def setUp(self):
+        self.path = Path(tempfile.mkdtemp()) / "conquistas.db"
+
+    def test_congelamento_salva_um_dia(self):
+        ok, no = [{"status": "done"}] * 2, []
+        days = [(d(i), {}, ok) for i in range(20, 6, -1)]            # 14 dias seguidos: 2 congelamentos
+        days += [(d(6), {}, no), (d(5), {}, ok), (d(4), {}, no), (d(3), {}, no), (d(2), {}, ok)]
+        sim = cq.streak_sim(days, d(0), since=d(30))
+        self.assertTrue(sim["per"][d(6)][1])                       # dia perdido salvo
+        self.assertEqual(sim["used"], 2)
+        self.assertEqual(sim["streak"], 1)                         # 3º dia perdido: sem congelamento, zerou
+        self.assertEqual(sim["best"], 15)                          # o dia congelado não soma
+        # antes da 1.18 não havia congelamento
+        self.assertEqual(cq.streak_sim(days, d(0), since=d(0))["used"], 0)
+
+    def test_fenix(self):
+        ok, no = [{"status": "done"}] * 2, []
+        days = [(f"2026-01-{i:02d}", {}, ok) for i in range(1, 8)] + [("2026-01-08", {}, no)]
+        days += [(f"2026-01-{i:02d}", {}, ok) for i in range(9, 16)]
+        self.assertEqual(cq.streak_sim(days, "2026-02-01", since="2027-01-01")["phoenix"], 1)
+
+    def test_multiplicador_e_dobro(self):
+        self.assertEqual([cq.streak_mult(n) for n in (0, 3, 7, 14, 30)], [1.0, 1.1, 1.2, 1.35, 1.5])
+        n = sum(cq.is_x2(f"2026-{m:02d}-{x:02d}") for m in range(1, 13) for x in range(1, 29))
+        self.assertTrue(20 < n < 80, n)                              # ~1 em 7
+        self.assertEqual(cq.is_x2("2026-11-26"), cq.is_x2("2026-11-26"))
+
+    def test_semana_desafios_e_chefao(self):
+        mon = "2026-11-23"
+        prev = [(d(i, mon), facts(foc=60), [{"status": "done"}] * 2) for i in range(1, 15)]
+        wd = [((date.fromisoformat(mon) + timedelta(days=i)).isoformat(), facts(foc=200), [{"status": "done"}] * 3)
+              for i in range(4)]
+        w = cq.eval_week(mon, wd, prev, "2026-11-26")
+        self.assertEqual(w["id"], "2026-W48")
+        self.assertEqual(w["quests"][0]["id"], "foco")
+        self.assertEqual(len(w["quests"]), 3)
+        foco = w["quests"][0]
+        self.assertEqual(foco["target"], 480)                      # 60 min/dia x 7 x 1,15, arredondado
+        self.assertEqual((foco["status"], foco["day"]), ("done", "2026-11-25"))
+        self.assertTrue(w["boss"]["dead"])
+        self.assertIn(w["boss"]["dead"], w["xp"])
+        # semana que já acabou sem cumprir: falhou e o chefão fugiu
+        w2 = cq.eval_week("2026-11-09", [], prev, "2026-11-26")
+        self.assertEqual({q["status"] for q in w2["quests"]}, {"failed"})
+        self.assertTrue(w2["boss"]["escaped"])
+        # sorteio fixo por semana
+        self.assertEqual([q["id"] for q in cq.eval_week(mon, wd, prev, "2026-11-26")["quests"]], [q["id"] for q in w["quests"]])
+
+    def test_regras_novas_nao_mudam_o_passado(self):
+        hist = {d(i): facts(foc=60) for i in range(1, 40)}
+        old = cq.Conquistas(self.path, FakeDays(hist), lambda: d(39))
+        with old._db() as db:                                      # banco de antes da 1.18 (sem "rules2")
+            pass
+        st, _ = old.refresh(d(0))
+        self.assertEqual(st["since"], d(0))
+        past = sum(x[3] for x in old._calc["days"] if x[0] < d(0))
+        self.assertEqual(past, sum(cq.day_xp(f, m) for _k, f, m, _x in old._calc["days"] if _k < d(0)))
+
+    def test_recompensas_e_equipar(self):
+        hist = {d(i): facts(foc=60, hrs=[0, 0, 0, 1000] + [0] * 20) for i in range(1, 30)}
+        c = cq.Conquistas(self.path, FakeDays(hist), lambda: d(29))
+        st, _ = c.refresh(d(0))
+        got = {r["id"] for r in st["rewards"] if r["got"]}
+        self.assertIn("novato", got)
+        self.assertIn("coruja", got)                                # título da conquista Coruja
+        self.assertNotIn("mito", got)
+        self.assertEqual(st["equip"]["title"], "novato")
+        c.equip("title", "coruja")
+        with self.assertRaises(ValueError):
+            c.equip("title", "mito")
+        with self.assertRaises(ValueError):
+            c.equip("frame", "coruja")                              # tipo errado
+        c.equip("show", ["coruja", "foco1"])
+        with self.assertRaises(ValueError):
+            c.equip("show", ["imortal"])
+        st, _ = c.refresh(d(0))
+        self.assertEqual((st["equip"]["title"], st["equip"]["show"]), ("coruja", ["coruja", "foco1"]))
+        s = c.summary()
+        self.assertEqual((s["title"], s["frame"], s["show"]), ("coruja", "f_simples", ["coruja", "foco1"]))
+
+    def test_secreta_fica_escondida(self):
+        c = cq.Conquistas(self.path, FakeDays({d(1): facts(foc=30)}), lambda: d(1))
+        st, _ = c.refresh(d(0))
+        g = next(x for x in st["conq"] if x["id"] == "gelo")
+        self.assertEqual((g["name"], g["secret"], g["day"]), ("???", True, None))
+        self.assertNotIn("congelamento", g["desc"])
+
+    def test_conquistas_novas_entram_sem_aviso(self):
+        days = FakeDays({d(i): facts(foc=30, m=[match(w=1, t=1) for _ in range(60)][:2]) for i in range(1, 40)})
+        c = cq.Conquistas(self.path, days, lambda: d(39))
+        with c._db() as db:                                        # simula um banco da 1.17
+            db.execute("INSERT INTO kv VALUES ('init', ?)", (d(39),))
+            db.execute("INSERT INTO kv VALUES ('conq_ver', '1')")
+        st, ev = c.refresh(d(0))
+        self.assertIn("part50", {x["id"] for x in st["conq"] if x["day"]})   # 78 partidas no histórico
+        self.assertEqual([e for e in ev if e["kind"] == "conq"], [])
+
+    def test_duelos_vencidos(self):
+        c = cq.Conquistas(self.path, FakeDays({d(1): facts()}), lambda: d(1))
+        c.refresh(d(0))
+        self.assertTrue(c.set_duels_won([5, 7]))
+        self.assertFalse(c.set_duels_won([5]))
+        st, ev = c.refresh(d(0))
+        self.assertIn(("conq", "duelo1"), {(e["kind"], e.get("id")) for e in ev})
+
+    def test_eventos_de_desafio_e_chefao(self):
+        days = FakeDays({d(i): facts(foc=10) for i in range(1, 20)})
+        c = cq.Conquistas(self.path, days, lambda: d(19))
+        c.refresh(d(0))
+        days.days[d(0)] = facts(foc=2000)
+        _st, ev = c.refresh(d(0))
+        kinds = {e["kind"] for e in ev}
+        self.assertIn("boss", kinds)
+        self.assertIn("quest", kinds)
+
+
 if __name__ == "__main__":
     unittest.main()

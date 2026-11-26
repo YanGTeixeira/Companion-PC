@@ -1,5 +1,5 @@
 "use strict";
-// ---------------------------------------------------------------- Conquistas: nível, metas do dia e conquistas
+// ---------------------------------------------------------------- Conquistas: metas do dia, galeria de troféus e avisos
 // Tudo é calculado no PC (conquistas.py) com o tempo de tela, foco, partidas e voz que ele já grava.
 const CQ_TIER = { bronze: "BRONZE", prata: "PRATA", ouro: "OURO" };
 async function loadConq() { try { onConq(await send("conq.get")); } catch {} }
@@ -10,13 +10,7 @@ function cqFmt(unit, v) {
 const CQ_STATUS = { done: "FEITA", failed: "passou", ok: "dentro até agora", skip: "PC quase não usado", open: "" };
 function renderConq() {
   const d = state.conq; if (!d) return;
-  const pct = Math.max(0, Math.min(100, ((d.xp - d.lvl_lo) / Math.max(1, d.lvl_hi - d.lvl_lo)) * 100));
-  $("cq-streak").textContent = d.streak ? `sequência: ${d.streak} dia${d.streak > 1 ? "s" : ""}` : "";
-  $("cq-lvl").innerHTML = `<div class="cqlvl"><b>${d.level}</b><div><div>Nível ${d.level}</div>
-      <small>${d.xp - d.lvl_lo} / ${d.lvl_hi - d.lvl_lo} XP para o nível ${d.level + 1}</small></div></div>
-    <div class="bar"><i style="width:${pct}%"></i></div>
-    <div class="dayg cqnums"><div><b>+${d.today_xp}</b><small>XP hoje</small></div><div><b>${d.week_xp}</b><small>XP na semana</small></div>
-      <div><b>${d.streak}</b><small>dias seguidos (2 metas)</small></div><div><b>${d.best_streak}</b><small>recorde</small></div></div>`;
+  renderJogador();
   const done = d.metas.filter((m) => m.status === "done").length;
   $("cq-today").textContent = d.metas.length ? `${done}/${d.metas.length}` : "";
   $("cq-metas").innerHTML = d.metas.map((m) => {
@@ -52,12 +46,14 @@ function cqmShow() {
   $("cqm-body").innerHTML = `<div class="cqm-tro${c.day ? " got " + c.tier : ""}">${trophy(c.tier, !!c.day)}</div>
     <h1>${esc(c.name)}</h1><div class="cqm-tier ${c.tier}">${CQ_TIER[c.tier]} · ${c.xp} XP</div>
     <div class="cqm-how"><small>COMO GANHAR</small>${esc(c.desc)}</div>
-    ${c.day ? `<div class="cqm-st ok">Conquistada em ${day}</div>`
+    ${c.day ? `<div class="cqm-st ok">Conquistada em ${day}</div>
+      <button class="btn sm cqm-show" data-show="${esc(c.id)}">${(state.conq.equip?.show || []).includes(c.id) ? "Tirar da vitrine" : "Pôr na vitrine"}</button>`
       : `${c.goal > 1 ? `<div class="bar"><i style="width:${Math.min(100, (c.cur / c.goal) * 100)}%"></i></div><div class="cqm-st">${Math.floor(c.cur)} de ${c.goal}</div>` : '<div class="cqm-st">Ainda não conquistada</div>'}`}`;
   $("cqm-prev").disabled = cqmI === 0; $("cqm-next").disabled = cqmI === list.length - 1;
 }
 $("cq-list").onclick = (e) => { const b = e.target.closest("[data-cq]"); if (!b) return; buzz(8); cqmI = +b.dataset.cq; $("cqm").classList.remove("hidden"); cqmShow(); };
 const cqmStep = (d) => { const n = (state.conq?.conq || []).length; if (cqmI + d < 0 || cqmI + d >= n) return; cqmI += d; buzz(6); cqmShow(); };
+$("cqm-body").onclick = (e) => { const b = e.target.closest("[data-show]"); if (b) { buzz(8); toggleShow(b.dataset.show); } };
 $("cqm-prev").onclick = () => cqmStep(-1);
 $("cqm-next").onclick = () => cqmStep(1);
 $("cqm-x").onclick = () => $("cqm").classList.add("hidden");
@@ -76,12 +72,22 @@ $("cqm").addEventListener("touchend", (e) => {
   const dx = e.changedTouches[0].clientX - cqmX; cqmX = null;
   if (Math.abs(dx) > 50) cqmStep(dx < 0 ? 1 : -1);
 });
+const CQ_EVENT = {
+  conq: (e) => `Conquista: ${e.name} (+${e.xp} XP)`,
+  meta: (e) => `Meta cumprida: ${e.text.replace("{t}", cqFmt(e.unit, e.target))} (+${e.xp} XP)`,
+  level: (e) => `Subiu para o nível ${e.level}!`,
+  quest: (e) => `Desafio da semana: ${e.text.replace("{t}", cqFmt(e.unit, e.target))} (+${e.xp} XP)`,
+  quests_all: (e) => `Os 3 desafios da semana! (+${e.xp} XP)`,
+  boss: (e) => `${e.icon} ${e.name} derrotado! (+${e.xp} XP)`,
+  reward: (e) => `Liberou ${KIND_LABEL[e.type] || ""}: ${e.name}`,
+  x2: () => "Hoje é dia de XP em dobro!",
+  freeze: (e) => `Um congelamento salvou a sua sequência (${e.left} sobrando)`,
+  duel_in: (e) => `${e.nick} desafiou você para um duelo (Jogador › Ranking)`,
+};
 function onConqEvent(e) {
   if (PREVIEW || !e) return;
-  const msg = e.kind === "conq" ? `Conquista: ${e.name} (+${e.xp} XP)`
-    : e.kind === "meta" ? `Meta cumprida: ${e.text.replace("{t}", cqFmt(e.unit, e.target))} (+${e.xp} XP)`
-    : e.kind === "level" ? `Subiu para o nível ${e.level}!` : "";
+  const msg = CQ_EVENT[e.kind]?.(e);
   if (!msg) return;
-  toast(msg, "ok"); snd("ok");
+  toast(msg, "ok", false); snd(cqSound());
   if (prefs.vib && navigator.vibrate) try { navigator.vibrate([40, 50, 40, 50, 120]); } catch {}
 }

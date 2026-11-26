@@ -1,6 +1,6 @@
 // Regras do ranking (sem nada da Cloudflare: dá para testar com o Node puro, veja test/logic.test.mjs).
-export const DAY_CAP = 2500;          // XP máximo plausível num dia (foco 300 + metas 200 + muitas partidas)
-export const CONQ_XP = 4050;          // XP de todas as conquistas juntas (podem cair no mesmo dia)
+export const DAY_CAP = 4500;          // XP máximo plausível num dia (foco, metas e partidas x sequência x dia em dobro + desafios e chefão)
+export const CONQ_XP = 8000;          // XP de todas as conquistas juntas (podem cair no mesmo dia; 7350 na 1.18)
 export const FIRST_MAX = 60000;       // 1º envio traz o histórico: até ~nível 35
 export const MIN_SUBMIT_S = 240;      // intervalo mínimo entre envios do mesmo PC
 export const REGS_PER_DAY = 5;        // cadastros por IP por dia
@@ -64,7 +64,48 @@ export function checkSubmit(u, s, now, weekRow, weeks, wday) {
   if (s.week_xp > wdays * DAY_CAP + CONQ_XP) return "XP da semana demais";
   if (weekRow && s.week_xp < weekRow.xp) return "XP da semana não pode diminuir";
   if (s.streak > 1000 || s.best_streak > 1000 || s.streak > s.best_streak) return "sequência inválida";
-  if (s.unlocked > 100) return "conquistas demais";
+  if (s.unlocked > 200) return "conquistas demais";
   return null;
 }
 
+
+// ------------------------------------------------------------------ perfil (1.18): título, moldura e vitrine
+// Só ids curtos (o app de cada um mostra o nome); texto livre nunca chega ao ranking.
+export const ID_RE = /^[a-z0-9_]{1,20}$/;
+export function cleanProfile(b) {
+  const id = (v) => (typeof v === "string" && ID_RE.test(v) ? v : "");
+  const show = Array.isArray(b?.show) ? [...new Set(b.show.filter((v) => typeof v === "string" && ID_RE.test(v)))].slice(0, 3) : [];
+  return { title: id(b?.title), frame: id(b?.frame), show: show.join(",") };
+}
+
+// ------------------------------------------------------------------ ligas semanais (1.18)
+// Grupos de até GROUP_SIZE pessoas da mesma liga, formados na 1ª vez que alguém envia na semana. Na semana
+// seguinte, quem ficou no topo do grupo sobe (com um mínimo de XP) e quem ficou no fim (ou zerou) desce.
+export const LEAGUES = ["Bronze", "Prata", "Ouro", "Safira", "Rubi", "Diamante"];
+export const GROUP_SIZE = 20;
+export const PROMOTE_MIN_XP = 200;
+export function leagueZones(n) {
+  return { up: Math.max(1, Math.floor(n / 4)), down: n >= 5 ? Math.max(1, Math.floor(n / 5)) : 0 };
+}
+export function leagueAfter(league, rank, n, xp) {
+  const { up, down } = leagueZones(n);
+  if (rank <= up && xp >= PROMOTE_MIN_XP && league < LEAGUES.length - 1) return { league: league + 1, res: "up" };
+  if (league > 0 && (xp <= 0 || rank > n - down)) return { league: league - 1, res: "down" };
+  return { league, res: "stay" };
+}
+
+// ------------------------------------------------------------------ duelos (1.18)
+// Duelo de XP da semana: conta o que cada um ganhou desde que o duelo foi aceito até o fim da semana.
+export const DUELS_OPEN = 3;          // duelos seus (pendentes + valendo) por semana
+export const DUELS_INBOX = 5;         // convites pendentes que alguém pode receber
+export const FRIENDS_MAX = 50;
+export function duelView(d, me, xpA, xpB, curWeek) {
+  const mine = d.a === me;
+  const sa = Math.max(0, xpA - (d.a0 || 0)), sb = Math.max(0, xpB - (d.b0 || 0));
+  const my = mine ? sa : sb, their = mine ? sb : sa;
+  let status = d.status;
+  if (d.week < curWeek) status = d.status === "active" ? "done" : d.status === "pending" ? "expired" : d.status;
+  const res = status === "done" ? (my > their ? "won" : my < their ? "lost" : "tie") : null;
+  return { id: d.id, week: d.week, dir: mine ? "out" : "in", status, res,
+    my: status === "active" || status === "done" ? my : null, their: status === "active" || status === "done" ? their : null };
+}
