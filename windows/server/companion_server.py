@@ -48,7 +48,7 @@ import updater
 import voice
 import watchers
 
-VERSION = "1.17.2"
+VERSION = "1.18"
 BASE = Path(__file__).resolve().parent
 CFG_PATH = BASE / "config.json"
 LOG_PATH = BASE / "companion-server.log"
