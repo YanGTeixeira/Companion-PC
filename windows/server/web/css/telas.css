@@ -579,6 +579,11 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .rhours { display: flex; align-items: flex-end; gap: 2px; height: 90px; margin: 6px 0; }
 .rhours i { flex: 1; background: var(--p3); border-radius: 1px; }
 .rhours i.pk { background: var(--p); }
+.rmonths { display: flex; align-items: flex-end; gap: 4px; height: 120px; margin: 8px 0; }
+.rmonths div { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; }
+.rmonths i { width: 100%; background: var(--p3); border-radius: 2px; }
+.rmonths small { color: var(--p3); font-size: 10px; text-transform: uppercase; }
+.rmonths .pk i { background: var(--p); } .rmonths .pk small { color: var(--p); }
 .rlist { display: flex; flex-direction: column; gap: 8px; }
 .rlist div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; font-size: 18px; }
 .rlist i { grid-column: 1 / -1; height: 6px; background: var(--p); border-radius: 3px; }

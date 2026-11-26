@@ -25,22 +25,34 @@ def prev_month(month):
     return (first - timedelta(days=1)).isoformat()[:7]
 
 
-def persona(hours, cats, total, focus_min, matches):
-    """Um rótulo divertido para o mês, com o porquê. A primeira regra que bate vence."""
+YEAR_OPEN = "12-15"   # a retrospectiva do ano abre em 15/12 ("até agora") e fecha em 1º/01
+
+
+def years_open(all_days, today=None):
+    """Anos com retrospectiva do ano disponível (mais novo primeiro): os que já acabaram e o atual a partir de 15/12."""
+    today = today or date.today().isoformat()
+    return sorted({int(d[:4]) for d in all_days if d[:4] < today[:4] or (d[:4] == today[:4] and today[5:] >= YEAR_OPEN)},
+                  reverse=True)
+
+
+def persona(hours, cats, total, focus_min, matches, months=1, unit="no mês"):
+    """Um rótulo divertido para o mês (ou o período: months = quantos meses ele tem), com o porquê.
+    A primeira regra que bate vence."""
     if not total:
         return {"name": "Fantasma", "why": "o PC quase não foi ligado"}
+    months = max(1.0, months)
     share = lambda keys: sum(cats.get(k, 0) for k in keys) / total  # noqa: E731
     night = (sum(hours[22:]) + sum(hours[:5])) / total
     early = sum(hours[5:8]) / total
     rules = [
         (night >= 0.25, "Coruja", f"{round(night * 100)}% do seu tempo foi entre 22h e 5h"),
         (share(["Jogos"]) >= 0.4, "Gamer de carteirinha", f"{round(share(['Jogos']) * 100)}% do tempo de tela foi jogando"),
-        (focus_min >= 20 * 60, "Monge do foco", f"{round(focus_min / 60)} h de foco no mês"),
+        (focus_min >= 20 * 60 * months, "Monge do foco", f"{round(focus_min / 60)} h de foco {unit}"),
         (early >= 0.12, "Madrugador", f"{round(early * 100)}% do tempo foi entre 5h e 8h"),
         (share(["Trabalho", "Criação"]) >= 0.5, "Workaholic", f"{round(share(['Trabalho', 'Criação']) * 100)}% foi trabalho"),
         (share(["Social", "Entretenimento"]) >= 0.35, "Rolador de feed",
          f"{round(share(['Social', 'Entretenimento']) * 100)}% foi rede social e vídeo"),
-        (matches >= 60, "Viciado em ranqueada", f"{matches} partidas no mês"),
+        (matches >= 60 * months, "Viciado em ranqueada", f"{matches} partidas {unit}"),
     ]
     for ok, name, why in rules:
         if ok:
@@ -51,8 +63,34 @@ def persona(hours, cats, total, focus_min, matches):
 def build(month, days, xp_before, conq, apps_report, matches, prev_days=None, today=None):
     """days: [(dia, facts, metas, xp)] do mês; conq: conquistas ganhas no mês; apps_report: ScreenTime.report("month");
     matches: [(fim, jogo, título, vitória, dados)] do mês; prev_days: os mesmos dias do mês anterior (comparação)."""
-    today = today or date.today().isoformat()
     first, last = month_bounds(month)
+    return build_period(month, f"{MONTHS[first.month - 1]} de {first.year}", first, last, days, xp_before, conq,
+                        apps_report, matches, prev_days, today)
+
+
+def build_year(year, first, last, days, xp_before, conq, apps_report, matches, collection, today=None):
+    """Retrospectiva do ano (1.20, "Sua jornada"): first = o 1º dia com dados (ou 1º/01), last = 31/12.
+    Além do de sempre: um resumo de cada mês, o melhor mês e a coleção (créditos, chefões, conjuntos, eventos)."""
+    out = build_period(str(year), f"sua jornada em {year}", first, last, days, xp_before, conq, apps_report, matches,
+                       None, today, unit="no ano")
+    per = {}
+    for d, f, ms, x in days:
+        m = per.setdefault(d[:7], {"month": d[:7], "label": MONTHS[int(d[5:7]) - 1], "screen": 0, "focus": 0, "xp": 0, "metas": 0})
+        m["screen"] += f.get("scr", 0)
+        m["focus"] += f.get("foc", 0)
+        m["xp"] += x
+        m["metas"] += sum(1 for z in ms if z["status"] == "done")
+    for c in conq:
+        if c["day"][:7] in per:
+            per[c["day"][:7]]["xp"] += c["xp"]
+    months = [m for m in sorted(per.values(), key=lambda m: m["month"]) if m["screen"] or m["xp"]]
+    out.update(kind="year", since=first.isoformat(), months_sum=months,
+               best_month=max(months, key=lambda m: (m["xp"], m["focus"]), default=None), collection=collection)
+    return out
+
+
+def build_period(key, label, first, last, days, xp_before, conq, apps_report, matches, prev_days=None, today=None, unit="no mês"):
+    today = today or date.today().isoformat()
     used = [(d, f) for d, f, _m, _x in days if f.get("scr", 0) > 0]
     hours = [0] * 24
     by_wd = [0] * 7
@@ -112,8 +150,8 @@ def build(month, days, xp_before, conq, apps_report, matches, prev_days=None, to
     peak = max(range(24), key=lambda h: hours[h]) if total else None
     wd = max(range(7), key=lambda i: by_wd[i]) if total else None
     return {
-        "month": month, "label": f"{MONTHS[first.month - 1]} de {first.year}", "partial": today <= last.isoformat(),
-        "days_used": len(used), "days_in_month": last.day,
+        "month": key, "kind": "month", "label": label, "partial": today <= last.isoformat(),
+        "days_used": len(used), "days_in_month": (last - first).days + 1,
         "screen": {"total": total, "avg": round(total / len(used)) if used else 0, "prev_total": prev_total,
                    "best_day": {"day": best[0], "secs": best[1].get("scr", 0)} if best else None,
                    "peak_hour": peak, "weekday": WEEKDAYS[wd] if wd is not None else None, "hours": hours},
@@ -129,5 +167,5 @@ def build(month, days, xp_before, conq, apps_report, matches, prev_days=None, to
         "talk": {"total": round(sum(talk.values())), "meet": round(talk.get("meet", 0)), "game": round(talk.get("game", 0))},
         "xp": {"month": month_xp, "level_start": lvl_a, "level_end": lvl_b},
         "conq": conq,
-        "persona": persona(hours, cats, total, focus, len(ms_all)),
+        "persona": persona(hours, cats, total, focus, len(ms_all), ((last - first).days + 1) / 30.4, unit),
     }

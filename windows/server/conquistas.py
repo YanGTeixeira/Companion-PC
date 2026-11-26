@@ -530,10 +530,23 @@ class Conquistas:
             equip = {**EQUIP_DEFAULT, **json.loads(self._kv(db, "equip", "{}"))}
         lvl, lo, hi = level_of(xp)
         conq_days = [(unlocked[c[0]], c[3]) for c in CONQ if c[0] in unlocked]
-        cr_days = colecao.credits_by_day(days, weeks, sim["per"], conq_days, lvl, events_done)
-        earned, spent = sum(cr_days.values()), sum(int(b.get("price") or 0) for b in bought)
         owned = {b["id"] for b in bought}
         got = colecao.got_ids(lvl, unlocked, owned)
+        # 1.20: conjuntos completos (o dia fica gravado: os créditos não mudam se um item sair da coleção depois)
+        new_sets = [sid for sid in colecao.sets_complete(got) if "set_" + sid not in unlocked]
+        if new_sets:
+            with self.lock, self._db() as db:
+                for sid in new_sets:
+                    unlocked["set_" + sid] = today
+                    db.execute("INSERT OR REPLACE INTO unlocks VALUES (?, ?, 0)", ("set_" + sid, today))
+            for sid in new_sets:
+                st_ = next(x for x in colecao.SETS if x[0] == sid)
+                new.append({"kind": "set", "id": sid, "name": st_[1], "icon": st_[2], "credits": colecao.set_credits(sid),
+                            "reward": colecao.BY_ID[colecao.SET_REWARD[sid]][2]})
+            got = colecao.got_ids(lvl, unlocked, owned)
+        sets_done = {k[4:]: d for k, d in unlocked.items() if k.startswith("set_")}
+        cr_days = colecao.credits_by_day(days, weeks, sim["per"], conq_days, lvl, events_done, sets_done)
+        earned, spent = sum(cr_days.values()), sum(int(b.get("price") or 0) for b in bought)
         equip = self._fix_equip(equip, got, unlocked, lvl)
         today_metas = days[-1][2] if days else []
         week0 = monday(today)
@@ -565,16 +578,22 @@ class Conquistas:
                         "week": sum(v for k, v in cr_days.items() if k >= week0),
                         "rules": {"meta": colecao.CR_META, "metas3": colecao.CR_ALL_METAS, "quest": colecao.CR_QUEST,
                                   "boss": colecao.CR_BOSS, "level": colecao.CR_LEVEL, "streak7": colecao.CR_STREAK7,
-                                  "conq": colecao.CR_CONQ, "event": colecao.CR_EVENT}},
+                                  "conq": colecao.CR_CONQ, "event": colecao.CR_EVENT, "set": colecao.CR_SET}},
             "shop": {"week": week_id(today), "end": (date.fromisoformat(week0) + timedelta(days=6)).isoformat(), "items": shop},
             "event": event,
             "events": [{"id": e[0], "name": e[1], "icon": e[2], "text": e[6], "done": e[0] in events_done} for e in colecao.EVENTS],
             "bought": [b["id"] for b in bought],
+            "sets": [{"id": sid, "name": name, "icon": icon, "items": items, "have": sum(1 for i in items if i in got),
+                      "done": sets_done.get(sid), "reward": colecao.SET_REWARD[sid], "credits": colecao.set_credits(sid)}
+                     for sid, name, icon, items in colecao.SETS],
         }
         st["today_bonus"] = {"base": base_xp, "mult": mult}
         ev = self._events(st, new, weeks)
         self._state = st
-        self._calc = {"days": [(k, f, metas, xp_days[k]) for k, f, metas in days], "unlocked": dict(unlocked)}
+        self._calc = {"days": [(k, f, metas, xp_days[k]) for k, f, metas in days], "unlocked": dict(unlocked),
+                      "credits": cr_days, "bought": bought,
+                      "bosses": [w["boss"]["dead"] for w in weeks if w["boss"]["dead"]],
+                      "quests": [q["day"] for w in weeks for q in w["quests"] if q["day"]]}
         return st, ev
 
     @staticmethod
@@ -592,12 +611,13 @@ class Conquistas:
     def _item_view(it, got, unlocked, owned):
         rid, kind, name, rarity, req = it
         conq = None
-        if isinstance(req, str) and req != colecao.SHOP and not req.startswith("ev:"):
+        if isinstance(req, str) and req != colecao.SHOP and not req.startswith(("ev:", "set:")):
             conq = next((c[1] if c[0] in unlocked or not (len(c) > 6 and c[6]) else "???") for c in CONQ if c[0] == req)
         return {"id": rid, "kind": kind, "name": name, "rarity": rarity, "got": rid in got,
                 "req": req if isinstance(req, int) else None, "conq": conq,
                 "shop": req == colecao.SHOP, "price": colecao.PRICE[rarity] if req == colecao.SHOP else None,
                 "event": req[3:] if isinstance(req, str) and req.startswith("ev:") else None,
+                "set": req[4:] if isinstance(req, str) and req.startswith("set:") else None,
                 "anim": rid in colecao.ANIMATED}
 
     @staticmethod
@@ -612,7 +632,7 @@ class Conquistas:
         out["bio"] = colecao.clean_bio(out.get("bio"))
         lay = out.get("lay")
         out["lay"] = colecao.clean_lay(lay) if isinstance(lay, list) else list(EQUIP_DEFAULT["lay"])
-        out["show"] = [c for c in (out.get("show") or []) if c in unlocked and not c.startswith("ev_")][:colecao.show_max(level)]
+        out["show"] = [c for c in (out.get("show") or []) if c in unlocked and not c.startswith(("ev_", "set_"))][:colecao.show_max(level)]
         return out
 
     def _events(self, st, new, weeks):
@@ -638,7 +658,7 @@ class Conquistas:
             ev.append({"kind": "level", "level": st["level"]})
         pgot = {r["id"] for r in prev["rewards"] if r["got"]}
         for r in st["rewards"]:
-            if r["got"] and r["id"] not in pgot and not r["shop"]:     # comprado na loja: a pessoa já sabe
+            if r["got"] and r["id"] not in pgot and not r["shop"] and not r["set"]:   # loja ou conjunto: já teve aviso
                 ev.append({"kind": "reward", "id": r["id"], "type": r["kind"], "name": r["name"]})
         if prev["day"] != st["day"]:
             if st["x2"]:
@@ -726,17 +746,36 @@ class Conquistas:
     def month_data(self, month):
         """Para a retrospectiva: (dias do mês [(dia, facts, metas, xp)], XP antes do mês,
         conquistas do mês [{id, name, tier, xp, day}], dias com dados de todos os meses)."""
+        return self.range_data(month + "-01", month + "-31")
+
+    def range_data(self, a, b):
+        """O mesmo que month_data, para um período qualquer (dias "AAAA-MM-DD", inclusive)."""
         if self._calc is None:
             self.refresh()
         days, unlocked = self._calc["days"], self._calc["unlocked"]
-        start = month + "-01"
-        inside = [x for x in days if x[0][:7] == month]
+        inside = [x for x in days if a <= x[0] <= b]
         conq = {c[0]: c for c in CONQ}
-        xp_before = sum(x[3] for x in days if x[0] < start) + sum(TIER_XP[conq[c][3]] for c, d in unlocked.items()
-                                                                  if c in conq and d < start)
+        xp_before = sum(x[3] for x in days if x[0] < a) + sum(TIER_XP[conq[c][3]] for c, d in unlocked.items()
+                                                              if c in conq and d < a)
         got = [{"id": c, "name": conq[c][1], "tier": conq[c][3], "xp": TIER_XP[conq[c][3]], "day": d}
-               for c, d in sorted(unlocked.items(), key=lambda x: x[1]) if c in conq and d[:7] == month]
+               for c, d in sorted(unlocked.items(), key=lambda x: x[1]) if c in conq and a <= d <= b]
         return inside, xp_before, got, [x[0] for x in days]
+
+    def collection_data(self, a, b):
+        """Para a retrospectiva do ano: créditos, chefões, desafios, conjuntos, eventos e compras do período,
+        e a coleção de hoje (itens liberados)."""
+        if self._calc is None:
+            self.refresh()
+        c, st = self._calc, self._state
+        inn = lambda d: bool(d) and a <= d <= b  # noqa: E731
+        sets = [s for s in colecao.SETS if inn(c["unlocked"].get("set_" + s[0]))]
+        events = [e for e in colecao.EVENTS if inn(c["unlocked"].get("ev_" + e[0]))]
+        return {"credits": sum(v for k, v in c["credits"].items() if inn(k)),
+                "bosses": sum(1 for d in c["bosses"] if inn(d)), "quests": sum(1 for d in c["quests"] if inn(d)),
+                "sets": [{"name": s[1], "icon": s[2]} for s in sets], "events": [{"name": e[1], "icon": e[2]} for e in events],
+                "bought": sum(1 for x in c["bought"] if inn(x.get("day"))),
+                "items": sum(1 for r in st["rewards"] if r["got"]), "items_total": len(st["rewards"]),
+                "level": st["level"], "best_streak": st["best_streak"]}
 
     def flag(self, key, value=None):
         """Marcador simples guardado no banco (ex.: retrospectiva já avisada). Sem value: lê."""

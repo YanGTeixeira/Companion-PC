@@ -322,7 +322,20 @@ function itemPreview(r, level, eq) {
   if (k === "effect") return fxName("Nome", r.id, "span", "ivfx");
   return "";
 }
-const reqText = (r) => (r.req ? `nível ${r.req}` : r.shop ? `loja · ${r.price} créditos` : r.event ? `evento ${EVENT_NAME[r.event] || r.event}` : `conquista ${r.conq}`);
+const reqText = (r) => (r.req ? `nível ${r.req}` : r.shop ? `loja · ${r.price} créditos` : r.event ? `evento ${EVENT_NAME[r.event] || r.event}`
+  : r.set ? `conjunto ${SET_NAME[r.set] || r.set}` : `conquista ${r.conq}`);
+const SET_NAME = { cosmos: "Cosmos", masmorra: "Masmorra", abismo: "Abismo", digital: "Chuva digital", dunas: "Deserto", fogo: "Fogo",
+  retro: "Fliperama", natal: "Natal", halloween: "Halloween", carnaval: "Carnaval", anonovo: "Ano Novo", lendario: "Lendário" };
+// 1.20: um conjunto da coleção (celular e PC). attr: o data-* que a página usa para abrir o item ao tocar
+function setCard(s, d, attr) {
+  const R = (id) => d.rewards.find((x) => x.id === id), rw = R(s.reward);
+  const pct = (s.have / s.items.length) * 100;
+  return `<div class="setc${s.done ? " done" : ""}"><div class="seth"><span class="seti">${s.icon}</span><div><b>${cEsc(s.name)}</b>
+      <small>${s.done ? "Completo!" : `${s.have} de ${s.items.length}`} · +${s.credits} créditos</small></div>
+      ${rw ? `<button class="ivit setrw rar-${rw.rarity}${rw.got ? "" : " lock"}" ${attr}="${cEsc(rw.id)}" title="Prêmio do conjunto">${itemPreview(rw, d.level, d.equip)}<small>${rw.got ? "prêmio ✓" : "prêmio"}</small></button>` : ""}</div>
+    <div class="setbar"><i style="width:${pct}%"></i></div>
+    <div class="setms">${s.items.map((id) => { const r = R(id); return r ? `<button class="ivit setmem${r.got ? " got" : " lock"}" ${attr}="${cEsc(id)}" title="${cEsc(r.got ? "Liberado" : reqText(r))}">${r.got ? "✓" : "🔒"} ${cEsc(r.name)}</button>` : ""; }).join("")}</div></div>`;
+}
 const EVENT_NAME = { natal: "de Natal", anonovo: "de Ano Novo", carnaval: "de Carnaval", halloween: "de Halloween" };
 
 // ---------------------------------------------------------------- cartão do jogador (perfil)

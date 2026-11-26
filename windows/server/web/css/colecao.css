@@ -34,7 +34,16 @@ html.noanim .an, html.noanim .an *, html.noanim .an::before, html.noanim .an::af
 .badge.f_galaxia { --fr: conic-gradient(from 0deg, #1b1035, #6741d9, #f783ac, #1b1035, #4dabf7, #1b1035); box-shadow: 0 0 14px #9775fa66; }
 .badge.f_natal { --fr: repeating-conic-gradient(#2f9e44 0 30deg, #e03131 30deg 45deg, #2f9e44 45deg 75deg, #ffd43b 75deg 90deg); }
 .badge.f_abobora { --fr: repeating-conic-gradient(#ff7a1a 0 22deg, #d9480f 22deg 30deg); box-shadow: 0 0 10px #ff7a1a55; }
+/* 1.20: prêmios dos conjuntos */
+.badge.f_abissal { --fr: linear-gradient(180deg, #7ff0ff, #0b6e8a 45%, #06233a 75%, #ff7f6a); box-shadow: 0 0 12px #2ad4ff55; }
+.badge.f_magma { --fr: conic-gradient(from 90deg, #2b0a00, #ff4500, #ffb000, #2b0a00, #ff2d00, #2b0a00); box-shadow: 0 0 14px #ff450088; }
+.badge.f_presente { --fr: conic-gradient(#e03131 0 22.5%, #ffd43b 22.5% 27.5%, #e03131 27.5% 72.5%, #ffd43b 72.5% 77.5%, #e03131 77.5%); box-shadow: 0 0 10px #ffd43b55; }
+.badge.f_serpentina { --fr: repeating-conic-gradient(#ff4dd2 0 15deg, #ffd23f 15deg 30deg, #3ef0ff 30deg 45deg, #4dff88 45deg 60deg); }
+.badge.f_fogos { --fr: radial-gradient(circle at 25% 25%, #fff 0 6%, transparent 7%), radial-gradient(circle at 75% 70%, #ffd23f 0 6%, transparent 7%), linear-gradient(135deg, #1b1035, #e64980 50%, #4dabf7); box-shadow: 0 0 12px #e6498066; }
+.badge.f_lendaria { --fr: conic-gradient(from 0deg, #fff1a8, #c8901a, #ffffff, #ffd23f, #b98bff, #fff1a8); box-shadow: 0 0 16px #ffd23f99, 0 0 4px #fff; }
 @media (prefers-reduced-motion: no-preference) {
+  .badge.big.f_magma, .badge.big.f_lendaria { animation: frspin 6s linear infinite; }
+  .badge.big.f_magma b, .badge.big.f_lendaria b, .badge.big.f_magma .blv, .badge.big.f_lendaria .blv { animation: frspin 6s linear infinite reverse; }
   .badge.big.f_chamas, .badge.big.f_arco, .badge.big.f_neon, .badge.big.f_galaxia { animation: frspin 6s linear infinite; }
   .badge.big.f_chamas b, .badge.big.f_arco b, .badge.big.f_neon b, .badge.big.f_galaxia b { animation: frspin 6s linear infinite reverse; }
   .badge.big.f_chamas .blv, .badge.big.f_arco .blv, .badge.big.f_neon .blv, .badge.big.f_galaxia .blv { animation: frspin 6s linear infinite reverse; }
@@ -205,3 +214,22 @@ html.noanim.acc-anim { animation: none !important; }
 #pf-edit input[type=color] { width: 54px; height: 34px; border: 1px solid var(--p3); background: none; border-radius: var(--r); padding: 2px; }
 .thm.lockall { opacity: .55; }
 .thm.lockall .thn { font-size: 17px; }
+
+/* ---- conjuntos (1.20) */
+.setgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.setc { border: 1px solid var(--p4); border-radius: var(--r); padding: 10px; background: var(--panel); }
+.setc.done { border-color: var(--hl, var(--p)); box-shadow: inset 0 0 0 1px var(--hl, var(--p)); }
+.seth { display: flex; gap: 10px; align-items: center; }
+.seth > div { flex: 1; min-width: 0; }
+.seth b { display: block; color: var(--p); font-family: var(--display); font-size: 17px; line-height: 1.1; }
+.seth small { color: var(--p3); font-size: 12px; }
+.seti { font: 28px/1 "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
+.setc .ivit.setrw { width: 74px; flex: none; padding: 4px; }
+.setc .ivit.setrw small { font-size: 10px; }
+.setbar { height: 5px; border-radius: 3px; background: var(--p4); overflow: hidden; margin: 8px 0; }
+.setbar i { display: block; height: 100%; background: var(--hl, var(--p)); }
+.setc.done .setbar i { background: #2fbf71; }
+.setms { display: flex; flex-wrap: wrap; gap: 4px; }
+.ivit.setmem { display: inline-flex; width: auto; min-height: 0; flex-direction: row; gap: 4px; padding: 3px 8px; border-radius: 999px; font-size: 12px;
+  border: 1px solid var(--p4); background: none; color: var(--p3); cursor: pointer; }
+.ivit.setmem.got { color: var(--p); border-color: var(--p3); }

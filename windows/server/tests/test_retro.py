@@ -100,3 +100,33 @@ class MonthDataTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AnoTest(unittest.TestCase):
+    """1.20: retrospectiva do ano ("Sua jornada")."""
+
+    def test_anos_abertos(self):
+        days = ["2025-12-30", "2026-03-01", "2026-11-26"]
+        self.assertEqual(retro.years_open(days, "2026-11-26"), [2025])
+        self.assertEqual(retro.years_open(days, "2026-12-15"), [2026, 2025])
+        self.assertEqual(retro.years_open(days, "2027-01-01"), [2026, 2025])
+        self.assertEqual(retro.years_open(["2027-01-02"], "2027-01-02"), [])
+
+    def test_ano(self):
+        done = [{"status": "done"}] * 2
+        days = [("2026-10-10", facts(scr=5 * H, foc=60), done, 400), ("2026-11-02", facts(scr=3 * H, foc=600), done, 900),
+                ("2026-11-03", facts(scr=2 * H, foc=30), [], 100)]
+        conq = [{"id": "vit1", "name": "Primeira vitória", "tier": "bronze", "xp": 50, "day": "2026-10-10"}]
+        col = {"credits": 99, "sets": [], "events": [], "items": 10, "items_total": 161}
+        r = retro.build_year(2026, date(2026, 10, 10), date(2026, 12, 31), days, 0, conq, {"apps": []}, [], col, today="2026-12-20")
+        self.assertEqual((r["kind"], r["month"], r["since"], r["partial"]), ("year", "2026", "2026-10-10", True))
+        self.assertEqual([m["month"] for m in r["months_sum"]], ["2026-10", "2026-11"])
+        self.assertEqual(r["months_sum"][0]["xp"], 450)                 # dia + conquista do mês
+        self.assertEqual(r["best_month"]["month"], "2026-11")
+        self.assertEqual(r["collection"]["credits"], 99)
+        self.assertEqual(r["xp"]["month"], 1450)
+        self.assertEqual(r["days_in_month"], 83)
+        # 11 h de foco num período de quase 3 meses: não é "Monge do foco" (20 h por mês)
+        self.assertNotEqual(r["persona"]["name"], "Monge do foco")
+        self.assertFalse(retro.build_year(2026, date(2026, 10, 10), date(2026, 12, 31), days, 0, conq, {"apps": []}, [], col,
+                                          today="2027-01-01")["partial"])

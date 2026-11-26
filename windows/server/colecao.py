@@ -1,7 +1,8 @@
 """Coleção (1.19): o catálogo de tudo o que dá para liberar, os créditos, a loja da semana e os eventos sazonais.
 
 Cada item tem um tipo, uma raridade e uma forma de liberar:
-    nível (int) · conquista (id de CONQ) · "shop" (só na loja, comprado com créditos) · "ev:<id>" (evento sazonal)
+    nível (int) · conquista (id de CONQ) · "shop" (só na loja, comprado com créditos) · "ev:<id>" (evento sazonal) ·
+    "set:<id>" (1.20: completar um conjunto da coleção)
 O visual de cada item (fundos, avatares, efeitos, temas) fica no app (web/js/catalogo.js); aqui só ids e regras.
 
 Créditos: calculados do histórico, como o XP (sempre dão o mesmo resultado); só as compras ficam gravadas.
@@ -35,6 +36,9 @@ ITEMS = [
     ("colecionador", "title", "Colecionador", R, "col25"), ("fenix", "title", "Fênix", E, "fenix"),
     ("zen", "title", "Zen", C, SHOP), ("lobo", "title", "Lobo solitário", R, SHOP), ("estrategista", "title", "Estrategista", R, SHOP),
     ("arcanista", "title", "Arcanista", E, SHOP), ("soberano", "title", "Soberano", L, SHOP),
+    ("astronauta", "title", "Astronauta", E, "set:cosmos"), ("senhor", "title", "Senhor da Masmorra", E, "set:masmorra"),
+    ("hacker", "title", "Hacker", E, "set:digital"), ("nomade", "title", "Nômade", R, "set:dunas"),
+    ("oldschool", "title", "Old school", R, "set:retro"), ("rei_abobora", "title", "Rei das Abóboras", R, "set:halloween"),
     ("noel", "title", "Espírito natalino", R, "ev:natal"), ("assombrado", "title", "Assombrado", R, "ev:halloween"),
     ("foliao", "title", "Folião", R, "ev:carnaval"), ("visionario", "title", "Visionário", R, "ev:anonovo"),
     # ---- molduras
@@ -43,6 +47,9 @@ ITEMS = [
     ("f_cristal", "frame", "Cristal", E, 30), ("f_obsidiana", "frame", "Obsidiana", E, 40), ("f_arco", "frame", "Arco-íris", L, 50),
     ("f_chamas", "frame", "Chamas", E, "seq30"),
     ("f_pixel", "frame", "Pixel", R, SHOP), ("f_gelo", "frame", "Gelo", R, SHOP), ("f_galaxia", "frame", "Galáxia", L, SHOP),
+    ("f_abissal", "frame", "Abissal", E, "set:abismo"), ("f_magma", "frame", "Magma", E, "set:fogo"),
+    ("f_presente", "frame", "Presente", E, "set:natal"), ("f_serpentina", "frame", "Serpentina", R, "set:carnaval"),
+    ("f_fogos", "frame", "Fogos", R, "set:anonovo"), ("f_lendaria", "frame", "Lendária", L, "set:lendario"),
     ("f_natal", "frame", "Guirlanda", R, "ev:natal"), ("f_abobora", "frame", "Abóbora", R, "ev:halloween"),
     # ---- sons das conquistas
     ("s_bipe", "sound", "Bipe", C, 1), ("s_fanfarra", "sound", "Fanfarra", C, 4), ("s_moeda", "sound", "Moeda", C, 7),
@@ -103,7 +110,7 @@ ITEMS = [
 BY_ID = {i[0]: i for i in ITEMS}
 ANIMATED = {"matrix:green", "matrix:red", "aurora:boreal", "aurora:austral", "natal:neve", "anonovo:fogos",
             "a_holo", "a_arco", "a_brasa", "a_plasma", "a_ouro", "b_aurora", "b_chuva", "b_lava", "b_natal",
-            "e_fogo", "e_arco", "e_glitch", "e_neon", "e_ouro", "e_cintilante", "f_galaxia"}
+            "e_fogo", "e_arco", "e_glitch", "e_neon", "e_ouro", "e_cintilante", "f_galaxia", "f_magma", "f_lendaria"}
 
 EQUIP_DEFAULT = {"title": "novato", "frame": "f_simples", "sound": "s_bipe", "accent": "a_tema", "bg": "b_nenhum",
                  "avatar": "av_nivel", "effect": "e_nenhum", "color": "#4c8dff", "bio": "", "lay": ["bio", "stats", "show"], "show": []}
@@ -116,6 +123,35 @@ def show_max(level):
     return next((n for lv, n in SHOW_SLOTS if level >= lv), 3)
 
 
+# ---------------------------------------------------------------- conjuntos (1.20)
+# (id, nome, ícone, itens). Completar libera o item com requisito "set:<id>" e dá créditos (CR_SET pela raridade dele).
+SETS = [
+    ("cosmos", "Cosmos", "🪐", ["cosmos:nebula", "cosmos:galaxy", "b_espaco", "av_alien", "av_foguete"]),
+    ("masmorra", "Masmorra", "🗝️", ["masmorra:torch", "masmorra:crypt", "b_castelo", "av_espada", "av_caveira"]),
+    ("abismo", "Abismo", "🌊", ["abismo:deep", "abismo:coral", "b_oceano", "f_gelo", "e_gelo"]),
+    ("digital", "Chuva digital", "💻", ["matrix:green", "matrix:red", "b_chuva", "b_circuito", "e_glitch"]),
+    ("dunas", "Deserto", "🏜️", ["dunas:day", "dunas:night", "b_sol", "tac:desert"]),
+    ("fogo", "Fogo", "🔥", ["b_lava", "e_fogo", "f_chamas", "a_brasa"]),
+    ("retro", "Fliperama", "🕹️", ["s_arcade", "s_moeda", "s_powerup", "b_grade", "av_controle", "f_pixel"]),
+    ("natal", "Natal", "🎄", ["natal:pinheiro", "natal:neve", "b_natal", "f_natal", "av_neve", "s_natal", "noel"]),
+    ("halloween", "Halloween", "🎃", ["halloween:abobora", "b_halloween", "f_abobora", "av_abobora", "assombrado"]),
+    ("carnaval", "Carnaval", "🎭", ["carnaval:confete", "av_mascara", "e_confete", "foliao"]),
+    ("anonovo", "Ano Novo", "🎆", ["anonovo:fogos", "av_estrela", "e_cintilante", "visionario"]),
+    ("lendario", "Lendário", "👑", [i[0] for i in ITEMS if i[3] == L and not str(i[4]).startswith("set:")]),
+]
+SET_REWARD = {i[4][4:]: i[0] for i in ITEMS if str(i[4]).startswith("set:")}
+CR_SET = {"comum": 30, "raro": 60, "epico": 120, "lendario": 300}
+
+
+def set_credits(sid):
+    return CR_SET[BY_ID[SET_REWARD[sid]][3]]
+
+
+def sets_complete(got):
+    """Ids dos conjuntos com todos os itens liberados."""
+    return [sid for sid, _n, _i, items in SETS if all(i in got for i in items)]
+
+
 def item_got(item, level, unlocked, bought):
     _id, _k, _n, _r, req = item
     if isinstance(req, int):
@@ -124,6 +160,8 @@ def item_got(item, level, unlocked, bought):
         return _id in bought
     if req.startswith("ev:"):
         return "ev_" + req[3:] in unlocked
+    if req.startswith("set:"):
+        return "set_" + req[4:] in unlocked
     return req in unlocked
 
 
@@ -158,9 +196,9 @@ CR_STREAK7 = 15                         # a cada 7 dias seguidos
 CR_EVENT = 50
 
 
-def credits_by_day(days, weeks, sim_per, conq_days, level, events_done):
+def credits_by_day(days, weeks, sim_per, conq_days, level, events_done, sets_done=None):
     """Créditos ganhos por dia. days: [(dia, facts, metas)]; weeks: eval_week de cada semana; sim_per: streak_sim()["per"];
-    conq_days: [(dia, tier)] das conquistas; events_done: {id: dia}. O dos níveis entra no dia de hoje (o último)."""
+    conq_days: [(dia, tier)] das conquistas; events_done: {id: dia}; sets_done: {id do conjunto: dia}. O dos níveis entra no dia de hoje (o último)."""
     out = {}
     add = lambda k, v: out.__setitem__(k, out.get(k, 0) + v)  # noqa: E731
     for k, _f, metas in days:
@@ -181,6 +219,8 @@ def credits_by_day(days, weeks, sim_per, conq_days, level, events_done):
         add(d, CR_CONQ.get(tier, 0))
     for d in events_done.values():
         add(d, CR_EVENT)
+    for sid, d in (sets_done or {}).items():
+        add(d, set_credits(sid))
     if days:
         add(days[-1][0], CR_LEVEL * (level - 1))
     return out

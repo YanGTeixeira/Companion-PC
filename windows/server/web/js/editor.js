@@ -31,7 +31,7 @@ const BLOCKS = {
   conq: [{ wide: 1, items: [["level", "Jogador (nível, título e sequência)"], ["metas", "Metas de hoje"], ["retro", "Retrospectiva do mês"]] }],
   quests: [{ wide: 1, items: [["week", "Desafios da semana"], ["boss", "Chefão da semana"]] }],
   troph: [{ wide: 1, items: [["show", "Vitrine"], ["conq", "Conquistas (troféus)"]] }],
-  inv: [{ wide: 1, items: [["next", "Próximas recompensas"], ["perfil", "Perfil (frase e blocos)"], ["title", "Títulos"], ["frame", "Molduras"], ["avatar", "Avatares"], ["bg", "Fundos do cartão"],
+  inv: [{ wide: 1, items: [["next", "Próximas recompensas"], ["sets", "Conjuntos"], ["perfil", "Perfil (frase e blocos)"], ["title", "Títulos"], ["frame", "Molduras"], ["avatar", "Avatares"], ["bg", "Fundos do cartão"],
     ["effect", "Efeito no nome"], ["accent", "Cor de destaque"], ["theme", "Temas"], ["sound", "Som das conquistas"], ["alerts", "Avisos"]] }],
   loja: [{ wide: 1, items: [["credits", "Créditos"], ["shop", "Loja da semana"], ["event", "Evento"]] }],
   rank: [{ wide: 1, items: [["rank", "Ranking (liga, amigos, duelos, geral)"]] }],

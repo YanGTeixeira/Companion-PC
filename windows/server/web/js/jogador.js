@@ -150,6 +150,11 @@ function renderInv() {
   const next = d.rewards.filter((r) => !r.got && r.req).sort((a, b) => a.req - b.req).slice(0, 5);
   $("iv-next").innerHTML = next.length ? `<div class="ivnext">${next.map((r) => `<div><b>Nível ${r.req}</b><span>${esc(r.name)}</span><small>${KIND_LABEL[r.kind]}</small></div>`).join("")}</div>`
     : '<div class="empty">Você liberou tudo o que o nível dá. Lenda!</div>';
+  if ($("iv-sets") && d.sets) {
+    $("iv-n-sets").textContent = `${d.sets.filter((s) => s.done).length}/${d.sets.length}`;
+    $("iv-sets").innerHTML = [...d.sets].sort((a, b) => !!a.done - !!b.done || b.have / b.items.length - a.have / a.items.length)
+      .map((s) => setCard(s, d, "data-rw")).join("");
+  }
   $("sw-cqpc").classList.toggle("on", d.pc_overlay !== false);
   renderPfEdit();
 }
@@ -189,7 +194,7 @@ function renderLoja() {
   const c = d.credits, R = c.rules;
   $("lj-bal").innerHTML = `<div class="crbal"><b><i class="crcoin"></i>${c.bal}</b><small>créditos · +${c.today} hoje · +${c.week} na semana</small></div>
     <div class="crhow">Ganha: meta do dia <b>${R.meta}</b> (as 3: +${R.metas3}) · desafio da semana <b>${R.quest}</b> · chefão <b>${R.boss}</b> · cada nível <b>${R.level}</b> ·
-      a cada 7 dias seguidos <b>${R.streak7}</b> · conquista <b>${R.conq.bronze}/${R.conq.prata}/${R.conq.ouro}</b> · evento <b>${R.event}</b></div>`;
+      a cada 7 dias seguidos <b>${R.streak7}</b> · conquista <b>${R.conq.bronze}/${R.conq.prata}/${R.conq.ouro}</b> · evento <b>${R.event}</b>${R.set ? ` · conjunto <b>${R.set.raro}–${R.set.lendario}</b>` : ""}</div>`;
   const left = Math.max(0, Math.round((new Date(d.shop.end + "T23:59") - Date.now()) / 86400000));
   $("lj-left").textContent = left ? `troca em ${left} dia${left > 1 ? "s" : ""}` : "troca amanhã";
   $("lj-shop").innerHTML = d.shop.items.length ? `<div class="shopgrid">${d.shop.items.map((id) => {
@@ -247,7 +252,7 @@ function itemModal(r) {
   $("pfm").classList.remove("hidden");
   $("pfm-body").innerHTML = `<div class="cqm-tier" style="color:var(--rar)"><span class="rar-${r.rarity}"><span class="rartag">${RARITY[r.rarity]}</span></span> ${esc(KIND_LABEL[r.kind])}${r.anim ? " · animado" : ""}</div>
     <h1 style="margin:6px 0 10px">${esc(r.name)}</h1>${prev}
-    <div class="cqm-how" style="margin-top:10px"><small>COMO LIBERAR</small>${r.got ? "Já é seu." : esc(r.req ? `Chegue ao nível ${r.req}` : r.shop ? `Loja da semana: ${r.price} créditos${inShop ? "" : " (não está na loja agora; ela muda toda segunda)"}` : r.event ? `Complete o evento ${EVENT_NAME[r.event] || r.event}` : `Ganhe a conquista ${r.conq}`)}</div>
+    <div class="cqm-how" style="margin-top:10px"><small>COMO LIBERAR</small>${r.got ? "Já é seu." : esc(r.req ? `Chegue ao nível ${r.req}` : r.shop ? `Loja da semana: ${r.price} créditos${inShop ? "" : " (não está na loja agora; ela muda toda segunda)"}` : r.event ? `Complete o evento ${EVENT_NAME[r.event] || r.event}` : r.set ? `Complete o conjunto ${SET_NAME[r.set] || r.set} (Recompensas › Conjuntos)` : `Ganhe a conquista ${r.conq}`)}</div>
     <div class="brow pfbtns">${r.got ? `<button class="btn" id="im-eq">${r.kind === "theme" ? "Usar este tema" : "Equipar"}</button>`
       : `${["theme", "accent"].includes(r.kind) ? '<button class="btn" id="im-try">Experimentar 10 s</button>' : ""}${r.kind === "sound" ? '<button class="btn" id="im-try">Ouvir</button>' : ""}
          ${inShop ? `<button class="btn" id="im-buy" ${d.credits.bal < r.price ? "disabled" : ""}>Comprar · ${r.price} créditos</button>` : ""}`}</div>

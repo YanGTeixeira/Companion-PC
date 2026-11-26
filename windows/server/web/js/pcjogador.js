@@ -11,7 +11,7 @@ const LEAGUES = ["Bronze", "Prata", "Ouro", "Safira", "Rubi", "Diamante"];
 const LEAGUE_COLOR = ["#cd7f32", "#c9d1d9", "#ffd23f", "#3b82f6", "#e0245e", "#7df9ff"];
 const TIER = { bronze: "BRONZE", prata: "PRATA", ouro: "OURO" };
 const SHOW_LV = { 4: 15, 5: 30, 6: 50 };
-let TAB = "perfil", CQ = null, LAY = {}, RANK = null, RD = {}, RTAB = "league", RKIND = "week", hover = null, FILTER = "all";
+let RETRO = null, TAB = "perfil", CQ = null, LAY = {}, RANK = null, RD = {}, RTAB = "league", RKIND = "week", hover = null, FILTER = "all";
 try { TAB = localStorage.getItem("pcj.tab") || "perfil"; } catch {}
 if (!TABS.some(([t]) => t === TAB)) TAB = "perfil";
 
@@ -65,6 +65,7 @@ const EV_TXT = {
   conq: (e) => `Conquista: ${e.name} (+${e.xp} XP)`, level: (e) => `Subiu para o nível ${e.level}!`,
   quest: () => "Desafio da semana cumprido!", quests_all: (e) => `Os 3 desafios da semana! (+${e.xp} XP)`, boss: (e) => `${e.icon} ${e.name} derrotado!`,
   reward: (e) => `Liberou ${KIND_LABEL[e.type] || ""}: ${e.name}`, event: (e) => `Evento ${e.name} completo!`,
+  set: (e) => `${e.icon} Conjunto ${e.name} completo! Liberou ${e.reward} (+${e.credits} créditos)`,
 };
 function onEvent(e) { const f = EV_TXT[e.kind]; if (f) toast(f(e)); }
 async function act(a, p, okMsg) {
@@ -151,7 +152,18 @@ function tabPerfil() {
         <label class="chk"><input type="checkbox" data-lt="${b}"${lay.includes(b) ? " checked" : ""}> ${LAY_LABEL[b]}</label></div>`).join("")}</div></section>
     ${free ? `<section class="box"><h2>Cor livre</h2><p class="hint">Vale quando a cor de destaque é <b>Cor livre</b>${eq.accent === "a_livre" ? "" : " (equipe em Coleção › Cor de destaque)"}.</p>
       <div class="row"><input type="color" id="pf-color" value="${esc(eq.color || "#4c8dff")}"><span class="hint" style="margin:0">${esc(eq.color || "")}</span></div></section>` : ""}
+    ${retroBox()}
     ${vitrine()}`;
+}
+// retrospectiva: abre na prévia do celular ao lado (é lá que ficam as "stories" e a imagem para compartilhar)
+function retroBox() {
+  if (!RETRO) { send("retro.get", {}, 30000).then((r) => { RETRO = { months: r.months || [], years: r.years || [] }; if (TAB === "perfil") renderBody(); }).catch(() => {}); return ""; }
+  const now = new Date(), cur = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const ml = (m) => { const [y, mo] = m.split("-"); return new Date(+y, +mo - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) + (m === cur ? " (até agora)" : ""); };
+  const opts = RETRO.years.map((y) => `<option value="y${y}">⭐ Sua jornada ${y}${y === now.getFullYear() ? " (até agora)" : ""}</option>`).join("")
+    + RETRO.months.map((m) => `<option value="${m}">${esc(ml(m))}</option>`).join("");
+  return `<section class="box"><h2>Retrospectiva</h2><p class="hint">O mês (ou o ano, a partir de 15/12) em números. Abre na prévia do celular ao lado: clique nela para avançar; no fim dá para baixar a imagem.</p>
+    <div class="row"><select id="pj-retro" class="pj-sel">${opts}</select><button class="pri" id="pj-retro-go">Ver</button></div></section>`;
 }
 function vitrine() {
   const d = CQ, show = d.equip.show || [], max = d.show_max || 3, got = d.conq.filter((c) => c.day);
@@ -179,6 +191,10 @@ function tabColecao() {
       Bloqueados: clique para ver como liberar e experimentar.</p></div>
       <div class="seg" id="pj-filter">${[["all", "Todos"], ["got", "Liberados"], ["lock", "Bloqueados"]].map(([k, l]) => `<button data-f="${k}" class="${FILTER === k ? "on" : ""}">${l}</button>`).join("")}</div></div>
       ${next.length ? `<div class="pj-next">${next.map((r) => `<span><b>nível ${r.req}</b> ${esc(r.name)} <small>${KIND_LABEL[r.kind]}</small></span>`).join("")}</div>` : ""}</section>
+    ${d.sets ? `<section class="box" id="k-sets"><h2>Conjuntos <span class="hint">${d.sets.filter((s) => s.done).length}/${d.sets.length}</span></h2>
+      <p class="hint">Junte todos os itens de um conjunto para ganhar o prêmio exclusivo e créditos. Clique num item para ver como liberar.</p>
+      <div class="setgrid pj-sets">${[...d.sets].sort((a, b) => !!a.done - !!b.done || b.have / b.items.length - a.have / a.items.length)
+        .map((s) => setCard(s, d, "data-it")).join("")}</div></section>` : ""}
     ${KINDS.map((k) => {
       const list = all.filter((r) => r.kind === k);
       const vis = list.filter(filt);
@@ -208,7 +224,7 @@ function itemModal(r) {
   const prev = profKinds.includes(r.kind) ? `<div id="im-card">${card({ [r.kind]: r.id })}</div>`
     : r.kind === "theme" ? themeTile(r) : `<div class="pj-bigprev">${itemPreview(r, d.level, d.equip)}</div>`;
   const how = r.got ? "Já é seu." : r.req ? `Chegue ao nível ${r.req} (você está no ${d.level}).` : r.shop ? `Loja da semana: ${r.price} créditos.${inShop ? "" : " Não está na loja agora; ela muda toda segunda."}`
-    : r.event ? `Complete o evento ${EVENT_NAME[r.event] || r.event}.` : `Ganhe a conquista ${r.conq}.`;
+    : r.event ? `Complete o evento ${EVENT_NAME[r.event] || r.event}.` : r.set ? `Complete o conjunto ${SET_NAME[r.set] || r.set} (Coleção › Conjuntos).` : `Ganhe a conquista ${r.conq}.`;
   openModal(`<div class="rar-${r.rarity}"><span class="rartag">${RARITY[r.rarity]}</span> <span class="hint">${esc(KIND_LABEL[r.kind])}${r.anim ? " · animado" : ""}</span></div>
     <h2 style="margin:6px 0 12px">${esc(r.name)}</h2>${prev}
     <p class="pj-how"><b>Como liberar:</b> ${esc(how)}</p>
@@ -258,7 +274,7 @@ function tabLoja() {
   return `<section class="box"><h2>Créditos</h2>
       <div class="crbal"><b><i class="crcoin"></i>${c.bal}</b><small>+${c.today} hoje · +${c.week} nesta semana · ${c.earned} ganhos no total · ${c.spent} gastos</small></div>
       <div class="crhow">Como ganhar: meta do dia <b>${R.meta}</b> (as 3 no mesmo dia: +${R.metas3}) · desafio da semana <b>${R.quest}</b> · chefão <b>${R.boss}</b> ·
-        cada nível <b>${R.level}</b> · a cada 7 dias seguidos <b>${R.streak7}</b> · conquista bronze/prata/ouro <b>${R.conq.bronze}/${R.conq.prata}/${R.conq.ouro}</b> · evento <b>${R.event}</b>.
+        cada nível <b>${R.level}</b> · conjunto completo <b>${R.set ? `${R.set.raro}–${R.set.lendario}` : "–"}</b> · a cada 7 dias seguidos <b>${R.streak7}</b> · conquista bronze/prata/ouro <b>${R.conq.bronze}/${R.conq.prata}/${R.conq.ouro}</b> · evento <b>${R.event}</b>.
         O histórico conta: os créditos são recalculados de tudo o que você já fez.</div></section>
     <section class="box"><h2>Loja da semana <span class="hint">${left ? `troca em ${left} dia${left > 1 ? "s" : ""}` : "troca amanhã"}</span></h2>
       <p class="hint">4 itens que não saem por nível, sorteados toda segunda (pelo menos 1 raro ou melhor).</p>
@@ -420,6 +436,7 @@ function bindBody() {
   }));
   B.querySelectorAll("#pj-filter [data-f]").forEach((b) => (b.onclick = () => { FILTER = b.dataset.f; renderBody(); }));
   B.querySelectorAll("[data-cq]").forEach((b) => (b.onclick = () => trophyModal(+b.dataset.cq)));
+  if ($("pj-retro-go")) $("pj-retro-go").onclick = () => { pvPost({ pcc: "retro", id: $("pj-retro").value }); toast("Abrindo na prévia do celular"); };
   // perfil
   if ($("pf-bio-ok")) {
     $("pf-bio-ok").onclick = () => { $("pf-bio").blur(); act("conq.profile", { bio: $("pf-bio").value }, "Frase salva"); };

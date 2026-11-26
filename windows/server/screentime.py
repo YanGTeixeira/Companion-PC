@@ -253,8 +253,8 @@ class ScreenTime:
         return cat
 
     # ------------------------------------------------------------ consulta
-    def report(self, rng="day", day=None):
-        """rng: day | week | month. day: 'AAAA-MM-DD' (padrão hoje). Inclui o que ainda não foi gravado."""
+    def report(self, rng="day", day=None, end=None):
+        """rng: day | week | month | range (de day até end). day: 'AAAA-MM-DD' (padrão hoje). Inclui o que ainda não foi gravado."""
         ref = date.fromisoformat(day) if day else date.today()
         if rng == "week":
             start = ref - timedelta(days=ref.weekday())
@@ -262,6 +262,8 @@ class ScreenTime:
         elif rng == "month":
             start = ref.replace(day=1)
             end = (start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        elif rng == "range":
+            start, end = ref, date.fromisoformat(end)
         else:
             start = end = ref
         a, b = start.isoformat(), end.isoformat()

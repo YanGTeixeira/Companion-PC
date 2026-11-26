@@ -74,6 +74,7 @@ const CQ_EVENT = {
   x2: () => "Hoje é dia de XP em dobro!",
   freeze: (e) => `Um congelamento salvou a sua sequência (${e.left} sobrando)`,
   event: (e) => `Evento ${e.name} completo! Itens liberados (+${e.credits} créditos)`,
+  set: (e) => `${e.icon} Conjunto ${e.name} completo! Liberou ${e.reward} (+${e.credits} créditos)`,
   duel_in: (e) => `${e.nick} desafiou você para um duelo (Jogador › Ranking)`,
 };
 function onConqEvent(e) {

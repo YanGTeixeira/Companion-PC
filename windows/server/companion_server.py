@@ -1788,6 +1788,7 @@ CONQ_OVERLAY = {
     "quest": lambda e: ("quest", "Desafio da semana cumprido", f"+{e['xp']} XP"),
     "reward": lambda e: ("level", f"Recompensa: {e['name']}", "Equipe em Jogador › Recompensas"),
     "event": lambda e: ("quest", f"Evento {e['name']} completo!", f"Itens do evento liberados · +{e['credits']} créditos"),
+    "set": lambda e: ("level", f"Conjunto {e['name']} completo!", f"Liberou {e['reward']} · +{e['credits']} créditos"),
 }
 
 
@@ -1835,9 +1836,43 @@ async def conq_loop():
         await asyncio.sleep(2)   # junta vários avisos seguidos (partida + foco)
 
 
-def retro_get(p):
-    """Retrospectiva de um mês ("AAAA-MM"; padrão: o mês atual)."""
+retro_years = retro.years_open
+
+
+def _match_rows(start, end):
+    with MATCHES.lock:
+        rows = MATCHES.db.execute("SELECT ended, game, title, win, data FROM matches WHERE ended >= ? AND ended < ?",
+                                  (start, end)).fetchall()
+    return [(e, g, t, w, json.loads(d or "{}")) for e, g, t, w, d in rows]
+
+
+def retro_year(year):
+    """Retrospectiva do ano (1.20, "Sua jornada"): desde o 1º dia com dados daquele ano até hoje (ou 31/12)."""
     import datetime as _dt
+    all_days = CONQ.range_data("0000", "0000")[3]
+    if year not in retro_years(all_days):
+        raise ValueError(f"a retrospectiva de {year} abre em 15/12")
+    inside = [d for d in all_days if d[:4] == str(year)]
+    first, last = _dt.date.fromisoformat(min(inside)), _dt.date(year, 12, 31)
+    upto = min(last, _dt.date.today())
+    days, xp_before, conq, _ = CONQ.range_data(first.isoformat(), last.isoformat())
+    out = retro.build_year(year, first, last, days, xp_before, conq,
+                           SCREEN.report("range", first.isoformat(), upto.isoformat()),
+                           _match_rows(time.mktime(first.timetuple()), time.mktime((last + _dt.timedelta(days=1)).timetuple())),
+                           CONQ.collection_data(first.isoformat(), last.isoformat()))
+    out["years"] = retro_years(all_days)
+    return out
+
+
+def retro_get(p):
+    """Retrospectiva de um mês ("AAAA-MM"; padrão: o mês atual) ou do ano ({"year": AAAA})."""
+    import datetime as _dt
+    if p.get("year") is not None:
+        try:
+            year = int(p["year"])
+        except (TypeError, ValueError):
+            raise ValueError("ano inválido") from None
+        return retro_year(year)
     month = str(p.get("month") or time.strftime("%Y-%m"))
     if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
         raise ValueError("mês inválido")
@@ -1849,22 +1884,27 @@ def retro_get(p):
     prev = [x for x in CONQ.month_data(retro.prev_month(month))[0] if int(x[0][8:]) <= upto]
     start = time.mktime(first.timetuple())
     end = time.mktime((last + _dt.timedelta(days=1)).timetuple())
-    with MATCHES.lock:
-        rows = MATCHES.db.execute("SELECT ended, game, title, win, data FROM matches WHERE ended >= ? AND ended < ?",
-                                  (start, end)).fetchall()
-    out = retro.build(month, days, xp_before, conq, SCREEN.report("month", first.isoformat()),
-                      [(e, g, t, w, json.loads(d or "{}")) for e, g, t, w, d in rows], prev)
+    out = retro.build(month, days, xp_before, conq, SCREEN.report("month", first.isoformat()), _match_rows(start, end), prev)
     out["months"] = sorted({d[:7] for d in all_days}, reverse=True)
+    out["years"] = retro_years(all_days)
     return out
 
 
 async def retro_notice():
     """No começo do mês, avisa uma vez que a retrospectiva do mês que acabou está pronta."""
     month = retro.prev_month(time.strftime("%Y-%m"))
-    if CONQ.flag("retro_seen") == month or not any(d[:7] == month for d in CONQ.month_data(month)[3]):
-        return
-    CONQ.flag("retro_seen", month)
-    await broadcast({"t": "event", "kind": "retro", "month": month, "label": retro.month_bounds(month)[0].strftime("%m/%Y")})
+    all_days = CONQ.month_data(month)[3]
+    if CONQ.flag("retro_seen") != month and any(d[:7] == month for d in all_days):
+        CONQ.flag("retro_seen", month)
+        await broadcast({"t": "event", "kind": "retro", "month": month, "label": retro.month_bounds(month)[0].strftime("%m/%Y")})
+    # 1.20: a do ano abre em 15/12 ("até agora") e fecha em 1º/01 (avisa de novo)
+    years = retro_years(all_days)
+    if years:
+        y = years[0]
+        tag = f"{y}" if str(y) < time.strftime("%Y") else f"{y}-parcial"
+        if CONQ.flag("retro_year_seen") != tag:
+            CONQ.flag("retro_year_seen", tag)
+            await broadcast({"t": "event", "kind": "retro", "year": y, "final": not tag.endswith("parcial"), "label": str(y)})
 
 
 def matches_get(p):

@@ -217,7 +217,8 @@ class CatalogoTest(unittest.TestCase):
             self.assertIn(i[3], co.RARITY)
             req = i[4]
             ok = isinstance(req, int) or req == co.SHOP or req in {c[0] for c in cq.CONQ} or \
-                (isinstance(req, str) and req.startswith("ev:") and req[3:] in {e[0] for e in co.EVENTS})
+                (isinstance(req, str) and req.startswith("ev:") and req[3:] in {e[0] for e in co.EVENTS}) or \
+                (isinstance(req, str) and req.startswith("set:") and req[4:] in {x[0] for x in co.SETS})
             self.assertTrue(ok, i)
         for k, v in co.EQUIP_DEFAULT.items():
             if k in co.EQUIP_KINDS:
@@ -226,3 +227,50 @@ class CatalogoTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConjuntosTest(unittest.TestCase):
+    """1.20: conjuntos da coleção."""
+
+    def setUp(self):
+        self.path = Path(tempfile.mkdtemp()) / "conquistas.db"
+        self.orig = co.SETS
+
+    def tearDown(self):
+        co.SETS = self.orig
+
+    def test_catalogo(self):
+        for sid, _n, _i, items in co.SETS:
+            self.assertIn(sid, co.SET_REWARD)
+            self.assertTrue(all(i in co.BY_ID for i in items), sid)
+            self.assertNotIn(co.SET_REWARD[sid], items)             # o prêmio não faz parte do conjunto
+            self.assertFalse(any(str(co.BY_ID[i][4]).startswith("set:") for i in items))
+        self.assertEqual(set(co.SET_REWARD), {s[0] for s in co.SETS})
+        self.assertEqual(co.sets_complete({"b_lava", "e_fogo", "f_chamas", "a_brasa"}), ["fogo"])
+
+    def test_completar_libera_premio_e_creditos(self):
+        co.SETS = [("retro", "Fliperama", "🕹️", ["b_grade", "f_pixel"])]   # um item de nível 2 e um da loja
+        c = cq.Conquistas(self.path, history(20), lambda: d(19))
+        st, _ = c.refresh(d(0))
+        s = st["sets"][0]
+        self.assertEqual((s["have"], s["done"]), (1, None))
+        self.assertFalse(next(r for r in st["rewards"] if r["id"] == "oldschool")["got"])
+        before = st["credits"]["earned"]
+        with c._db() as db:                                          # como se tivesse comprado a moldura na loja
+            db.execute("INSERT OR REPLACE INTO kv VALUES ('bought', ?)", (json.dumps([{"id": "f_pixel", "price": 150, "day": d(0)}]),))
+        st, ev = c.refresh(d(0))
+        s = st["sets"][0]
+        self.assertEqual((s["have"], s["done"], s["reward"], s["credits"]), (2, d(0), "oldschool", 60))
+        rw = next(r for r in st["rewards"] if r["id"] == "oldschool")
+        self.assertTrue(rw["got"])
+        self.assertEqual(rw["set"], "retro")
+        self.assertTrue(any(e["kind"] == "set" and e["id"] == "retro" and e["credits"] == 60 for e in ev))
+        self.assertFalse(any(e["kind"] == "reward" and e["id"] == "oldschool" for e in ev))   # um aviso só
+        self.assertEqual(st["credits"]["earned"] - before, 60)
+        self.assertEqual(st["credits"]["today"] - 60 >= 0, True)
+        self.assertEqual(c.refresh(d(0))[1], [])                     # não avisa de novo
+        self.assertEqual(c.equip("title", "oldschool")["equip"]["title"], "oldschool")
+        col = c.collection_data(d(0), d(0))
+        self.assertEqual([x["name"] for x in col["sets"]], ["Fliperama"])
+        self.assertEqual(col["bought"], 1)
+        self.assertEqual(c.collection_data(d(30), d(1))["sets"], [])

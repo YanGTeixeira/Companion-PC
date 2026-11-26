@@ -21,6 +21,8 @@ addEventListener("message", (e) => {
   if (e.origin !== location.origin || !e.data) return;
   // página Jogador do PC: experimentar um tema ou cor na prévia (10 s)
   if (e.data.pcc === "try") { const r = state.conq?.rewards?.find((x) => x.id === e.data.id); if (r && typeof tryApp === "function") tryApp(r); return; }
+  // e abrir a retrospectiva (do mês "AAAA-MM" ou do ano "yAAAA") na prévia
+  if (e.data.pcc === "retro" && typeof openRetro === "function") { openRetro(String(e.data.id || "")); return; }
   if (e.data.pcc !== "view") return;
   // Jogando e Reunião só existem ao vivo; na prévia aparecem quando o editor pede
   for (const v of ["play", "meet"]) if (v !== e.data.view && PREVIEW_LIVE.has(v)) { PREVIEW_LIVE.delete(v); if (!LIVE_REAL[v]) setLive(v, "", false, false); }
