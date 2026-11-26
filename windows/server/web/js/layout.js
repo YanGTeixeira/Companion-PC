@@ -5,12 +5,12 @@
 // ---------------------------------------------------------------- layout (menu e cartões), um em pé e um deitado
 // O layout fica no PC (layout.json) e é editado na página /editor; vale para todos os aparelhos.
 const VIEW_LABEL = { dash: "Sistema", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
-  screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes", play: "Jogando", meet: "Reunião", today: "Hoje" };
+  screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes", play: "Jogando", meet: "Reunião", today: "Hoje", conq: "Conquistas" };
 const DEFAULT_NAV = [
-  { id: "status", label: "Status", views: ["dash", "today", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
+  { id: "status", label: "Status", views: ["dash", "today", "conq", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
   { id: "ctrl", label: "Controle", views: ["mouse", "screen"] }, { id: "deck", label: "Botões", views: ["deck"] },
   { id: "pc", label: "PC", views: ["send", "power", "voz", "sys"] }];
-const SPLIT_DEFAULT = { status: "minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
+const SPLIT_DEFAULT = { status: "minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
   ctrl: "minmax(0,1fr) minmax(0,1.7fr)", pc: "minmax(0,1.1fr) minmax(0,.7fr) minmax(0,1.3fr) minmax(0,1.1fr)" };
 const BASE_VIEWS = Object.keys(VIEW_LABEL).filter((v) => v !== "play" && v !== "meet");
 let LAYOUT = store.get("layout", null) || {};
@@ -166,6 +166,7 @@ function showView(name, temp) {
   if (vis("games") && welcome) loadHist();
   if (vis("mix") && welcome) loadProfiles();
   if (vis("today")) { renderToday(); setTimeout(() => loadDay(true)); }
+  if (vis("conq")) setTimeout(() => (state.conq ? renderConq() : loadConq()));
   if (vis("games")) { renderSteam(); renderPost(); }
   if (vis("screen")) requestAnimationFrame(() => { layoutScreen(); screenLoop(); });
   if (vis("media") || vis("mix")) { mixT = 0; renderMixer(); pollMixer(); }

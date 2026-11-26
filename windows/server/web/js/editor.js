@@ -3,11 +3,11 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 // mesmos nomes do app (index.html)
-const VIEW_LABEL = { dash: "Sistema", today: "Hoje", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
+const VIEW_LABEL = { dash: "Sistema", today: "Hoje", conq: "Conquistas", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
   screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes" };
 const BASE_VIEWS = Object.keys(VIEW_LABEL);
 const DEFAULT_NAV = [
-  { id: "status", label: "Status", views: ["dash", "today", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
+  { id: "status", label: "Status", views: ["dash", "today", "conq", "games", "usage"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
   { id: "ctrl", label: "Controle", views: ["mouse", "screen"] }, { id: "deck", label: "Botões", views: ["deck"] },
   { id: "pc", label: "PC", views: ["send", "power", "voz", "sys"] }];
 const CARD_LABEL = { cpu: "CPU", ram: "Memória", gpu: "GPU", net: "Rede", procs: "Processos", disks: "Discos", bat: "Bateria", sys: "Sistema" };
@@ -17,7 +17,7 @@ const DEFAULT_DASH = {
 };
 const COLS = { portrait: 2, landscape: 4 };
 // telas e seus blocos (data-b no index.html); cada grupo é um conjunto de irmãos que dá para reordenar
-const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["today", "Hoje"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
+const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["today", "Hoje"], ["conq", "Conquistas"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
   ["mix", "Mixer"], ["mouse", "Mouse e teclado"], ["send", "Arquivos"], ["power", "Energia"], ["voz", "Voz"], ["sys", "Ajustes"]];
 const BLOCKS = {
   play: [{ wide: 1, items: [["hero", "Jogo (capa, tempo e atalhos)"], ["perf", "Desempenho e FPS"], ["gsi", "Partida (CS2 / Dota 2)"], ["post", "Fim de partida (comparação)"], ["agora", "Dota: próximo item, skill e talento"], ["tact", "Timers do Dota / bomba e economia do CS"], ["dota", "Dota 2: draft e build"], ["graph", "Gráficos do Dota / rounds do CS"]] },
@@ -26,6 +26,7 @@ const BLOCKS = {
     { title: "Botões da reunião", items: [["m-mic", "Microfone"], ["m-cam", "Câmera"], ["m-share", "Compartilhar tela"], ["m-hand", "Levantar a mão"],
       ["m-captions", "Legendas"], ["m-chat", "Chat"], ["m-focus", "Mostrar no PC"], ["m-leave", "Sair"]] }],
   today: [{ wide: 1, items: [["weather", "Clima"], ["agenda", "Agenda"], ["day", "Seu dia (resumo)"], ["focus", "Foco"]] }],
+  conq: [{ wide: 1, items: [["level", "Nível e sequência"], ["metas", "Metas de hoje"], ["conq", "Conquistas"]] }],
   games: [{ wide: 1, items: [["now", "Jogo atual"], ["recent", "Jogados recentemente"], ["week", "Esta semana"], ["post", "Fim de partida"], ["dl", "Downloads da Steam"], ["friends", "Amigos da Steam"], ["dota", "Dota 2: draft e build"], ["hist", "Partidas (CS2 / Dota 2)"], ["lib", "Biblioteca"]] }],
   usage: [{ items: [["range", "Hoje / Semana / Mês"]] }, { wide: 1, items: [["total", "Total, gráfico e categorias"], ["apps", "Por aplicativo"]] }],
   media: [{ items: [["art", "Capa"], ["info", "Música e artista"], ["prog", "Barra de progresso"], ["ctrls", "Anterior / tocar / próxima"], ["vol", "Volume"], ["out", "Saída de áudio"]] }],

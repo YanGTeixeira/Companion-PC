@@ -511,3 +511,23 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
   .play.ph-menu #dota-ui.dtwo .dright, .play.ph-draft #dota-ui.dtwo .dright { border-left: 1px solid var(--p4); padding-left: 14px; }
   .play.ph-draft #dota-ui.dtwo .dsug { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Conquistas */
+.cqlvl { display: flex; align-items: center; gap: 12px; }
+.cqlvl > b { font: 56px/1 var(--display); color: var(--p); min-width: 1.2em; text-align: center; }
+.cqlvl small, .cqv { color: var(--p3); font-size: 12px; }
+.cqnums { margin-top: 10px; }
+.cqmeta { padding: 6px 0; border-bottom: 1px dashed var(--p4); }
+.cqmeta:last-child { border-bottom: 0; }
+.cqrow { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.cqrow small { color: var(--p3); font-size: 11px; letter-spacing: .5px; flex: none; }
+.cqmeta .bar { margin: 4px 0 2px; height: 6px; }
+.cqmeta.done .cqrow small { color: var(--p); }
+.cqmeta.bad .cqrow small { color: var(--alert); }
+.cqgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.cqc { border: 1px solid var(--p4); border-radius: var(--r); padding: 6px 8px; opacity: .55; display: flex; flex-direction: column; gap: 2px; }
+.cqc.got { opacity: 1; border-color: var(--p2); }
+.cqc.got.ouro { border-color: var(--p); box-shadow: 0 0 0 1px var(--p) inset; }
+.cqc b { color: var(--p); font-weight: 600; font-size: 14px; }
+.cqc small { color: var(--p2); font-size: 12px; }
+.cqc .bar { margin: 4px 0 0; height: 4px; }

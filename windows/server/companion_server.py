@@ -28,6 +28,7 @@ from websockets.exceptions import ConnectionClosed
 
 import devices
 import extras
+import conquistas
 import games
 import gsi
 import https_cert
@@ -300,7 +301,7 @@ DOWNLOADS = extras.DownloadWatcher(CFG.get("downloads_dir") or DEFAULT_CFG["down
 
 
 LAYOUT_PATH = BASE / "layout.json"
-LAYOUT_VIEWS = {"dash", "today", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"}
+LAYOUT_VIEWS = {"dash", "today", "conq", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"}
 LAYOUT_CARDS = {"cpu", "ram", "gpu", "net", "procs", "disks", "bat", "sys"}
 SKINS = {"fallout", "synth", "minimal", "hud", "lcd", "paper", "pocket", "code", "rpg", "tac", "jp", "exec"}
 
@@ -498,6 +499,7 @@ ASYNC_ACTIONS = {
     "matches.get": lambda p: asyncio.to_thread(matches_get, p),
     "daily.get": lambda p: _async(daily_public()),
     "day.summary": lambda p: asyncio.to_thread(day_summary, p),
+    "conq.get": lambda p: _async(CONQ.state()),
     "steam.set": lambda p: steam_set(p),
     "steam.get": lambda p: _async({**STEAM_STATE, "steamid": STEAM.steamid()}),
     "stratz.get": lambda p: _async(stratz_public()),
@@ -1333,6 +1335,7 @@ async def focus_stop(p=None, done=False):
     if f:
         FOCUS["state"] = None
         _focus_add(round((min(time.time(), f["end"]) - f["start"]) / 60))
+        CONQ_KICK.set()
     st = focus_state()
     await broadcast({"t": "focus", "d": {**st, "done": done}})
     return st
@@ -1404,6 +1407,7 @@ LAST_MATCH = {"d": None}
 
 def match_saved(pm):
     LAST_MATCH["d"] = pm
+    CONQ_KICK.set()
     loop = asyncio.get_running_loop()
     loop.create_task(broadcast({"t": "match_end", "d": pm}))
     if pm.get("game") == "dota2" and pm.get("key"):
@@ -1635,6 +1639,72 @@ def talk_today(today):
     for k, v in dict(TALK_WATCH.pend).items():
         secs[k] = secs.get(k, 0) + v
     return {k: round(v / 60, 1) for k, v in secs.items()}
+
+
+# --------------------------------------------------------------------------
+# Conquistas, metas do dia e nível (conquistas.py)
+# --------------------------------------------------------------------------
+def _focus_log():
+    try:
+        return json.loads(FOCUS_LOG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def conq_facts(day):
+    import datetime as _dt
+    start = time.mktime(_dt.date.fromisoformat(day).timetuple())
+    end = start + 86400
+    with MATCHES.lock:
+        rows = MATCHES.db.execute("SELECT ended, game, win, data FROM matches WHERE ended >= ? AND ended < ?", (start, end)).fetchall()
+    talk = TALK.day(day)
+    if day == time.strftime("%Y-%m-%d"):
+        for k, v in dict(TALK_WATCH.pend).items():
+            talk[k] = talk.get(k, 0) + v
+    return conquistas.build_facts(SCREEN.report("day", day), _focus_log().get(day, 0), talk,
+                                  [(e, g, w, json.loads(d or "{}")) for e, g, w, d in rows])
+
+
+def conq_first_day():
+    days = list(_focus_log())
+    try:
+        with SCREEN._db() as db:
+            days.append(db.execute("SELECT MIN(day) FROM usage").fetchone()[0])
+    except Exception:  # noqa: BLE001
+        pass
+    with MATCHES.lock:
+        first = MATCHES.db.execute("SELECT MIN(ended) FROM matches").fetchone()[0]
+    if first:
+        days.append(time.strftime("%Y-%m-%d", time.localtime(first)))
+    days = [d for d in days if d]
+    return min(days) if days else None
+
+
+CONQ = conquistas.Conquistas(BASE / "conquistas.db", conq_facts, conq_first_day)
+CONQ_KICK = asyncio.Event()
+
+
+async def conq_loop():
+    """Recalcula a cada minuto (ou logo depois de uma partida ou um foco) e avisa os celulares."""
+    sent = None
+    while True:
+        try:
+            st, ev = await asyncio.to_thread(CONQ.refresh)
+            for e in ev:
+                log.info("conquistas: %s", e)
+                await broadcast({"t": "event", "kind": "conq", "d": e})
+            key = json.dumps(st, sort_keys=True)
+            if key != sent:
+                sent = key
+                await broadcast({"t": "conq", "d": st})
+        except Exception:  # noqa: BLE001
+            log.exception("conq_loop")
+        try:
+            await asyncio.wait_for(CONQ_KICK.wait(), 60)
+        except asyncio.TimeoutError:
+            pass
+        CONQ_KICK.clear()
+        await asyncio.sleep(2)   # junta vários avisos seguidos (partida + foco)
 
 
 def matches_get(p):
@@ -1878,6 +1948,7 @@ async def main():
     asyncio.create_task(battery_loop())
     asyncio.create_task(screentime_loop())
     asyncio.create_task(talk_loop())
+    asyncio.create_task(conq_loop())
     asyncio.create_task(daily_loop())
     asyncio.create_task(focus_loop())
     asyncio.create_task(steam_loop())

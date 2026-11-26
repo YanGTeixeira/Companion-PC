@@ -130,6 +130,7 @@ function onMsg(m) {
       bootLine(`${m.host} conectado.`); bootDone();
       if (typeof dotaShown === "function") dotaShown();
       if (m.features?.sounds) sbLoad(); else sbMark();
+      loadConq();
       snd("on"); wasOnline = true;
       if (m.features?.notif) subNotif();
       libT = 0; if (vis("games")) loadGamesExtra();
@@ -157,6 +158,7 @@ function onMsg(m) {
     case "match_report": onMatchReport(m.d); break;
     case "dota_plan": onDotaPlan(m.d, m.reset); break;
     case "snd": onSb(m.d); break;
+    case "conq": onConq(m.d); break;
     case "meet_soon": onMeetSoon(m.d); break;
     case "focus": onFocus(m.d); break;
     case "update": onUpdate(m.d); break;
@@ -166,6 +168,7 @@ function onMsg(m) {
       if (m.kind === "notif") { snd("note"); notify(`${m.app}: ${m.title}`, m.body, "pcn-" + m.app); break; }
       if (m.kind === "voice") { voiceEvent(m); break; }
       if (m.kind === "talkwarn") { onTalkWarn(m); break; }
+      if (m.kind === "conq") { onConqEvent(m.d); break; }
       if (m.kind === "steam_done" && prefs.alerts.steam) notify("Steam: pronto para jogar", m.name, "steam-dl");
       if (m.kind === "download" && prefs.alerts.download) notify("Download concluído", m.name + (m.size ? ` · ${fmtBytes(m.size)}` : ""), "dl");
       break;

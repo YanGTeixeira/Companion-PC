@@ -43,6 +43,17 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
 | **Botões** | Páginas de botões estilo Stream Deck. **Editar** cria/edita botões (atalho de teclado, texto, ação pronta ou programa do config.json), com ícone, cor e confirmação. Ficam salvos em `deck.json` no PC. Tipo **Tocar som**: escolha um áudio no celular e ele sai no microfone (Discord etc.); veja *Sons no microfone*. |
 | **PC** | *Arquivos*: texto/link para a área de transferência do PC (ou já colar), fotos e arquivos para `Downloads\Companion PC`, e "Pegar o que está copiado no PC". *Energia*: bloquear, monitor, suspender, reiniciar, desligar. *Ajustes*: alertas (download concluído, GPU/CPU quente, memória cheia), cor do terminal e ajustes do aparelho. |
 
+**Novidades da 1.15**
+
+- **Conquistas (Status › Conquistas):** o PC transforma o que já registra (tempo de tela, foco, partidas de CS2/Dota 2
+  e tempo falando) em **XP e nível**. Todo dia aparecem **3 metas** que se ajustam à sua média dos últimos 14 dias
+  (o foco sempre entra; as outras são sorteadas entre tela, redes/vídeos, trabalho, tempo de jogo, vitórias e KDA).
+  Metas de "no máximo" só valem quando o dia acaba. Cumprir 2 metas por dia mantém a **sequência**. São 23
+  **conquistas** (bronze, prata e ouro), como *Maratona de foco*, *Imortal* (vencer sem morrer), *Fazendeiro*,
+  *Coruja* e *Semana firme*. O celular avisa ao cumprir uma meta, ganhar uma conquista ou subir de nível. Na
+  primeira vez, o que você já tinha feito é liberado sem avisos. Fica em `conquistas.db`, com um resumo de cada dia
+  (que também vai servir para a retrospectiva do mês e para um ranking no futuro).
+
 **Depois da 1.9**
 
 - **Fim de partida:** quando uma partida de CS2 ou Dota 2 termina, o celular avisa e mostra seus números
