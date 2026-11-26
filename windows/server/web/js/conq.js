@@ -27,16 +27,7 @@ function renderConq() {
     ${trophy(c.tier, !!c.day)}<span>${esc(c.name)}</span></button>`).join("");
   if (!$("cqm").classList.contains("hidden")) cqmShow();
 }
-// troféu em SVG; a cor vem do degradê da raridade (index.html), ou apagado se ainda não ganhou
-function trophy(tier, got) {
-  const f = got ? `url(#tg-${tier})` : "var(--p4)";
-  return `<svg class="tro ${got ? tier : "off"}" viewBox="0 0 64 64" aria-hidden="true">
-    <path d="M18 14h-7v3a10 10 0 0 0 10 10M46 14h7v3a10 10 0 0 1-10 10" fill="none" stroke="${f}" stroke-width="4" stroke-linecap="round"/>
-    <path d="M18 7h28v15a14 14 0 0 1-28 0z" fill="${f}"/>
-    <path d="M29 35h6v8h-6z" fill="${f}"/><path d="M23 50l3-7h12l3 7z" fill="${f}"/><rect x="18" y="50" width="28" height="7" rx="1.5" fill="${f}"/>
-    ${got ? '<path d="M24 11v9a8 8 0 0 0 4 7" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2.5" stroke-linecap="round"/>'
-      : '<text x="32" y="25" text-anchor="middle" font-size="14" font-family="sans-serif" fill="var(--bg)">?</text>'}</svg>`;
-}
+// trophy(): catalogo.js
 // ---------------------------------------------------------------- modal: como ganhar, com setas para passear pela galeria
 let cqmI = 0;
 function cqmShow() {
@@ -82,6 +73,7 @@ const CQ_EVENT = {
   reward: (e) => `Liberou ${KIND_LABEL[e.type] || ""}: ${e.name}`,
   x2: () => "Hoje é dia de XP em dobro!",
   freeze: (e) => `Um congelamento salvou a sua sequência (${e.left} sobrando)`,
+  event: (e) => `Evento ${e.name} completo! Itens liberados (+${e.credits} créditos)`,
   duel_in: (e) => `${e.nick} desafiou você para um duelo (Jogador › Ranking)`,
 };
 function onConqEvent(e) {

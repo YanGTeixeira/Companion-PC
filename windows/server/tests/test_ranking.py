@@ -51,7 +51,12 @@ class RankingTest(unittest.TestCase):
         r = Fake({"id": "abc123456", "key": "k" * 43})
         self.assertTrue(r.submit(SUM, force=True))
         sent = r.calls[-1][2]
-        self.assertEqual(set(sent), {"xp", "week_xp", "streak", "best_streak", "unlocked", "week", "title", "frame", "show"})   # nada além disso
+        self.assertEqual(set(sent), {"xp", "week_xp", "streak", "best_streak", "unlocked", "week", "title", "frame", "show", "profile"})   # nada além disso
+        self.assertEqual(sent["profile"], {})   # o perfil (1.19) só leva ids de itens e a frase; sem resumo, vazio
+        r2 = Fake({"id": "abc123456", "key": "k" * 43})
+        pf = {"bg": "b_lava", "avatar": "av_robo", "effect": "e_fogo", "accent": "a_holo", "bio": "oi", "lay": ["bio"]}
+        r2.submit({**SUM, "profile": pf}, force=True)
+        self.assertEqual(r2.calls[-1][2]["profile"], pf)
         self.assertFalse(r.submit(SUM))                 # igual e cedo: não envia
         self.assertFalse(r.submit({**SUM, "xp": 950}))  # diferente, mas antes de 15 min
         r.last_submit -= rk.SUBMIT_EVERY_S + 1

@@ -3,12 +3,12 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 // mesmos nomes do app (index.html)
-const VIEW_LABEL = { dash: "Sistema", today: "Hoje", conq: "Resumo", quests: "Desafios", troph: "Troféus", inv: "Recompensas", rank: "Ranking", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
+const VIEW_LABEL = { dash: "Sistema", today: "Hoje", conq: "Resumo", quests: "Desafios", troph: "Troféus", inv: "Recompensas", loja: "Loja", rank: "Ranking", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
   screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes" };
 const BASE_VIEWS = Object.keys(VIEW_LABEL);
 const DEFAULT_NAV = [
   { id: "status", label: "Status", views: ["dash", "today", "games", "usage"] },
-  { id: "xp", label: "Jogador", views: ["conq", "quests", "troph", "inv", "rank"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
+  { id: "xp", label: "Jogador", views: ["conq", "quests", "troph", "inv", "loja", "rank"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
   { id: "ctrl", label: "Controle", views: ["mouse", "screen"] }, { id: "deck", label: "Botões", views: ["deck"] },
   { id: "pc", label: "PC", views: ["send", "power", "voz", "sys"] }];
 const CARD_LABEL = { cpu: "CPU", ram: "Memória", gpu: "GPU", net: "Rede", procs: "Processos", disks: "Discos", bat: "Bateria", sys: "Sistema" };
@@ -19,7 +19,7 @@ const DEFAULT_DASH = {
 const COLS = { portrait: 2, landscape: 4 };
 // telas e seus blocos (data-b no index.html); cada grupo é um conjunto de irmãos que dá para reordenar
 const SCREENS = [["dash", "Sistema"], ["play", "Jogando"], ["meet", "Reunião"], ["today", "Hoje"], ["conq", "Jogador: Resumo"], ["quests", "Jogador: Desafios"],
-  ["troph", "Jogador: Troféus"], ["inv", "Jogador: Recompensas"], ["rank", "Jogador: Ranking"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
+  ["troph", "Jogador: Troféus"], ["inv", "Jogador: Recompensas"], ["loja", "Jogador: Loja"], ["rank", "Jogador: Ranking"], ["games", "Jogos"], ["usage", "Tempo"], ["media", "Tocando"],
   ["mix", "Mixer"], ["mouse", "Mouse e teclado"], ["send", "Arquivos"], ["power", "Energia"], ["voz", "Voz"], ["sys", "Ajustes"]];
 const BLOCKS = {
   play: [{ wide: 1, items: [["hero", "Jogo (capa, tempo e atalhos)"], ["perf", "Desempenho e FPS"], ["gsi", "Partida (CS2 / Dota 2)"], ["post", "Fim de partida (comparação)"], ["agora", "Dota: próximo item, skill e talento"], ["tact", "Timers do Dota / bomba e economia do CS"], ["dota", "Dota 2: draft e build"], ["graph", "Gráficos do Dota / rounds do CS"]] },
@@ -31,7 +31,9 @@ const BLOCKS = {
   conq: [{ wide: 1, items: [["level", "Jogador (nível, título e sequência)"], ["metas", "Metas de hoje"], ["retro", "Retrospectiva do mês"]] }],
   quests: [{ wide: 1, items: [["week", "Desafios da semana"], ["boss", "Chefão da semana"]] }],
   troph: [{ wide: 1, items: [["show", "Vitrine"], ["conq", "Conquistas (troféus)"]] }],
-  inv: [{ wide: 1, items: [["next", "Próximas recompensas"], ["title", "Títulos"], ["frame", "Molduras"], ["sound", "Som das conquistas"], ["theme", "Temas"], ["alerts", "Avisos"]] }],
+  inv: [{ wide: 1, items: [["next", "Próximas recompensas"], ["perfil", "Perfil (frase e blocos)"], ["title", "Títulos"], ["frame", "Molduras"], ["avatar", "Avatares"], ["bg", "Fundos do cartão"],
+    ["effect", "Efeito no nome"], ["accent", "Cor de destaque"], ["theme", "Temas"], ["sound", "Som das conquistas"], ["alerts", "Avisos"]] }],
+  loja: [{ wide: 1, items: [["credits", "Créditos"], ["shop", "Loja da semana"], ["event", "Evento"]] }],
   rank: [{ wide: 1, items: [["rank", "Ranking (liga, amigos, duelos, geral)"]] }],
   games: [{ wide: 1, items: [["now", "Jogo atual"], ["recent", "Jogados recentemente"], ["week", "Esta semana"], ["post", "Fim de partida"], ["dl", "Downloads da Steam"], ["friends", "Amigos da Steam"], ["dota", "Dota 2: draft e build"], ["hist", "Partidas (CS2 / Dota 2)"], ["lib", "Biblioteca"]] }],
   usage: [{ items: [["range", "Hoje / Semana / Mês"]] }, { wide: 1, items: [["total", "Total, gráfico e categorias"], ["apps", "Por aplicativo"]] }],
@@ -51,20 +53,7 @@ const NOTES = {
   sys: "Este aparelho fica sempre visível: é onde troca o token.",
 };
 let SCR = "dash";
-const THEMES = [
-  { id: "fallout", name: "Fallout", desc: "Terminal de fósforo", font: "VT323", crt: true, variants: [["green", "#040d07", "#5cff8a", "#1c7a3d"], ["amber", "#0c0703", "#ffbf47", "#8a5a17"], ["cyan", "#030b0d", "#7cf4ff", "#1b6f7a"], ["blue", "#030a10", "#8fd3ff", "#23597a"], ["white", "#07090a", "#e8f0f2", "#5e6a6e"], ["red", "#0d0403", "#ff6b5e", "#82271f"]] },
-  { id: "synth", name: "Synthwave", desc: "Neon rosa e ciano", font: "Orbitron", crt: true, variants: [["neon", "#0d0518", "#ff4fd8", "#3ef0ff"], ["sunset", "#140818", "#ff6b9d", "#ffb347"], ["ice", "#050b1a", "#4d7cff", "#7df9ff"], ["gold", "#120b02", "#ffc94d", "#ff7a1a"]] },
-  { id: "minimal", name: "Minimal", desc: "Limpo e moderno", font: "Inter", variants: [["dark", "#171a20", "#eef1f5", "#4c8dff"], ["light", "#f3f5f8", "#15181d", "#2563eb"], ["amoled", "#000000", "#f1f1f1", "#4c8dff"], ["purple", "#110e1a", "#efeaff", "#8b5cf6"]] },
-  { id: "hud", name: "Cockpit", desc: "HUD laranja e branco", font: "Rajdhani", variants: [["orange", "#0a0e12", "#eef3f7", "#ff8a1f"], ["aviation", "#04080a", "#ffb000", "#3fd3ff"]] },
-  { id: "lcd", name: "LCD 8-bit", desc: "Tela de pixel verde", font: "Press Start 2P", variants: [["olive", "#a4b465", "#1f2a10", "#5b6c32"]] },
-  { id: "paper", name: "Papel", desc: "E-ink, preto no creme", font: "Playfair Display", variants: [["cream", "#f2ede2", "#161514", "#8a857a"]] },
-  { id: "pocket", name: "Portátil", desc: "4 tons, tela de bolso", font: "Pixelify Sans", variants: [["dmg", "#9bbc0f", "#0f380f", "#306230"], ["gray", "#c4c4b2", "#22221e", "#6e6e63"]] },
-  { id: "code", name: "Código", desc: "Editor escuro, cores de sintaxe", font: "JetBrains Mono", variants: [["dark", "#1e1e1e", "#4ec9b0", "#c586c0"], ["mocha", "#1e1e2e", "#94e2d5", "#cba6f7"]] },
-  { id: "rpg", name: "Fantasia", desc: "Pedra, ouro e moldura", font: "Cinzel", variants: [["stone", "#13100d", "#d9ad4f", "#b3302a"], ["crimson", "#120a0b", "#e8c06a", "#c23b32"], ["emerald", "#0a110d", "#d9ad4f", "#2fbf71"]] },
-  { id: "tac", name: "Tático", desc: "Mapa de missão", font: "Chakra Petch", variants: [["olive", "#171a14", "#dadccf", "#ff7a1a"], ["urban", "#121519", "#dfe3e8", "#ffb020"]] },
-  { id: "jp", name: "Japão", desc: "Washi, sakura e carimbo", font: "Zen Maru Gothic", variants: [["sakura", "#f7f1e8", "#d94f78", "#c8372d"], ["night", "#0e0f24", "#6ee7ff", "#ff5c8a"]] },
-  { id: "exec", name: "Executivo", desc: "Marinho e champanhe", font: "Cormorant Garamond", variants: [["navy", "#0b1220", "#eef0f4", "#c9a961"], ["ivory", "#f6f3ec", "#1c1f26", "#9c7b3c"], ["black", "#0a0a0a", "#f2f2f2", "#c9a961"]] },
-];
+// THEMES e VAR_NAME ficam em catalogo.js (os mesmos do app)
 
 // ------------------------------------------------------------ conexão
 const m = location.hash.match(/[#&]t=([^&]+)/);
@@ -116,7 +105,7 @@ function save() {
 // ------------------------------------------------------------ modelo
 const LEGACY_VIEWS = ["dash", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"];
 // abas novas (que o layout salvo ainda não conhecia) entram na seção padrão delas, como no app
-const XP_VIEWS = ["conq", "quests", "troph", "inv", "rank"];
+const XP_VIEWS = ["conq", "quests", "troph", "inv", "loja", "rank"];
 function migrateXp(nav, known) {   // igual ao layout.js: menu salvo antes da 1.18 ganha a seção Jogador
   const k = new Set(known || LEGACY_VIEWS);
   if (k.has("quests") || nav.some((s) => s.id === "xp")) return nav;
@@ -229,11 +218,12 @@ function renderAll() { renderThemes(); renderAuto(); renderLayout(); }
 function renderThemes() {
   const skin = LAY.skin || "fallout", theme = LAY.theme;
   $("themes").innerHTML = THEMES.map((t) => {
-    const v = t.variants.find(([id]) => id === theme && t.id === skin) || t.variants[0];
-    const [, bg, fg, acc] = v;
-    return `<div class="thm${t.id === skin ? " on" : ""}" data-skin="${t.id}" style="background:${bg};color:${fg}">
-      <span class="tn" style="font-family:'${t.font}';font-size:${t.id === "lcd" ? 12 : 20}px">${t.name}</span><small>${t.desc}</small>
-      ${t.variants.length > 1 ? `<div class="vars">${t.variants.map(([id, b, f]) => { const lk = themeLock(t.id, id); return `<button data-var="${id}" class="${t.id === skin && id === (theme || t.variants[0][0]) ? "on" : ""}${lk ? " lock" : ""}" style="background:${id === "light" || id === "dark" ? b : f}" title="${esc(VAR_NAME[id] || id)}${lk ? " · libera no " + esc(lk) : ""}">${lk ? "🔒" : ""}</button>`; }).join("")}</div>` : ""}
+    const free = t.variants.filter(([id]) => !themeLock(t.id, id)), all = !free.length;
+    const v = t.variants.find(([id]) => id === theme && t.id === skin) || free[0] || t.variants[0];
+    const [, , , bg, fg, acc] = v;
+    return `<div class="thm${t.id === skin ? " on" : ""}${all ? " lockall" : ""}" data-skin="${t.id}" style="background:${bg};color:${fg}">
+      <span class="tn" style="font-family:'${t.font}';font-size:${t.id === "lcd" ? 12 : 20}px">${all ? "🔒 " : ""}${t.name}</span><small>${t.desc}</small>
+      ${t.variants.length > 1 ? `<div class="vars">${t.variants.map(([id, label, sw]) => { const lk = themeLock(t.id, id); return `<button data-var="${id}" class="${t.id === skin && id === (theme || t.variants[0][0]) ? "on" : ""}${lk ? " lock" : ""}" style="background:${sw}" title="${esc(label)}${lk ? " · libera no " + esc(lk) : ""}">${lk ? "🔒" : ""}</button>`; }).join("")}</div>` : ""}
       <div class="bars"><i style="background:${fg}"></i><i style="background:${acc}"></i><i style="background:${fg};opacity:.4"></i></div></div>`;
   }).join("");
   const t = THEMES.find((x) => x.id === skin) || THEMES[0];
@@ -243,7 +233,8 @@ function renderThemes() {
 $("themes").onclick = (e) => {
   const card = e.target.closest(".thm"); if (!card) return;
   const t = THEMES.find((x) => x.id === card.dataset.skin);
-  const v = e.target.closest("[data-var]")?.dataset.var;
+  let v = e.target.closest("[data-var]")?.dataset.var;
+  if (!v && !(LAY.skin === t.id && t.variants.some(([id]) => id === LAY.theme))) v = (t.variants.find(([id]) => !themeLock(t.id, id)) || t.variants[0])[0];
   if (v && themeLock(t.id, v)) { status("bad", `Esse tema libera no ${themeLock(t.id, v)} (Jogador › Recompensas)`); return; }
   LAY.skin = t.id; LAY.theme = v || (LAY.skin === t.id && t.variants.some(([id]) => id === LAY.theme) ? LAY.theme : t.variants[0][0]);
   renderThemes(); save();
@@ -251,15 +242,13 @@ $("themes").onclick = (e) => {
 $("crt").onchange = () => { LAY.crt = $("crt").checked; save(); };
 // troca automática
 function renderAuto() {
-  const opts = '<option value="">(o escolhido acima)</option>' + THEMES.map((t) => t.variants.map(([v]) => `<option value="${t.id}:${v}">${esc(t.name)}${t.variants.length > 1 ? " · " + esc(VAR_NAME[v] || v) : ""}</option>`).join("")).join("");
+  const opts = '<option value="">(o escolhido acima)</option>' + THEMES.map((t) => t.variants.filter(([v]) => !themeLock(t.id, v)).map(([v, label]) => `<option value="${t.id}:${v}">${esc(t.name)}${t.variants.length > 1 ? " · " + esc(label) : ""}</option>`).join("")).join("");
   const a = LAY.auto || {}, tm = a.time || {}, gm = a.game || {};
   for (const id of ["au-day", "au-night", "au-dota", "au-cs"]) $(id).innerHTML = opts;
   $("au-time").checked = !!tm.on; $("au-day").value = tm.day || ""; $("au-night").value = tm.night || "jp:night";
   $("au-from").value = tm.from || "19:00"; $("au-to").value = tm.to || "07:00";
   $("au-game").checked = !!gm.on; $("au-dota").value = gm.dota2 || "rpg:stone"; $("au-cs").value = gm.cs2 || "tac:olive";
 }
-const VAR_NAME = { red: "Vermelho", gold: "Ouro", purple: "Roxo", emerald: "Esmeralda", green: "Verde", amber: "Âmbar", cyan: "Ciano", blue: "Azul", white: "Branco", neon: "Neon", sunset: "Pôr do sol", ice: "Gelo", dark: "Escuro", light: "Claro", amoled: "Preto (AMOLED)",
-  orange: "Laranja", aviation: "Aviônica", olive: "Oliva", cream: "Creme", dmg: "Verde", gray: "Cinza", mocha: "Mocha", stone: "Pedra", crimson: "Carmim", urban: "Urbano", sakura: "Sakura", night: "Noite em Tóquio", navy: "Marinho", ivory: "Marfim", black: "Preto" };
 function saveAuto() {
   LAY.auto = { time: { on: $("au-time").checked, day: $("au-day").value, night: $("au-night").value, from: $("au-from").value || "19:00", to: $("au-to").value || "07:00" },
                game: { on: $("au-game").checked, dota2: $("au-dota").value, cs2: $("au-cs").value } };
@@ -576,24 +565,16 @@ function renderConq() {
   const box = $("jg-body"); if (!box || !CQ) return;
   const d = CQ, eq = d.equip || {}, nm = (id) => d.rewards.find((r) => r.id === id)?.name || "";
   const pct = Math.max(0, Math.min(100, ((d.xp - d.lvl_lo) / Math.max(1, d.lvl_hi - d.lvl_lo)) * 100));
-  const sel = (kind) => `<select data-eq="${kind}">${d.rewards.filter((r) => r.kind === kind).map((r) =>
-    `<option value="${esc(r.id)}"${r.id === eq[kind] ? " selected" : ""}${r.got ? "" : " disabled"}>${esc(r.name)}${r.got ? "" : ` (${r.req ? "nível " + r.req : esc(r.conq)})`}</option>`).join("")}</select>`;
-  const w = d.week, b = w?.boss;
-  box.innerHTML = `<div class="jg-top"><span class="jg-badge ${esc(eq.frame || "")}"><b>${d.level}</b></span>
-      <div><div class="jg-title">${esc(nm(eq.title) || "Novato")}</div>
+  const got = d.rewards.filter((r) => r.got).length;
+  box.innerHTML = `<div class="jg-top">${badge(d.level, eq.frame, "big", eq.avatar)}
+      <div style="flex:1;min-width:0">${fxName(nm(eq.title) || "Novato", eq.effect, "div", "jg-title")}
         <div class="hint" style="margin:2px 0">${d.xp - d.lvl_lo} / ${d.lvl_hi - d.lvl_lo} XP para o nível ${d.level + 1} · sequência ${d.streak} dia${d.streak === 1 ? "" : "s"}
-          ${d.mult > 1 ? ` · XP ×${String(d.mult).replace(".", ",")}` : ""}${d.x2 ? " · <b>XP em dobro hoje</b>" : ""} · ${"❄".repeat(d.freezes) || "sem"} congelamento${d.freezes === 1 ? "" : "s"}</div>
-        <div class="jg-bar"><i style="width:${pct}%"></i></div></div></div>
-    <div class="row" style="flex-wrap:wrap;gap:10px;margin:12px 0"><label>Título ${sel("title")}</label><label>Moldura ${sel("frame")}</label><label>Som ${sel("sound")}</label>
-      <label class="chk"><input type="checkbox" id="jg-ov"${d.pc_overlay !== false ? " checked" : ""}> Troféu no canto da tela do PC</label></div>
-    ${w ? `<h3 style="margin:10px 0 6px;font-size:14px">Semana ${esc(w.id.split("-W")[1])} · até ${new Date(w.end + "T12:00").toLocaleDateString("pt-BR")}</h3>
-      <ul class="jg-q">${w.quests.map((q) => `<li class="${q.day ? "ok" : ""}">${q.day ? "✓" : "○"} ${esc(q.text.replace("{t}", CQ_FMT(q.unit, q.target)))}
-        <span>${CQ_FMT(q.unit, q.value)} / ${CQ_FMT(q.unit, q.target)} · +${q.xp} XP</span></li>`).join("")}
-      <li class="${b.dead ? "ok" : ""}">${b.dead ? "✓" : b.icon} Chefão: ${esc(b.name)} <span>${b.dead ? "derrotado" : `${Math.max(0, b.hp - b.dmg)} / ${b.hp} HP`} · +${b.xp} XP</span></li></ul>` : ""}
-    <p class="hint" style="margin:10px 0 0">${d.conq.filter((c) => c.day).length} de ${d.conq.length} conquistas. Troféus, vitrine, ligas, amigos e duelos ficam no app do celular, na seção <b>Jogador</b>.</p>`;
-  box.querySelectorAll("[data-eq]").forEach((el) => (el.onchange = async () => {
-    try { CQ = await send("conq.equip", { kind: el.dataset.eq, id: el.value }); status("ok", "Conectado · tudo salvo"); renderConq(); }
-    catch (e) { status("bad", e.message); renderConq(); }
-  }));
+          · <b>${d.credits?.bal ?? 0}</b> créditos · ${got} de ${d.rewards.length} itens</div>
+        <div class="jg-bar"><i style="width:${pct}%"></i></div></div>
+      <button class="pri" id="jg-open">Abrir a página Jogador</button></div>
+    <div class="row" style="margin-top:12px"><label class="chk"><input type="checkbox" id="jg-ov"${d.pc_overlay !== false ? " checked" : ""}> Troféu no canto da tela do PC</label></div>
+    <p class="hint" style="margin:10px 0 0">Perfil, troféus, vitrine, inventário, loja, evento, desafios, liga, amigos e duelos: tudo dá para ver e editar na página <b>Jogador</b>
+      (também no menu do ícone perto do relógio).</p>`;
+  $("jg-open").onclick = () => window.open("/jogador", "_blank");
   $("jg-ov").onchange = async () => { try { CQ = await send("conq.cfg", { overlay: $("jg-ov").checked }); } catch (e) { status("bad", e.message); } };
 }

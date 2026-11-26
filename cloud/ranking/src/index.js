@@ -1,14 +1,15 @@
 // Ranking público do Companion PC (Cloudflare Worker + D1).
 //
 // O PC envia só um resumo: nível/XP, XP da semana, sequência e quantos troféus (nada de tempo de tela ou apps),
-// e (1.18) os ids do título, da moldura e de até 3 troféus da vitrine.
+// (1.18) os ids do título, da moldura e da vitrine e (1.19) o perfil: fundo, avatar, efeito, cor, ordem dos blocos
+// e uma frase curta (filtrada), com até 6 troféus na vitrine.
 // Sem e-mail nem senha: no cadastro o servidor devolve um id e uma chave secreta; guarda só o sha256 da chave.
 // Como os números vêm do PC de cada um, o servidor recusa o que é impossível (XP que diminui, XP demais por
 // dia, semana errada) e recalcula o nível ele mesmo.
 //
 // Rotas (JSON):
 //   POST   /v1/register  {nick}                 -> {id, key, nick}
-//   POST   /v1/submit    {xp, week, week_xp, streak, best_streak, unlocked, title, frame, show}  (Authorization: Bearer id.key)
+//   POST   /v1/submit    {xp, week, week_xp, streak, best_streak, unlocked, title, frame, show, profile}  (Authorization: Bearer id.key)
 //   POST   /v1/nick      {nick}                 (troca o apelido; 1 vez por dia)
 //   GET    /v1/me                               -> posições do próprio usuário
 //   DELETE /v1/me                               -> apaga a conta e os dados
@@ -21,7 +22,7 @@
 
 import {
   DUELS_INBOX, DUELS_OPEN, FRIENDS_MAX, GROUP_SIZE, LEAGUES, MIN_SUBMIT_S, MAX_STRIKES, REGS_PER_DAY, SOFT,
-  checkNick, checkSubmit, cleanProfile, duelView, isoWeek, leagueAfter, leagueZones, levelOf, nickKey, normNick, weekDay,
+  checkNick, checkSubmit, cleanProfile, pfMini, readProfile, duelView, isoWeek, leagueAfter, leagueZones, levelOf, nickKey, normNick, weekDay,
 } from "./logic.js";
 
 const BOARD_LIMIT = 50;
@@ -97,8 +98,8 @@ async function submit(req, env, u) {
     return fail(422, bad);
   }
   await env.DB.batch([
-    env.DB.prepare("UPDATE users SET xp = ?, level = ?, streak = ?, best_streak = ?, unlocked = ?, last_submit = ?, title = ?, frame = ?, show = ? WHERE id = ?")
-      .bind(s.xp, levelOf(s.xp), s.streak, s.best_streak, s.unlocked, now, p.title, p.frame, p.show, u.id),
+    env.DB.prepare("UPDATE users SET xp = ?, level = ?, streak = ?, best_streak = ?, unlocked = ?, last_submit = ?, title = ?, frame = ?, show = ?, profile = ? WHERE id = ?")
+      .bind(s.xp, levelOf(s.xp), s.streak, s.best_streak, s.unlocked, now, p.title, p.frame, p.show, p.profile, u.id),
     env.DB.prepare("INSERT INTO weeks VALUES (?, ?, ?) ON CONFLICT(user_id, week) DO UPDATE SET xp = excluded.xp").bind(u.id, s.week, s.week_xp),
   ]);
   const lg = u.hidden ? null : await leagueEnsure(env, u, weeks.cur);
@@ -121,7 +122,9 @@ async function changeNick(req, env, u) {
   return json({ nick });
 }
 
-const COLS = "u.nick, u.level, u.streak, u.unlocked, u.title, u.frame, u.league";
+const COLS = "u.nick, u.level, u.streak, u.unlocked, u.title, u.frame, u.league, u.profile";
+// linha de lista: troca o perfil inteiro (JSON) pelo avatar e o efeito no nome
+const slim = (r) => { const { profile: pf, ...rest } = r; return { ...rest, ...pfMini(pf) }; };
 const BOARDS = {
   week: (week) => [`SELECT ${COLS}, w.xp AS value FROM weeks w JOIN users u ON u.id = w.user_id ` +
     "WHERE w.week = ? AND u.hidden = 0 AND w.xp > 0 ORDER BY w.xp DESC, u.created LIMIT ?", [week, BOARD_LIMIT]],
@@ -132,14 +135,14 @@ const BOARDS = {
 async function board(req, env, ctx, url) {
   const kind = url.searchParams.get("kind") || "week";
   if (!BOARDS[kind]) return fail(400, "ranking inválido");
-  const cache = caches.default, key = new Request(`https://board.cache/v2/${kind}/${isoWeek()}`);
+  const cache = caches.default, key = new Request(`https://board.cache/v3/${kind}/${isoWeek()}`);
   const hit = await cache.match(key);
   if (hit) return hit;
   const week = isoWeek();
   const [sql, args] = BOARDS[kind](week);
   const { results } = await env.DB.prepare(sql).bind(...args).all();
   const total = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE hidden = 0 AND xp > 0").first();
-  const res = json({ kind, week, players: total?.n || 0, rows: results.map((r, i) => ({ rank: i + 1, ...r })) }, 200,
+  const res = json({ kind, week, players: total?.n || 0, rows: results.map((r, i) => ({ rank: i + 1, ...slim(r) })) }, 200,
     { "cache-control": "public, max-age=60" });
   ctx.waitUntil(cache.put(key, res.clone()));
   return res;
@@ -155,7 +158,7 @@ async function me(env, u) {
     streak: u.streak ? await q("SELECT COUNT(*) AS n FROM users WHERE hidden = 0 AND streak > ?", u.streak) : null,
   };
   return json({ nick: u.nick, hidden: !!u.hidden, xp: u.xp, level: u.level, streak: u.streak, week, week_xp: wxp, ranks,
-    league: u.league, title: u.title, frame: u.frame });
+    league: u.league, title: u.title, frame: u.frame, ...pfMini(u.profile) });
 }
 
 async function remove(env, u) {
@@ -173,12 +176,13 @@ async function profile(env, url) {
   const u = await byNick(env, url.searchParams.get("nick") || "");
   if (!u) return fail(404, "ninguém com esse apelido");
   return json({ nick: u.nick, level: u.level, xp: u.xp, streak: u.streak, best_streak: u.best_streak, unlocked: u.unlocked,
-    title: u.title, frame: u.frame, show: show(u.show), league: u.league, week_xp: await weekXp(env, u.id, isoWeek()) },
+    title: u.title, frame: u.frame, show: show(u.show), league: u.league, week_xp: await weekXp(env, u.id, isoWeek()),
+    pf: readProfile(u.profile) },
   200, { "cache-control": "public, max-age=60" });
 }
 
 // ------------------------------------------------------------------ ligas
-const GROUP_SQL = "SELECT u.id, u.nick, u.level, u.title, u.frame, u.streak, COALESCE(w.xp, 0) AS xp FROM league_members m " +
+const GROUP_SQL = "SELECT u.id, u.nick, u.level, u.title, u.frame, u.streak, u.profile, COALESCE(w.xp, 0) AS xp FROM league_members m " +
   "JOIN users u ON u.id = m.user_id LEFT JOIN weeks w ON w.user_id = m.user_id AND w.week = m.week " +
   "WHERE m.week = ? AND m.league = ? AND m.grp = ? AND u.hidden = 0 ORDER BY xp DESC, u.created";
 
@@ -214,20 +218,20 @@ async function league(env, u) {
   const { results } = await env.DB.prepare(GROUP_SQL).bind(week, m.league, m.grp).all();
   const z = leagueZones(results.length);
   return json({ ...base, joined: true, up: z.up, down: m.league > 0 ? z.down : 0,
-    rows: results.map((r, i) => ({ rank: i + 1, nick: r.nick, level: r.level, title: r.title, frame: r.frame, streak: r.streak, xp: r.xp, me: r.id === u.id })) });
+    rows: results.map((r, i) => ({ rank: i + 1, nick: r.nick, level: r.level, title: r.title, frame: r.frame, streak: r.streak, xp: r.xp, me: r.id === u.id, ...pfMini(r.profile) })) });
 }
 
 // ------------------------------------------------------------------ amigos (quem você segue)
 async function friends(env, u) {
   const week = isoWeek();
   const { results } = await env.DB.prepare(
-    "SELECT u.nick, u.level, u.title, u.frame, u.streak, u.league, u.unlocked, COALESCE(w.xp, 0) AS week_xp, " +
+    "SELECT u.nick, u.level, u.title, u.frame, u.streak, u.league, u.unlocked, u.profile, COALESCE(w.xp, 0) AS week_xp, " +
     "EXISTS(SELECT 1 FROM follows b WHERE b.user_id = u.id AND b.friend_id = ?) AS mutual " +
     "FROM follows f JOIN users u ON u.id = f.friend_id LEFT JOIN weeks w ON w.user_id = u.id AND w.week = ? " +
     "WHERE f.user_id = ? AND u.hidden = 0 ORDER BY week_xp DESC, u.xp DESC").bind(u.id, week, u.id).all();
   const followers = await env.DB.prepare("SELECT COUNT(*) AS n FROM follows WHERE friend_id = ?").bind(u.id).first();
   return json({ week, me: { nick: u.nick, level: u.level, title: u.title, frame: u.frame, streak: u.streak, league: u.league,
-    week_xp: await weekXp(env, u.id, week) }, rows: results.map((r) => ({ ...r, mutual: !!r.mutual })), followers: followers?.n || 0 });
+    week_xp: await weekXp(env, u.id, week), ...pfMini(u.profile) }, rows: results.map((r) => ({ ...slim(r), mutual: !!r.mutual })), followers: followers?.n || 0 });
 }
 
 async function friendAdd(req, env, u) {

@@ -118,23 +118,14 @@ button.danger { border-color: var(--bad); color: var(--bad); }
 #blk-ed .hint { margin: 0 0 10px; color: var(--dim); font-size: 13px; }
 
 /* Jogador (1.18) */
-.jg-top { display: flex; gap: 14px; align-items: center; }
 .jg-top > div { flex: 1; min-width: 0; }
-.jg-badge { display: grid; place-items: center; width: 64px; height: 64px; padding: 5px; border-radius: 50%; background: var(--faint); flex: none; }
-.jg-badge b { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--panel); font-size: 26px; }
-.jg-badge.f_bronze { background: linear-gradient(135deg, #f0b27a, #8a4b1f 55%, #e0965a); }
-.jg-badge.f_prata { background: linear-gradient(135deg, #fff, #8e99a3 55%, #dfe5ea); }
-.jg-badge.f_ouro { background: linear-gradient(135deg, #fff1a8, #c8901a 55%, #ffd23f); }
-.jg-badge.f_neon { background: linear-gradient(135deg, #ff4fd8, #3ef0ff); }
-.jg-badge.f_cristal { background: linear-gradient(135deg, #e0fbff, #7ccfff 40%, #b9a6ff 70%, #e0fbff); }
-.jg-badge.f_chamas { background: conic-gradient(from 200deg, #ff3b1f, #ffb000, #ff5a1f, #ffd84d, #ff3b1f); }
-.jg-badge.f_arco { background: conic-gradient(#ff4d4d, #ffb84d, #f5ff4d, #4dff88, #4dd2ff, #8a4dff, #ff4dd2, #ff4d4d); }
-.jg-title { font-size: 18px; font-weight: 700; }
 .jg-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .jg-bar i { display: block; height: 100%; background: var(--acc); }
 #jg-body select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; margin-left: 4px; }
-.jg-q { list-style: none; margin: 0; padding: 0; }
-.jg-q li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); }
-.jg-q li span { color: var(--dim); font-size: 13px; flex: none; }
-.jg-q li.ok { color: var(--dim); }
 .vars button.lock { opacity: .45; font-size: 9px; line-height: 1; }
+
+/* Jogador (1.19): os tokens do app para o selo e o nome com efeito (css/colecao.css) */
+#jg-body { --p: var(--text); --p2: var(--dim); --p3: var(--faint); --p4: var(--line); --panel: var(--panel2); --hl: var(--acc); --display: "Inter", system-ui, sans-serif; --mono: "Inter", system-ui, sans-serif; }
+.jg-top { display: flex; align-items: center; gap: 16px; }
+.jg-title { font-size: 20px; font-weight: 700; }
+.thm.lockall { opacity: .6; }

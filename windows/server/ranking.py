@@ -1,7 +1,8 @@
 """Ranking público (opcional): envia o resumo das conquistas para o servidor do ranking e busca as posições.
 
 O servidor é um Cloudflare Worker (pasta cloud/ranking). Só sai do PC: apelido, XP total e da semana, sequência,
-quantos troféus e (1.18) os ids do título, da moldura e da vitrine (Conquistas.summary). Nada de tempo de tela,
+quantos troféus, (1.18) os ids do título, da moldura e da vitrine e (1.19) o perfil: ids do fundo, avatar, efeito e
+cor, a ordem dos blocos e a frase curta que a pessoa escreveu (Conquistas.summary). Nada de tempo de tela,
 apps ou horários. 1.18: ligas semanais, amigos (quem você segue) e duelos de XP da semana. Sem e-mail nem senha: no
 cadastro o servidor devolve um id e uma chave secreta, que ficam no config.json ("ranking").
 """
@@ -118,7 +119,8 @@ class Ranking:
             return False
         body = {k: summary.get(k) or 0 for k in ("xp", "week_xp", "streak", "best_streak", "unlocked")}
         body["week"] = summary.get("week")
-        body.update(title=summary.get("title") or "", frame=summary.get("frame") or "", show=list(summary.get("show") or []))
+        body.update(title=summary.get("title") or "", frame=summary.get("frame") or "", show=list(summary.get("show") or []),
+                    profile=dict(summary.get("profile") or {}))
         now = time.monotonic()
         if not force and (body == self.last_sent or now - self.last_submit < SUBMIT_EVERY_S):
             return False

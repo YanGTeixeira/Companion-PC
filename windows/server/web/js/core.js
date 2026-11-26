@@ -18,7 +18,10 @@ const store = {
 const PREVIEW = new URLSearchParams(location.search).has("preview");
 const PREVIEW_LIVE = new Set(), LIVE_REAL = {};
 addEventListener("message", (e) => {
-  if (e.origin !== location.origin || !e.data || e.data.pcc !== "view") return;
+  if (e.origin !== location.origin || !e.data) return;
+  // página Jogador do PC: experimentar um tema ou cor na prévia (10 s)
+  if (e.data.pcc === "try") { const r = state.conq?.rewards?.find((x) => x.id === e.data.id); if (r && typeof tryApp === "function") tryApp(r); return; }
+  if (e.data.pcc !== "view") return;
   // Jogando e Reunião só existem ao vivo; na prévia aparecem quando o editor pede
   for (const v of ["play", "meet"]) if (v !== e.data.view && PREVIEW_LIVE.has(v)) { PREVIEW_LIVE.delete(v); if (!LIVE_REAL[v]) setLive(v, "", false, false); }
   if (["play", "meet"].includes(e.data.view) && !VIEWS.includes(e.data.view)) { PREVIEW_LIVE.add(e.data.view); setLive(e.data.view, e.data.view === "play" ? "Jogando" : "Reunião", true, false); }

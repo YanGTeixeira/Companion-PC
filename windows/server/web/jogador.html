@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jogador · Companion PC</title>
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/css/editor.css">
+<link rel="stylesheet" href="/css/colecao.css">
+<link rel="stylesheet" href="/css/pcjogador.css">
+</head>
+<body>
+<header>
+  <h1>Companion PC <span>· Jogador</span></h1>
+  <nav class="pj-tabs" id="tabs" role="tablist"></nav>
+  <div id="status"><i></i><span>Conectando…</span></div>
+</header>
+
+<div id="login" class="box" hidden>
+  <section class="box"><h2>Abra pelo PC</h2>
+    <p class="hint">Use o ícone do Companion PC perto do relógio &gt; <b>Jogador</b>. Ou cole o token do config.json:</p>
+    <div class="row"><input type="text" id="tok" placeholder="token"><button class="pri" id="tok-ok">Entrar</button></div></section>
+</div>
+
+<div class="pj" id="app" hidden>
+  <aside class="pj-side">
+    <section class="box pj-me">
+      <div id="me-card"></div>
+      <div id="me-xp"></div>
+    </section>
+    <section class="box pv">
+      <h3><span>Prévia no celular</span><span id="pv-note">ao vivo</span></h3>
+      <div class="frame" id="pv-frame"></div>
+    </section>
+  </aside>
+  <main id="body"></main>
+</div>
+
+<div class="pj-modal" id="modal" hidden><div class="pj-mbox"><button class="pj-x" id="modal-x" aria-label="Fechar">×</button><div id="modal-body"></div></div></div>
+<div class="pj-toast" id="toast" hidden></div>
+
+<script src="/js/catalogo.js"></script>
+<script src="/js/pcjogador.js"></script>
+</body>
+</html>

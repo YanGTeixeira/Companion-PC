@@ -48,7 +48,7 @@ const shield = (n, cls = "") => `<svg class="lgsh ${cls}" viewBox="0 0 40 46" ar
 function rankRow(r, right, cls = "") {
   const t = rewardName(r.title);
   return `<li class="${cls}${r.me || r.nick === rankSt?.nick ? " me" : ""}"><span class="rkpos">${r.pos ?? ""}</span>
-    <button class="rknick" data-pf="${esc(r.nick)}">${badge(r.level, r.frame, "xs")}<span>${esc(r.nick)}</span></button>
+    <button class="rknick" data-pf="${esc(r.nick)}">${badge(r.level, r.frame, "xs", r.av)}${fxName(r.nick, r.fx)}</button>
     <small>${t ? esc(t) + " · " : ""}nível ${r.level}${r.extra ? " · " + r.extra : ""}</small><b>${right}</b></li>`;
 }
 
@@ -58,7 +58,7 @@ function renderRank() {
   if (!rankSt.available) { box.innerHTML = '<div class="empty">O ranking online ainda não está no ar.</div>'; return; }
   if (!rankSt.joined) {
     box.innerHTML = `<div class="sub" style="white-space:normal;margin-bottom:10px">Compare o seu XP com o de outras pessoas, entre numa <b>liga</b> semanal,
-      siga amigos e desafie para <b>duelos</b>. Do seu PC sai só: <b>apelido, nível, XP, sequência, quantos troféus, título, moldura e vitrine</b>.
+      siga amigos e desafie para <b>duelos</b>. Do seu PC sai só: <b>apelido, nível, XP, sequência, quantos troféus e o seu perfil</b> (título, moldura, avatar, fundo, efeito, cor, vitrine e a frase que você escrever).
       Nada de apps, sites ou tempo de tela. Dá para sair e apagar tudo quando quiser.</div>
       <div class="brow rkjoin"><input class="fi" id="rk-nick" maxlength="20" placeholder="Seu apelido (3 a 20 letras)" autocomplete="off"><button class="btn" id="rk-join">Entrar</button></div>`;
     $("rk-join").onclick = async () => {
@@ -197,15 +197,17 @@ document.addEventListener("click", async (e) => {
   let p;
   try { p = await send("rank.profile", { nick }, true, 20000); } catch (err) { $("pfm-body").innerHTML = `<div class="warn">${esc(err.message)}</div>`; return; }
   const follows = (rankData.friends?.rows || []).some((r) => r.nick === p.nick);
-  const conq = state.conq?.conq || [];
+  const conq = state.conq?.conq || [], pf = p.pf || {};
   const show = p.show.map((id) => conq.find((c) => c.id === id)).filter(Boolean);
-  $("pfm-body").innerHTML = `<div class="pfhead">${badge(p.level, p.frame, "big")}<div><h1>${esc(p.nick)}</h1>
-      <div class="ptitle">${esc(rewardName(p.title) || "Novato")}</div>${leagueTag(p.league)}</div></div>
-    <div class="dayg cqnums"><div><b>${p.level}</b><small>nível</small></div><div><b>${p.week_xp}</b><small>XP na semana</small></div>
-      <div><b>${p.streak}</b><small>dias seguidos</small></div><div><b>${p.unlocked}</b><small>troféus</small></div></div>
-    <h4 class="dlh">Vitrine</h4><div class="shrow">${show.length ? show.map((c) => `<div class="cqt got">${trophy(c.tier, true)}<span>${esc(c.name)}</span></div>`).join("") : '<div class="empty">Nada na vitrine.</div>'}</div>
+  // a cor livre/animada do outro vale só dentro do cartão dele
+  $("pfm-body").innerHTML = `<div id="pf-other">${profileCard({ nick: p.nick, level: p.level, title: rewardName(p.title) || "Novato", frame: p.frame,
+      avatar: pf.av, effect: pf.fx, bg: pf.bg, bio: pf.bio, lay: pf.lay || ["stats", "show"], sub: p.streak ? `🔥 ${p.streak} dia${p.streak > 1 ? "s" : ""}` : "",
+      stats: [[p.level, "nível"], [p.week_xp, "XP na semana"], [p.best_streak ?? p.streak, "recorde"], [p.unlocked, "troféus"]],
+      show: show.length ? `<div class="shrow">${show.map((c) => `<div class="cqt got">${trophy(c.tier, true)}<span>${esc(c.name)}</span></div>`).join("")}</div>` : '<div class="empty">Nada na vitrine.</div>',
+      league: leagueTag(p.league) })}</div>
     ${mine ? "" : `<div class="brow pfbtns">${follows ? '<button class="btn" id="pf-unf">Deixar de seguir</button><button class="btn" id="pf-duel">Desafiar para duelo</button>'
       : '<button class="btn" id="pf-fol">Seguir</button>'}</div>`}`;
+  accentApply($("pf-other"), pf.acc, pf.col);
   const close = () => $("pfm").classList.add("hidden");
   if ($("pf-fol")) $("pf-fol").onclick = async () => { buzz(8); if (await rankDo("rank.friend.add", { nick: p.nick }, "friends", `Seguindo ${p.nick}`)) close(); };
   if ($("pf-unf")) $("pf-unf").onclick = async () => { buzz(8); if (await rankDo("rank.friend.del", { nick: p.nick }, "friends", `Deixou de seguir ${p.nick}`)) close(); };

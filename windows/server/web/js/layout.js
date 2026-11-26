@@ -6,10 +6,10 @@
 // O layout fica no PC (layout.json) e é editado na página /editor; vale para todos os aparelhos.
 const VIEW_LABEL = { dash: "Sistema", games: "Jogos", usage: "Tempo", media: "Tocando", mix: "Mixer", mouse: "Mouse e teclado",
   screen: "Tela do PC", deck: "Botões", send: "Arquivos", power: "Energia", voz: "Voz", sys: "Ajustes", play: "Jogando", meet: "Reunião", today: "Hoje", conq: "Resumo",
-  quests: "Desafios", troph: "Troféus", inv: "Recompensas", rank: "Ranking" };
+  quests: "Desafios", troph: "Troféus", inv: "Recompensas", loja: "Loja", rank: "Ranking" };
 const DEFAULT_NAV = [
   { id: "status", label: "Status", views: ["dash", "today", "games", "usage"] },
-  { id: "xp", label: "Jogador", views: ["conq", "quests", "troph", "inv", "rank"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
+  { id: "xp", label: "Jogador", views: ["conq", "quests", "troph", "inv", "loja", "rank"] }, { id: "radio", label: "Rádio", views: ["media", "mix"] },
   { id: "ctrl", label: "Controle", views: ["mouse", "screen"] }, { id: "deck", label: "Botões", views: ["deck"] },
   { id: "pc", label: "PC", views: ["send", "power", "voz", "sys"] }];
 const SPLIT_DEFAULT = { status: "minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)", radio: "minmax(0,1fr) minmax(0,1.1fr)",
@@ -34,7 +34,7 @@ function addNewViews(nav, known) {
 }
 // 1.18: seção Jogador. Num menu salvo antes dela, as abas de gamificação saem de onde estavam e viram uma
 // seção nova logo depois da que tinha Conquistas (se a pessoa tinha escondido Conquistas, o Resumo fica escondido).
-const XP_VIEWS = ["conq", "quests", "troph", "inv", "rank"];
+const XP_VIEWS = ["conq", "quests", "troph", "inv", "loja", "rank"];
 function migrateXp(nav, known) {
   const k = new Set(known || LEGACY_VIEWS);
   if (k.has("quests") || nav.some((s) => s.id === "xp")) return nav;

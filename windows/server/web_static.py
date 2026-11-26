@@ -38,7 +38,8 @@ def serve_static(connection, request):
                            ("Content-Disposition", f"attachment; filename*=UTF-8''{quote(name)}"),
                            ("Cache-Control", "no-store")])
         return Response(200, "OK", headers, body)
-    name = "index.html" if path in ("/", "") else "editor.html" if path.rstrip("/") == "/editor" else path.lstrip("/")
+    pages = {"/editor": "editor.html", "/jogador": "jogador.html"}
+    name = "index.html" if path in ("/", "") else pages.get(path.rstrip("/")) or path.lstrip("/")
     f = (WEB_DIR / name).resolve()
     if WEB_DIR.resolve() not in f.parents or not f.is_file() or f.suffix not in MIME:
         return connection.respond(HTTPStatus.NOT_FOUND, "não encontrado\n")

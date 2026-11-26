@@ -19,6 +19,8 @@ import threading
 import time
 from datetime import date, timedelta
 
+import colecao
+
 log = logging.getLogger("companion")
 
 TIER_XP = {"bronze": 50, "prata": 150, "ouro": 400}
@@ -399,33 +401,9 @@ def current_streak(days, today):
     return n
 
 
-# ---------------------------------------------------------------- recompensas (1.18)
-# (id, tipo, nome, requisito: nível (int) ou id de conquista). Tipos: title (aparece no ranking), frame (moldura do
-# nível, também no ranking), sound (som dos avisos de conquista no celular), theme (variante de tema "skin:cor").
-REWARDS = [
-    ("novato", "title", "Novato", 1), ("aprendiz", "title", "Aprendiz", 3), ("focado", "title", "Focado", 5),
-    ("veterano", "title", "Veterano", 10), ("mestre", "title", "Mestre", 20), ("lenda", "title", "Lenda", 25),
-    ("mito", "title", "Mito", 50),
-    ("coruja", "title", "Coruja", "coruja"), ("madrugador", "title", "Madrugador", "cedo"), ("monge", "title", "Monge", "foco100"),
-    ("imortal", "title", "Imortal", "imortal"), ("imparavel", "title", "Imparável", "vit10"),
-    ("cacador", "title", "Caçador de chefões", "boss5"), ("desafiante", "title", "Desafiante", "des10"),
-    ("tagarela", "title", "Tagarela", "fala"), ("duelista", "title", "Duelista", "duelo1"),
-    ("colecionador", "title", "Colecionador", "col25"), ("fenix", "title", "Fênix", "fenix"),
-    ("f_simples", "frame", "Simples", 1), ("f_bronze", "frame", "Bronze", 4), ("f_prata", "frame", "Prata", 8),
-    ("f_ouro", "frame", "Ouro", 15), ("f_neon", "frame", "Neon", 12), ("f_cristal", "frame", "Cristal", 30),
-    ("f_chamas", "frame", "Chamas", "seq30"), ("f_arco", "frame", "Arco-íris", 50),
-    ("s_bipe", "sound", "Bipe", 1), ("s_fanfarra", "sound", "Fanfarra", 4), ("s_moeda", "sound", "Moeda", 7),
-    ("s_arcade", "sound", "Arcade", 11), ("s_sino", "sound", "Sino", 16), ("s_vitoria", "sound", "Vitória", 22),
-    ("fallout:red", "theme", "Fallout Vermelho", 6), ("minimal:purple", "theme", "Minimal Roxo", 9),
-    ("synth:gold", "theme", "Synthwave Ouro", 14), ("rpg:emerald", "theme", "Fantasia Esmeralda", 20),
-]
-EQUIP_DEFAULT = {"title": "novato", "frame": "f_simples", "sound": "s_bipe", "show": []}
-SHOW_MAX = 3
-
-
-def rewards_got(level, unlocked):
-    """Ids das recompensas liberadas."""
-    return {rid for rid, _k, _n, req in REWARDS if (req <= level if isinstance(req, int) else req in unlocked)}
+# ---------------------------------------------------------------- recompensas (1.18) e coleção (1.19)
+# O catálogo, os créditos, a loja e os eventos ficam em colecao.py.
+EQUIP_DEFAULT = colecao.EQUIP_DEFAULT
 
 
 class Conquistas:
@@ -533,16 +511,35 @@ class Conquistas:
                 db.execute("INSERT INTO kv VALUES ('init', ?)", (today,))
             if silent:
                 db.execute("INSERT OR REPLACE INTO kv VALUES ('conq_ver', ?)", (str(CONQ_VER),))
+            # 1.19: eventos sazonais (só a partir do dia em que a 1.19 rodou), compras e créditos
+            since3 = self._kv(db, "rules3")
+            if since3 is None:
+                since3 = today
+                db.execute("INSERT INTO kv VALUES ('rules3', ?)", (since3,))
+            ev_done, event = colecao.events_eval(days, weeks, today, since3)
+            for eid, d in ev_done.items():
+                if "ev_" + eid not in unlocked:
+                    unlocked["ev_" + eid] = d
+                    db.execute("INSERT OR REPLACE INTO unlocks VALUES (?, ?, 0)", ("ev_" + eid, d))
+                    new.append({"kind": "event", "id": eid, "name": next(e[1] for e in colecao.EVENTS if e[0] == eid),
+                                "credits": colecao.CR_EVENT})
+            events_done = {k[3:]: d for k, d in unlocked.items() if k.startswith("ev_")}
+            bought = json.loads(self._kv(db, "bought", "[]"))
             xp = sum(xp_days.values()) + sum(TIER_XP[c[3]] for c in CONQ if c[0] in unlocked)
             conq_xp_today = sum(TIER_XP[c[3]] for c in CONQ if unlocked.get(c[0]) == today)
             equip = {**EQUIP_DEFAULT, **json.loads(self._kv(db, "equip", "{}"))}
         lvl, lo, hi = level_of(xp)
-        got = rewards_got(lvl, unlocked)
-        equip = self._fix_equip(equip, got, unlocked)
+        conq_days = [(unlocked[c[0]], c[3]) for c in CONQ if c[0] in unlocked]
+        cr_days = colecao.credits_by_day(days, weeks, sim["per"], conq_days, lvl, events_done)
+        earned, spent = sum(cr_days.values()), sum(int(b.get("price") or 0) for b in bought)
+        owned = {b["id"] for b in bought}
+        got = colecao.got_ids(lvl, unlocked, owned)
+        equip = self._fix_equip(equip, got, unlocked, lvl)
         today_metas = days[-1][2] if days else []
         week0 = monday(today)
         base_xp, mult = bonus.get(today, (0, 1.0))
         cur_week = weeks[-1] if weeks else None
+        shop = colecao.shop_pick(week_id(today), {b["id"] for b in bought if b.get("day", "") < week0})
         st = {
             "day": today, "level": lvl, "xp": xp, "lvl_lo": lo, "lvl_hi": hi,
             "today_xp": xp_days.get(today, 0) + conq_xp_today,
@@ -560,12 +557,19 @@ class Conquistas:
                 "quest_xp": QUEST_XP, "all_xp": ALL_QUESTS_XP},
             "weeks_won": {"quests": agg["quests"], "bosses": agg["bosses"]},
             "conq": [self._conq_view(c, agg, unlocked) for c in CONQ],
-            "rewards": [{"id": rid, "kind": kind, "name": name, "got": rid in got,
-                         "req": req if isinstance(req, int) else None,
-                         "conq": None if isinstance(req, int) else next(
-                             (c[1] if c[0] in unlocked or not (len(c) > 6 and c[6]) else "???") for c in CONQ if c[0] == req)}
-                        for rid, kind, name, req in REWARDS],
+            "rewards": [self._item_view(it, got, unlocked, owned) for it in colecao.ITEMS],
             "equip": equip,
+            "show_max": colecao.show_max(lvl),
+            "show_next": next((lv for lv, _n in reversed(colecao.SHOW_SLOTS) if lv > lvl), None),
+            "credits": {"bal": earned - spent, "earned": earned, "spent": spent, "today": cr_days.get(today, 0),
+                        "week": sum(v for k, v in cr_days.items() if k >= week0),
+                        "rules": {"meta": colecao.CR_META, "metas3": colecao.CR_ALL_METAS, "quest": colecao.CR_QUEST,
+                                  "boss": colecao.CR_BOSS, "level": colecao.CR_LEVEL, "streak7": colecao.CR_STREAK7,
+                                  "conq": colecao.CR_CONQ, "event": colecao.CR_EVENT}},
+            "shop": {"week": week_id(today), "end": (date.fromisoformat(week0) + timedelta(days=6)).isoformat(), "items": shop},
+            "event": event,
+            "events": [{"id": e[0], "name": e[1], "icon": e[2], "text": e[6], "done": e[0] in events_done} for e in colecao.EVENTS],
+            "bought": [b["id"] for b in bought],
         }
         st["today_bonus"] = {"base": base_xp, "mult": mult}
         ev = self._events(st, new, weeks)
@@ -585,14 +589,30 @@ class Conquistas:
                 "cur": round(min(val(agg), goal), 1), "goal": goal, "secret": bool(secret)}
 
     @staticmethod
-    def _fix_equip(equip, got, unlocked):
+    def _item_view(it, got, unlocked, owned):
+        rid, kind, name, rarity, req = it
+        conq = None
+        if isinstance(req, str) and req != colecao.SHOP and not req.startswith("ev:"):
+            conq = next((c[1] if c[0] in unlocked or not (len(c) > 6 and c[6]) else "???") for c in CONQ if c[0] == req)
+        return {"id": rid, "kind": kind, "name": name, "rarity": rarity, "got": rid in got,
+                "req": req if isinstance(req, int) else None, "conq": conq,
+                "shop": req == colecao.SHOP, "price": colecao.PRICE[rarity] if req == colecao.SHOP else None,
+                "event": req[3:] if isinstance(req, str) and req.startswith("ev:") else None,
+                "anim": rid in colecao.ANIMATED}
+
+    @staticmethod
+    def _fix_equip(equip, got, unlocked, level=1):
         """O que está equipado continua valendo? (ex.: conquista perdida num banco apagado) Senão volta ao padrão."""
-        kinds = {rid: k for rid, k, _n, _r in REWARDS}
         out = dict(equip)
-        for kind in ("title", "frame", "sound"):
-            if kinds.get(out.get(kind)) != kind or out[kind] not in got:
+        for kind in colecao.EQUIP_KINDS:
+            it = colecao.BY_ID.get(out.get(kind))
+            if not it or it[1] != kind or out[kind] not in got:
                 out[kind] = EQUIP_DEFAULT[kind]
-        out["show"] = [c for c in (out.get("show") or []) if c in unlocked][:SHOW_MAX]
+        out["color"] = colecao.clean_color(out.get("color")) or EQUIP_DEFAULT["color"]
+        out["bio"] = colecao.clean_bio(out.get("bio"))
+        lay = out.get("lay")
+        out["lay"] = colecao.clean_lay(lay) if isinstance(lay, list) else list(EQUIP_DEFAULT["lay"])
+        out["show"] = [c for c in (out.get("show") or []) if c in unlocked and not c.startswith("ev_")][:colecao.show_max(level)]
         return out
 
     def _events(self, st, new, weeks):
@@ -618,7 +638,7 @@ class Conquistas:
             ev.append({"kind": "level", "level": st["level"]})
         pgot = {r["id"] for r in prev["rewards"] if r["got"]}
         for r in st["rewards"]:
-            if r["got"] and r["id"] not in pgot:
+            if r["got"] and r["id"] not in pgot and not r["shop"]:     # comprado na loja: a pessoa já sabe
                 ev.append({"kind": "reward", "id": r["id"], "type": r["kind"], "name": r["name"]})
         if prev["day"] != st["day"]:
             if st["x2"]:
@@ -630,27 +650,69 @@ class Conquistas:
     def state(self):
         return self._state
 
-    # ------------------------------------------------------------ equipar (título, moldura, som) e vitrine
+    # ------------------------------------------------------------ equipar, vitrine, perfil e loja
+    def _save_equip(self, **changes):
+        with self.lock, self._db() as db:
+            eq = {**EQUIP_DEFAULT, **json.loads(self._kv(db, "equip", "{}")), **changes}
+            db.execute("INSERT OR REPLACE INTO kv VALUES ('equip', ?)", (json.dumps(eq),))
+        self._state["equip"] = {**self._state["equip"], **changes}
+        return self._state
+
     def equip(self, kind, rid):
         st = self._state or self.refresh()[0]
         if kind == "show":
-            ids = [str(x) for x in (rid or [])][:SHOW_MAX]
+            ids = [str(x) for x in (rid or [])]
+            if len(ids) > st["show_max"]:
+                raise ValueError(f"a vitrine tem {st['show_max']} lugares no seu nível")
             have = {c["id"] for c in st["conq"] if c["day"]}
             if any(i not in have for i in ids):
                 raise ValueError("só dá para mostrar conquistas que você já ganhou")
-            val = list(dict.fromkeys(ids))
-        else:
-            r = next((r for r in st["rewards"] if r["id"] == rid and r["kind"] == kind), None)
-            if kind not in ("title", "frame", "sound") or not r:
-                raise ValueError("recompensa inválida")
-            if not r["got"]:
-                raise ValueError("ainda bloqueada")
-            val = rid
+            return self._save_equip(show=list(dict.fromkeys(ids)))
+        r = next((r for r in st["rewards"] if r["id"] == rid and r["kind"] == kind), None)
+        if kind not in colecao.EQUIP_KINDS or not r:
+            raise ValueError("recompensa inválida")
+        if not r["got"]:
+            raise ValueError("ainda bloqueada")
+        return self._save_equip(**{kind: rid})
+
+    def set_profile(self, p):
+        """Frase, ordem dos blocos do perfil e a cor livre (essa só com a recompensa)."""
+        st = self._state or self.refresh()[0]
+        ch = {}
+        if "bio" in p:
+            ch["bio"] = colecao.clean_bio(p["bio"])
+        if "lay" in p:
+            if not isinstance(p["lay"], list):
+                raise ValueError("layout inválido")
+            ch["lay"] = colecao.clean_lay(p["lay"])
+        if "color" in p:
+            c = colecao.clean_color(p["color"])
+            if not c:
+                raise ValueError("cor inválida (use #rrggbb)")
+            if not next(r["got"] for r in st["rewards"] if r["id"] == "a_livre"):
+                raise ValueError("a cor livre ainda está bloqueada")
+            ch["color"] = c
+        return self._save_equip(**ch) if ch else st
+
+    def buy(self, rid, today=None):
+        """Compra um item da loja da semana com créditos."""
+        st = self._state or self.refresh(today)[0]
+        r = next((r for r in st["rewards"] if r["id"] == rid), None)
+        if not r or not r["shop"]:
+            raise ValueError("esse item não é da loja")
+        if r["got"]:
+            raise ValueError("esse item já é seu")
+        if rid not in st["shop"]["items"]:
+            raise ValueError("esse item não está na loja desta semana")
+        if st["credits"]["bal"] < r["price"]:
+            raise ValueError(f"faltam {r['price'] - st['credits']['bal']} créditos")
         with self.lock, self._db() as db:
-            eq = {**EQUIP_DEFAULT, **json.loads(self._kv(db, "equip", "{}")), kind: val}
-            db.execute("INSERT OR REPLACE INTO kv VALUES ('equip', ?)", (json.dumps(eq),))
-        st["equip"] = {**st["equip"], kind: val}
-        return st
+            bought = json.loads(self._kv(db, "bought", "[]"))
+            if any(b["id"] == rid for b in bought):
+                raise ValueError("esse item já é seu")
+            bought.append({"id": rid, "price": r["price"], "day": today or date.today().isoformat()})
+            db.execute("INSERT OR REPLACE INTO kv VALUES ('bought', ?)", (json.dumps(bought),))
+        return self.refresh(today)
 
     def set_duels_won(self, ids):
         """Duelos vencidos no ranking (ids): guarda a união; conta para a conquista Duelista."""
@@ -689,6 +751,9 @@ class Conquistas:
         st = self._state or {}
         y, w, _d = date.today().isocalendar()
         eq = st.get("equip") or EQUIP_DEFAULT
+        pf = {k: eq.get(k) for k in ("bg", "avatar", "effect", "accent", "bio", "lay")}
+        if eq.get("accent") == "a_livre":
+            pf["color"] = eq.get("color")
         return {k: st.get(k) for k in ("level", "xp", "week_xp", "streak", "best_streak")} | {
             "unlocked": sum(1 for c in st.get("conq") or [] if c["day"]), "week": f"{y}-W{w:02d}",   # semana ISO local
-            "title": eq["title"], "frame": eq["frame"], "show": list(eq["show"])}
+            "title": eq["title"], "frame": eq["frame"], "show": list(eq["show"]), "profile": pf}

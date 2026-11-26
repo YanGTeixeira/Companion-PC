@@ -621,26 +621,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .rkjoin .btn { flex: none; padding-left: 18px; padding-right: 18px; }
 
 /* ------------------------------------------------------------------ Jogador (1.18) */
-/* selo do nível com moldura: o anel é o fundo (padding), o miolo tem a cor do painel */
-.badge { --fr: var(--p3); display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; padding: 3px; border-radius: 50%;
-  background: var(--fr); box-sizing: border-box; }
-.badge b { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--panel); color: var(--p);
-  font: 15px/1 var(--display); font-weight: 400; }
-.badge.xs { width: 24px; height: 24px; padding: 2px; } .badge.xs b { font-size: 11px; }
-.badge.sm { width: 42px; height: 42px; } .badge.sm b { font-size: 17px; }
-.badge.big { width: 84px; height: 84px; padding: 6px; } .badge.big b { font-size: 38px; }
-.badge.f_bronze { --fr: linear-gradient(135deg, #f0b27a, #8a4b1f 55%, #e0965a); }
-.badge.f_prata { --fr: linear-gradient(135deg, #ffffff, #8e99a3 55%, #dfe5ea); }
-.badge.f_ouro { --fr: linear-gradient(135deg, #fff1a8, #c8901a 55%, #ffd23f); box-shadow: 0 0 10px #ffd23f55; }
-.badge.f_neon { --fr: linear-gradient(135deg, #ff4fd8, #3ef0ff); box-shadow: 0 0 12px #ff4fd877, 0 0 18px #3ef0ff44; }
-.badge.f_cristal { --fr: linear-gradient(135deg, #e0fbff, #7ccfff 40%, #b9a6ff 70%, #e0fbff); box-shadow: 0 0 10px #7ccfff66; }
-.badge.f_chamas { --fr: conic-gradient(from 200deg, #ff3b1f, #ffb000, #ff5a1f, #ffd84d, #ff3b1f); box-shadow: 0 0 14px #ff6a1f88; }
-.badge.f_arco { --fr: conic-gradient(#ff4d4d, #ffb84d, #f5ff4d, #4dff88, #4dd2ff, #8a4dff, #ff4dd2, #ff4d4d); box-shadow: 0 0 12px #ffffff33; }
-@media (prefers-reduced-motion: no-preference) {
-  .badge.big.f_chamas, .badge.big.f_arco, .badge.big.f_neon { animation: frspin 6s linear infinite; }
-  .badge.big.f_chamas b, .badge.big.f_arco b, .badge.big.f_neon b { animation: frspin 6s linear infinite reverse; }
-}
-@keyframes frspin { to { transform: rotate(360deg); } }
+/* selo do nível, vitrine e inventário: css/colecao.css */
 .pcard { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
 .pinfo { min-width: 0; }
 .ptitle { font: 20px/1.15 var(--display); color: var(--hl, var(--p)); letter-spacing: .5px; }
@@ -668,24 +649,7 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .bar.hp i { background: linear-gradient(90deg, #e0245e, #ff7a45); }
 .boss.dead .bar.hp i { background: var(--p4); }
 .bhow { margin-top: 10px; color: var(--p2); font-size: 13px; line-height: 1.4; }
-.shrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.shslot { display: grid; place-items: center; min-height: 92px; border: 1px dashed var(--p4); border-radius: var(--r); color: var(--p3); font-size: 12px; }
 .cqm-show { margin-top: 12px; }
-.ivgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
-.ivit { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; background: none; border: 1px solid var(--p4);
-  border-radius: var(--r); color: var(--p2); font: 13px var(--mono); cursor: pointer; text-align: center; }
-.ivit.on { border-color: var(--p); color: var(--p); box-shadow: 0 0 0 1px var(--p) inset; }
-.ivit.lock { opacity: .45; }
-.ivit small { color: var(--p3); font-size: 11px; min-height: 1.2em; }
-.ivit.on small { color: var(--p); }
-.ivtitle { font: 15px/1.2 var(--display); color: var(--hl, var(--p)); min-height: 2.4em; display: grid; place-items: center; }
-.ivplay { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--p3); font-size: 14px; }
-.ivsw { width: 40px; height: 28px; border-radius: var(--r); border: 1px solid var(--p3); }
-.ivnext { display: grid; gap: 6px; }
-.ivnext div { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 8px; align-items: baseline; border-bottom: 1px dashed var(--p4); padding: 4px 0; }
-.ivnext div:last-child { border-bottom: 0; }
-.ivnext b { color: var(--p); font-weight: 400; font-family: var(--display); }
-.ivnext small { color: var(--p3); font-size: 12px; }
 .thv button.lock { opacity: .4; font-size: 10px; line-height: 1; }
 /* ranking: liga, amigos, duelos, perfil */
 .lghead { display: flex; gap: 12px; align-items: center; margin: 4px 0 10px; }

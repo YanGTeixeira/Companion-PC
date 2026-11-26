@@ -119,6 +119,13 @@ class TrayApp:
         if url:
             os.startfile(url.replace("/#t=", "/editor#t=", 1))
 
+    def open_player(self, *_):
+        """Página Jogador (perfil, troféus, vitrine, loja e ranking) no navegador do PC."""
+        links = (self.status_fn().get("phone") or {}).get("links") or {}
+        url = links.get("cabo")
+        if url:
+            os.startfile(url.replace("/#t=", "/jogador#t=", 1))
+
     def update(self, *_):
         """Baixa e instala a versão nova (o instalador reinicia o servidor)."""
         def run():
@@ -219,6 +226,7 @@ class TrayApp:
                 Menu.SEPARATOR,
                 Item("Abrir painel", self.open_panel, default=True),
                 Item("Personalizar (tema e layout)", self.open_editor),
+                Item("Jogador (perfil, troféus e loja)", self.open_player),
                 Item("Abrir app no celular (cabo)", self.open_on_phone,
                      visible=lambda _: bool(self.open_on_phone_fn and self.status_fn().get("phone", {}).get("adb"))),
                 Item("Ver log", self.open_log),
@@ -342,6 +350,7 @@ class Panel:
             b.pack(side=side, padx=(0, 8) if side == "left" else (8, 0))
 
         button("Personalizar", self.app.open_editor)
+        button("Jogador", self.app.open_player)
         button("Abrir pasta", self.app.open_folder)
         button("Ver log completo", self.app.open_log)
         button("Fechar", root.destroy, "right")

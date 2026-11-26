@@ -1,7 +1,7 @@
 // Regras do ranking. Rodar: node --test test/
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CONQ_XP, DAY_CAP, FIRST_MAX, checkNick, checkSubmit, cleanProfile, duelView, isoWeek, leagueAfter, leagueZones, levelOf, nickKey, weekDay } from "../src/logic.js";
+import { CONQ_XP, DAY_CAP, FIRST_MAX, checkNick, checkSubmit, cleanProfile, duelView, pfMini, readProfile, isoWeek, leagueAfter, leagueZones, levelOf, nickKey, weekDay } from "../src/logic.js";
 
 test("nível igual ao conquistas.py", () => {
   assert.equal(levelOf(0), 1);
@@ -64,10 +64,29 @@ test("virada da semana pelo fuso", () => {
 });
 
 test("perfil: só ids curtos", () => {
-  assert.deepEqual(cleanProfile({ title: "coruja", frame: "f_ouro", show: ["foco1", "foco1", "imortal", "x", "y"] }),
-    { title: "coruja", frame: "f_ouro", show: "foco1,imortal,x" });
-  assert.deepEqual(cleanProfile({ title: "<b>oi</b>", frame: 3, show: "foco1" }), { title: "", frame: "", show: "" });
-  assert.deepEqual(cleanProfile(null), { title: "", frame: "", show: "" });
+  const r = cleanProfile({ title: "coruja", frame: "f_ouro", show: ["foco1", "foco1", "imortal", "x", "y", "z", "w", "v"] });
+  assert.deepEqual([r.title, r.frame, r.show], ["coruja", "f_ouro", "foco1,imortal,x,y,z,w"]);   // até 6
+  const bad = cleanProfile({ title: "<b>oi</b>", frame: 3, show: "foco1" });
+  assert.deepEqual([bad.title, bad.frame, bad.show], ["", "", ""]);
+  assert.equal(cleanProfile(null).show, "");
+});
+
+test("perfil 1.19: catálogo, cor livre e frase filtrada", () => {
+  const p = (x) => JSON.parse(cleanProfile({ profile: x }).profile);
+  assert.deepEqual(p({ bg: "b_espaco", avatar: "av_robo", effect: "e_fogo", accent: "a_holo", bio: "  oi   mundo ", lay: ["show", "bio", "show", "xx"] }),
+    { bg: "b_espaco", av: "av_robo", fx: "e_fogo", acc: "a_holo", bio: "oi mundo", lay: ["show", "bio"] });
+  const d = p({ bg: "<script>", avatar: "av_inventado", effect: 5 });
+  assert.deepEqual([d.bg, d.av, d.fx, d.acc], ["b_nenhum", "av_nivel", "e_nenhum", "a_tema"]);
+  assert.equal(p({ accent: "a_livre", color: "#FF00aa" }).col, "#ff00aa");
+  assert.equal(p({ accent: "a_livre", color: "red" }).acc, "a_tema");       // cor livre sem cor válida
+  assert.equal(p({ accent: "a_ouro", color: "#ff00aa" }).col, undefined);   // a cor só vai com a cor livre
+  assert.equal(p({ bio: "x".repeat(200) }).bio.length, 60);
+  assert.equal(p({ bio: "vai tomar no c* p0rr4" }).bio, "");
+  assert.equal(p({ bio: "sou admin do clã" }).bio, "sou admin do clã");    // nome reservado só vale no apelido
+  assert.equal(p({ bio: "a\u202eb\u0007c" }).bio, "abc");
+  assert.deepEqual(pfMini('{"av":"av_gato","fx":"e_arco"}'), { av: "av_gato", fx: "e_arco" });
+  assert.deepEqual(pfMini(""), { av: "av_nivel", fx: "e_nenhum" });
+  assert.deepEqual(readProfile("{quebrado"), {});
 });
 
 test("ligas: sobe, desce, fica", () => {

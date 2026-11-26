@@ -303,9 +303,11 @@ DOWNLOADS = extras.DownloadWatcher(CFG.get("downloads_dir") or DEFAULT_CFG["down
 
 
 LAYOUT_PATH = BASE / "layout.json"
-LAYOUT_VIEWS = {"dash", "today", "conq", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys"}
+LAYOUT_VIEWS = {"dash", "today", "conq", "games", "usage", "media", "mix", "mouse", "screen", "deck", "send", "power", "voz", "sys",
+                "quests", "troph", "inv", "loja", "rank"}   # Jogador (1.18) e Loja (1.19)
 LAYOUT_CARDS = {"cpu", "ram", "gpu", "net", "procs", "disks", "bat", "sys"}
-SKINS = {"fallout", "synth", "minimal", "hud", "lcd", "paper", "pocket", "code", "rpg", "tac", "jp", "exec"}
+SKINS = {"fallout", "synth", "minimal", "hud", "lcd", "paper", "pocket", "code", "rpg", "tac", "jp", "exec",
+         "abismo", "masmorra", "cosmos", "dunas", "matrix", "aurora", "natal", "halloween", "carnaval", "anonovo"}   # 1.19
 
 
 def layout_get():
@@ -504,6 +506,8 @@ ASYNC_ACTIONS = {
     "conq.get": lambda p: _async(conq_view()),
     "conq.equip": lambda p: conq_equip(p),
     "conq.cfg": lambda p: conq_cfg(p),
+    "conq.profile": lambda p: conq_profile(p),
+    "conq.buy": lambda p: conq_buy(p),
     "retro.get": lambda p: asyncio.to_thread(retro_get, p),
     "rank.state": lambda p: _async(RANK.state()),
     "rank.join": lambda p: rank_join(p),
@@ -1735,6 +1739,23 @@ async def conq_equip(p):
     return conq_view()
 
 
+async def conq_profile(p):
+    await asyncio.to_thread(CONQ.set_profile, p if isinstance(p, dict) else {})
+    await broadcast({"t": "conq", "d": conq_view()})
+    CONQ_KICK.set()
+    return conq_view()
+
+
+async def conq_buy(p):
+    st, ev = await asyncio.to_thread(CONQ.buy, str(p.get("id") or ""))
+    log.info("loja: comprou %s", p.get("id"))
+    for e in ev:
+        await broadcast({"t": "event", "kind": "conq", "d": e})
+    await broadcast({"t": "conq", "d": conq_view()})
+    CONQ_KICK.set()
+    return conq_view()
+
+
 async def conq_cfg(p):
     if "overlay" in p:
         save_cfg_key("conq_overlay", bool(p["overlay"]))
@@ -1766,6 +1787,7 @@ CONQ_OVERLAY = {
     "quests_all": lambda e: ("quest", "Desafios da semana completos!", f"+{e['xp']} XP de bônus"),
     "quest": lambda e: ("quest", "Desafio da semana cumprido", f"+{e['xp']} XP"),
     "reward": lambda e: ("level", f"Recompensa: {e['name']}", "Equipe em Jogador › Recompensas"),
+    "event": lambda e: ("quest", f"Evento {e['name']} completo!", f"Itens do evento liberados · +{e['credits']} créditos"),
 }
 
 

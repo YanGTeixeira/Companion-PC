@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="css/temas.css">
 <link rel="stylesheet" href="css/moldura.css">
 <link rel="stylesheet" href="css/telas.css">
+<link rel="stylesheet" href="css/colecao.css">
 <script src="js/cq-shim.js"></script>
 </head>
 <body class="crt">
@@ -98,12 +99,26 @@
   <section class="tab" id="t-inv">
     <div class="cols tday">
       <div class="card" data-b="next"><h3><span>Próximas</span></h3><div id="iv-next"></div></div>
+      <div class="card" data-b="perfil"><h3><span>Perfil</span></h3><div id="pf-edit"></div></div>
       <div class="card" data-b="title"><h3><span>Títulos</span><span id="iv-n-title"></span></h3><div class="ivgrid" id="iv-title"></div></div>
       <div class="card" data-b="frame"><h3><span>Molduras</span><span id="iv-n-frame"></span></h3><div class="ivgrid" id="iv-frame"></div></div>
-      <div class="card" data-b="sound"><h3><span>Som das conquistas</span><span id="iv-n-sound"></span></h3><div class="ivgrid" id="iv-sound"></div></div>
+      <div class="card" data-b="avatar"><h3><span>Avatares</span><span id="iv-n-avatar"></span></h3><div class="ivgrid" id="iv-avatar"></div></div>
+      <div class="card" data-b="bg"><h3><span>Fundos do cartão</span><span id="iv-n-bg"></span></h3><div class="ivgrid" id="iv-bg"></div></div>
+      <div class="card" data-b="effect"><h3><span>Efeito no nome</span><span id="iv-n-effect"></span></h3><div class="ivgrid" id="iv-effect"></div></div>
+      <div class="card" data-b="accent"><h3><span>Cor de destaque</span><span id="iv-n-accent"></span></h3><div class="ivgrid" id="iv-accent"></div></div>
       <div class="card" data-b="theme"><h3><span>Temas</span><span id="iv-n-theme"></span></h3><div class="ivgrid" id="iv-theme"></div></div>
+      <div class="card" data-b="sound"><h3><span>Som das conquistas</span><span id="iv-n-sound"></span></h3><div class="ivgrid" id="iv-sound"></div></div>
       <div class="card" data-b="alerts"><h3><span>Avisos</span></h3>
         <div class="set"><label>Troféu na tela do PC<small>Aviso no canto da tela ao ganhar conquista, desafio, chefão ou nível</small></label><button class="switch" id="sw-cqpc" aria-label="Troféu na tela do PC"></button></div></div>
+    </div>
+  </section>
+
+  <!-- JOGADOR > Loja: créditos, itens da semana e evento sazonal -->
+  <section class="tab" id="t-loja">
+    <div class="cols tday">
+      <div class="card" data-b="credits"><h3><span>Créditos</span></h3><div id="lj-bal"><div class="empty">Carregando…</div></div></div>
+      <div class="card" data-b="shop"><h3><span>Loja da semana</span><span id="lj-left"></span></h3><div id="lj-shop"></div></div>
+      <div class="card" data-b="event"><h3><span>Evento</span></h3><div id="lj-ev"></div></div>
     </div>
   </section>
 
@@ -416,6 +431,7 @@
         <div class="card">
           <div class="set" style="display:block"><label>Tema<small>Vale para todos os aparelhos. Para arrumar o menu e os cartões, use o editor no PC (ícone da bandeja &gt; Personalizar).</small></label><div class="themes" id="themes"></div></div>
           <div class="set"><label>Efeito de tubo<small>Linhas de varredura e brilho</small></label><button class="switch" id="sw-crt" aria-label="Efeito de tubo"></button></div>
+          <div class="set"><label>Animações<small>Temas, fundos e efeitos que se mexem. Param sozinhas com bateria fraca ou "reduzir movimento"</small></label><button class="switch" id="sw-anim" aria-label="Animações"></button></div>
           <div class="set"><label>Sons de terminal<small>Bipes curtos ao tocar e ao conectar</small></label><button class="switch" id="sw-snd" aria-label="Sons de terminal"></button></div>
           <div class="set"><label>Quando ficar parado<small>Passa Sistema, Jogos, Tocando e o relógio, ou só o relógio</small></label><button class="btn sm" id="dock-now">Ver</button><select id="idle-mode" class="sel" aria-label="Quando ficar parado"><option value="cycle">Passar as telas</option><option value="clock">Só o relógio</option><option value="off">Nada</option></select></div>
           <div class="set"><label>Depois de</label><select id="dock-min" class="sel" aria-label="Depois de quanto tempo parado"><option value="1">1 min</option><option value="2">2 min</option><option value="5">5 min</option><option value="10">10 min</option></select></div>
@@ -547,6 +563,7 @@
 <div class="toast hidden" id="toast"></div>
 <textarea id="kbd" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
 
+<script src="js/catalogo.js"></script>
 <script src="js/core.js"></script>
 <script src="js/layout.js"></script>
 <script src="js/painel.js"></script>

@@ -31,6 +31,8 @@ const BANNED = ["porra", "caralh", "buceta", "bucet", "puta", "viado", "cuzao", 
   "piroca", "xoxota", "bosta", "retardad", "estupr", "pedof", "nazi", "hitler", "fuck", "shit", "bitch", "nigg",
   "fagg", "cunt", "whore", "rapist", "admin", "moderador", "companion", "anthropic", "suporte", "oficial"];
 const LEET = { 0: "o", 1: "i", 3: "e", 4: "a", 5: "s", 7: "t", "@": "a", $: "s", "!": "i" };
+// a frase do perfil: os mesmos palavrões, sem os nomes reservados (que só valem para o apelido)
+const BANNED_BIO = BANNED.filter((w) => !["admin", "moderador", "companion", "anthropic", "suporte", "oficial"].includes(w));
 
 export function normNick(nick) {
   return String(nick || "").trim().replace(/\s+/g, " ");
@@ -70,12 +72,49 @@ export function checkSubmit(u, s, now, weekRow, weeks, wday) {
 
 
 // ------------------------------------------------------------------ perfil (1.18): título, moldura e vitrine
-// Só ids curtos (o app de cada um mostra o nome); texto livre nunca chega ao ranking.
+// 1.19: fundo, avatar, efeito no nome, cor de destaque, ordem dos blocos e uma frase curta. Ids só do catálogo
+// (o mesmo do windows/server/colecao.py; um teste do PC confere); a frase passa pelo filtro de palavrões.
 export const ID_RE = /^[a-z0-9_]{1,20}$/;
+export const SHOW_MAX = 6;
+export const BIO_MAX = 60;
+export const PROFILE_IDS = {
+  bg: ["b_nenhum", "b_grade", "b_cidade", "b_montanhas", "b_espaco", "b_sol", "b_circuito", "b_aurora", "b_castelo", "b_lava",
+    "b_oceano", "b_floresta", "b_chuva", "b_natal", "b_halloween"],
+  avatar: ["av_nivel", "av_robo", "av_gato", "av_controle", "av_fantasma", "av_alien", "av_caveira", "av_ninja", "av_coroa",
+    "av_dragao", "av_coruja", "av_espada", "av_foguete", "av_slime", "av_cogumelo", "av_pinguim", "av_mago", "av_neve",
+    "av_abobora", "av_mascara", "av_estrela"],
+  effect: ["e_nenhum", "e_brilho", "e_gradiente", "e_fogo", "e_arco", "e_glitch", "e_gelo", "e_neon", "e_ouro", "e_confete", "e_cintilante"],
+  accent: ["a_tema", "a_livre", "a_holo", "a_arco", "a_brasa", "a_plasma", "a_ouro"],
+};
+export const LAY_BLOCKS = ["bio", "stats", "show", "recent", "league"];
+
+export function cleanBio(v) {
+  const s = String(typeof v === "string" ? v : "").replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, "")
+    .replace(/\s+/g, " ").trim().slice(0, BIO_MAX);
+  if (!s) return "";
+  const flat = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[0-9@$!]/g, (c) => LEET[c] ?? c).replace(/[^a-z]/g, "");
+  return BANNED_BIO.some((w) => flat.includes(w)) ? "" : s;
+}
+
 export function cleanProfile(b) {
   const id = (v) => (typeof v === "string" && ID_RE.test(v) ? v : "");
-  const show = Array.isArray(b?.show) ? [...new Set(b.show.filter((v) => typeof v === "string" && ID_RE.test(v)))].slice(0, 3) : [];
-  return { title: id(b?.title), frame: id(b?.frame), show: show.join(",") };
+  const show = Array.isArray(b?.show) ? [...new Set(b.show.filter((v) => typeof v === "string" && ID_RE.test(v)))].slice(0, SHOW_MAX) : [];
+  const p = b?.profile && typeof b.profile === "object" ? b.profile : {};
+  const pick = (k, v) => (PROFILE_IDS[k].includes(v) ? v : PROFILE_IDS[k][0]);
+  const pf = { bg: pick("bg", p.bg), av: pick("avatar", p.avatar), fx: pick("effect", p.effect), acc: pick("accent", p.accent),
+    bio: cleanBio(p.bio), lay: Array.isArray(p.lay) ? [...new Set(p.lay.filter((x) => LAY_BLOCKS.includes(x)))] : ["bio", "stats", "show"] };
+  if (pf.acc === "a_livre" && typeof p.color === "string" && /^#[0-9a-f]{6}$/i.test(p.color)) pf.col = p.color.toLowerCase();
+  else if (pf.acc === "a_livre") pf.acc = "a_tema";
+  return { title: id(b?.title), frame: id(b?.frame), show: show.join(","), profile: JSON.stringify(pf) };
+}
+
+// o que as listas (ranking, liga, amigos, duelos) mostram de cada um: avatar e efeito no nome
+export function readProfile(s) {
+  try { const p = JSON.parse(s || "{}"); return p && typeof p === "object" ? p : {}; } catch { return {}; }
+}
+export function pfMini(s) {
+  const p = readProfile(s);
+  return { av: p.av || "av_nivel", fx: p.fx || "e_nenhum" };
 }
 
 // ------------------------------------------------------------------ ligas semanais (1.18)
