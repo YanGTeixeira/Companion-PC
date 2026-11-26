@@ -1,4 +1,4 @@
 {
-  "version": "1.17",
-  "notes": "Ranking online público: escolha um apelido e compare o seu XP da semana, nível e sequência com outras pessoas (opcional; só sai apelido, XP, sequência e quantos troféus)"
+  "version": "1.17.1",
+  "notes": "Corrige o servidor que não abria depois de atualizar para a 1.17"
 }
