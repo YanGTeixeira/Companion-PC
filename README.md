@@ -61,6 +61,14 @@ Em tablet deitado (≥ 1000 px de largura) as sub-abas de uma seção aparecem l
   cores do tema para compartilhar ou salvar. Dá para ver o mês atual (até agora) ou os anteriores; no começo do mês
   o celular avisa que a do mês que acabou está pronta.
 
+**Novidades da 1.17**
+
+- **Ranking online (Status › Conquistas, opcional):** escolha um apelido e compare o seu XP com o de outras pessoas:
+  XP da semana (zera na segunda), nível e sequência, com a sua posição mesmo fora do top 50. Do PC sai só apelido,
+  XP, sequência e quantos troféus; nada de apps, sites ou tempo de tela. Sem e-mail nem senha (a chave fica no
+  `config.json`). Dá para trocar o apelido (1 vez por dia) e sair apagando a conta. O servidor é um Cloudflare
+  Worker na pasta `cloud/ranking` (como publicar e moderar: `cloud/ranking/README.md`).
+
 **Depois da 1.9**
 
 - **Fim de partida:** quando uma partida de CS2 ou Dota 2 termina, o celular avisa e mostra seus números

@@ -30,6 +30,7 @@ import devices
 import extras
 import conquistas
 import retro
+import ranking
 import games
 import gsi
 import https_cert
@@ -502,6 +503,11 @@ ASYNC_ACTIONS = {
     "day.summary": lambda p: asyncio.to_thread(day_summary, p),
     "conq.get": lambda p: _async(CONQ.state()),
     "retro.get": lambda p: asyncio.to_thread(retro_get, p),
+    "rank.state": lambda p: _async(RANK.state()),
+    "rank.join": rank_join,
+    "rank.nick": lambda p: rank_call(RANK.set_nick, str(p.get("nick") or "")),
+    "rank.leave": lambda p: rank_call(RANK.leave),
+    "rank.board": lambda p: rank_call(RANK.board, str(p.get("kind") or "week")),
     "steam.set": lambda p: steam_set(p),
     "steam.get": lambda p: _async({**STEAM_STATE, "steamid": STEAM.steamid()}),
     "stratz.get": lambda p: _async(stratz_public()),
@@ -875,7 +881,7 @@ async def meet_cmd(p):
         raise ValueError("não consegui trazer o Meet para a frente")
     await MEET["ws"].send(json.dumps(msg))
 # não vão para o log: repetitivas ou com conteúdo pessoal (texto digitado/copiado)
-QUIET_ACTIONS = {"conq.get", "retro.get", "snd.get", "snd.state", "snd.mics", "snd.add", "snd.info", "snd.play", "snd.stop", "layout.get", "dota.plan.get", "dota.heroes", "dota.draft", "dota.build", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
+QUIET_ACTIONS = {"conq.get", "retro.get", "rank.state", "rank.board", "snd.get", "snd.state", "snd.mics", "snd.add", "snd.info", "snd.play", "snd.stop", "layout.get", "dota.plan.get", "dota.heroes", "dota.draft", "dota.build", "day.summary", "steam.get", "stratz.get", "matches.get", "daily.get", "audio.profiles", "bat.refresh", "usage.get", "usage.app", "games.history", "games.library", "notif.sub", "mouse.move", "mouse.scroll", "key.text", "clip.set", "clip.get", "file.chunk",
                  "screen.shot", "mixer.get", "deck.get", "voice.devices", "voice.help", "voice.try"}
 
 
@@ -1684,6 +1690,23 @@ def conq_first_day():
 
 CONQ = conquistas.Conquistas(BASE / "conquistas.db", conq_facts, conq_first_day)
 CONQ_KICK = asyncio.Event()
+RANK = ranking.Ranking(CFG.setdefault("ranking", {}), lambda c: save_cfg_key("ranking", c))
+
+
+async def rank_call(fn, *a):
+    """Ações do ranking (rede): erro vira mensagem para o celular; o estado novo vai para todos."""
+    try:
+        res = await asyncio.to_thread(fn, *a)
+    except ranking.RankError as e:
+        raise ValueError(str(e)) from None
+    await broadcast({"t": "rank", "d": RANK.state()})
+    return res
+
+
+async def rank_join(p):
+    st = await rank_call(RANK.join, str(p.get("nick") or ""))
+    await asyncio.to_thread(RANK.submit, CONQ.summary(), True)   # já aparece no ranking
+    return st
 
 
 async def conq_loop():
@@ -1697,6 +1720,7 @@ async def conq_loop():
                 await broadcast({"t": "event", "kind": "conq", "d": e})
             if clients:
                 await retro_notice()
+            await asyncio.to_thread(RANK.submit, CONQ.summary())     # a cada 15 min, se entrou no ranking
             key = json.dumps(st, sort_keys=True)
             if key != sent:
                 sent = key

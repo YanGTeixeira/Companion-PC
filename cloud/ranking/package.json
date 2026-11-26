@@ -1,0 +1,13 @@
+{
+  "name": "companion-ranking",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/",
+    "dev": "wrangler dev --local",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "3.99.0"
+  }
+}

@@ -346,5 +346,6 @@ class Conquistas:
     def summary(self):
         """O que um ranking online receberia (sem nada de tempo de tela ou apps)."""
         st = self._state or {}
+        y, w, _d = date.today().isocalendar()
         return {k: st.get(k) for k in ("level", "xp", "week_xp", "streak", "best_streak")} | {
-            "unlocked": sum(1 for c in st.get("conq") or [] if c["day"])}
+            "unlocked": sum(1 for c in st.get("conq") or [] if c["day"]), "week": f"{y}-W{w:02d}"}   # semana ISO local

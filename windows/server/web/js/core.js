@@ -159,6 +159,7 @@ function onMsg(m) {
     case "dota_plan": onDotaPlan(m.d, m.reset); break;
     case "snd": onSb(m.d); break;
     case "conq": onConq(m.d); break;
+    case "rank": onRank(m.d); break;
     case "meet_soon": onMeetSoon(m.d); break;
     case "focus": onFocus(m.d); break;
     case "update": onUpdate(m.d); break;

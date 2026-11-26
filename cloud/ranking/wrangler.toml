@@ -1,0 +1,13 @@
+# Ranking público do Companion PC. Como publicar: veja README.md desta pasta.
+name = "companion-ranking"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "companion-ranking"
+database_id = "1f4d696b-5ad5-40c4-ac0e-a9c1cf83be1c"
+
+[vars]
+# trocar o "sal" deixa os hashes de IP antigos inúteis (não precisa ser secreto, só único)
+IP_SALT = "companion-ranking-1"

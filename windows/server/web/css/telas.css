@@ -595,3 +595,24 @@ select.sel { flex: none; padding: 6px 8px; border: 1px solid var(--p3); backgrou
 .rimg { box-sizing: border-box; width: 100%; max-width: 360px; align-self: center; border: 1px solid var(--p3); border-radius: var(--r); }
 #td-retro.new { border-color: var(--p); box-shadow: 0 0 0 1px var(--p) inset; }
 #td-retro .brow { display: flex; gap: 8px; } #td-retro .sel { flex: 1; min-width: 0; }
+
+/* Ranking online */
+.rkchips { margin-bottom: 8px; align-items: center; flex-wrap: wrap; overflow: visible; }
+.rkweek { color: var(--p3); font-size: 11px; margin-left: auto; }
+.rklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rklist li { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 8px; align-items: center;
+  padding: 6px 4px; border-bottom: 1px dashed var(--p4); }
+.rklist li:last-child { border-bottom: 0; }
+.rklist li.me { background: var(--p4); border-radius: var(--r); }
+.rkpos { grid-row: 1 / 3; color: var(--p2); font: 20px/1 var(--display); text-align: center; }
+.rkpos .tro { width: 30px; height: 30px; }
+.rknick { color: var(--p); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rklist small { grid-column: 2; color: var(--p3); font-size: 11px; }
+.rklist b { grid-column: 3; grid-row: 1 / 3; color: var(--p); font: 22px/1 var(--display); font-weight: 400; }
+.rkyou { margin-top: 8px; color: var(--p2); font-size: 14px; }
+.rkfoot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; color: var(--p3); font-size: 12px; flex-wrap: wrap; }
+.rkfoot .btn { margin-left: 6px; }
+.rkjoin { display: flex; gap: 8px; margin-top: 8px; } .rkjoin .fi { flex: 1; min-width: 0; }
+#td-rank .warn { color: var(--alert); font-size: 13px; margin-top: 8px; }
+#td-rank .fi { padding: 9px 10px; border: 1px solid var(--p3); background: var(--bg); color: var(--p); font: 15px var(--mono); border-radius: var(--r); }
+.rkjoin .btn { flex: none; padding-left: 18px; padding-right: 18px; }
